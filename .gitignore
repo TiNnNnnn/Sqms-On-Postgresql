@@ -32,7 +32,8 @@ win32ver.rc
 lib*dll.def
 lib*.pc
 
-data 
+data/
+log/
 
 # Local excludes in root directory
 /GNUmakefile
@@ -46,4 +47,3 @@ data
 /tmp_install/
 /portlock/
 
-/data/
