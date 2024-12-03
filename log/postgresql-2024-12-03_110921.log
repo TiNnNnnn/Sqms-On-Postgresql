@@ -1,0 +1,46 @@
+2024-12-03 11:09:21.943 CST [3525293] LOG:  starting PostgreSQL 13.10 on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 11.4.0-2ubuntu1~20.04) 11.4.0, 64-bit
+2024-12-03 11:09:21.944 CST [3525293] LOG:  listening on IPv4 address "127.0.0.1", port 33333
+2024-12-03 11:09:21.945 CST [3525293] LOG:  listening on Unix socket "/tmp/.s.PGSQL.33333"
+2024-12-03 11:09:21.948 CST [3525333] LOG:  database system was shut down at 2024-12-03 11:09:21 CST
+2024-12-03 11:09:21.950 CST [3525293] LOG:  database system is ready to accept connections
+2024-12-03 11:09:25.755 CST [3525452] LOG:  statement: SELECT * FROM pg_extension WHERE extname = 'sqms';
+2024-12-03 11:09:25.757 CST [3525452] LOG:  duration: 0.048 ms  plan:
+	{
+	"Query Text": "SELECT * FROM pg_extension WHERE extname = 'sqms';",
+	"Plan": {
+	"Node Type": "Seq Scan",
+	"Parallel Aware": false,
+	"Relation Name": "pg_extension",
+	"Schema": "pg_catalog",
+	"Alias": "pg_extension",
+	"Startup Cost": 0.00,
+	"Total Cost": 1.01,
+	"Plan Rows": 1,
+	"Plan Width": 145,
+	"Actual Startup Time": 0.021,
+	"Actual Total Time": 0.022,
+	"Actual Rows": 1,
+	"Actual Loops": 1,
+	    "Output": ["oid", "extname", "extowner", "extnamespace", "extrelocatable", "extversion", "extconfig", "extcondition"],
+	"Filter": "(pg_extension.extname = 'sqms'::name)",
+	"Rows Removed by Filter": 2,
+	"Shared Hit Blocks": 0,
+	"Shared Read Blocks": 1,
+	"Shared Dirtied Blocks": 1,
+	"Shared Written Blocks": 0,
+	"Local Hit Blocks": 0,
+	"Local Read Blocks": 0,
+	"Local Dirtied Blocks": 0,
+	"Local Written Blocks": 0,
+	"Temp Read Blocks": 0,
+	"Temp Written Blocks": 0,
+	"WAL Records": 0,
+	"WAL FPI": 0,
+	"WAL Bytes": 0
+	}
+	}
+2024-12-03 11:09:46.234 CST [3525293] LOG:  received fast shutdown request
+2024-12-03 11:09:46.235 CST [3525293] LOG:  aborting any active transactions
+2024-12-03 11:09:46.236 CST [3525293] LOG:  background worker "logical replication launcher" (PID 3525341) exited with exit code 1
+2024-12-03 11:09:46.236 CST [3525336] LOG:  shutting down
+2024-12-03 11:09:46.244 CST [3525293] LOG:  database system is shut down

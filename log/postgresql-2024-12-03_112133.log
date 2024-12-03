@@ -1,0 +1,60 @@
+2024-12-03 11:21:33.530 CST [3568262] LOG:  starting PostgreSQL 13.10 on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 11.4.0-2ubuntu1~20.04) 11.4.0, 64-bit
+2024-12-03 11:21:33.530 CST [3568262] LOG:  listening on IPv4 address "127.0.0.1", port 33333
+2024-12-03 11:21:33.534 CST [3568262] LOG:  listening on Unix socket "/tmp/.s.PGSQL.33333"
+2024-12-03 11:21:33.538 CST [3568264] LOG:  database system was shut down at 2024-12-03 11:21:25 CST
+2024-12-03 11:21:33.541 CST [3568262] LOG:  database system is ready to accept connections
+2024-12-03 11:22:20.786 CST [3570734] LOG:  statement: select * from pg_extension;
+2024-12-03 11:22:20.816 CST [3568262] LOG:  server process (PID 3570734) was terminated by signal 11: Segmentation fault
+2024-12-03 11:22:20.816 CST [3568262] DETAIL:  Failed process was running: select * from pg_extension;
+2024-12-03 11:22:20.816 CST [3568262] LOG:  terminating any other active server processes
+2024-12-03 11:22:20.816 CST [3571003] WARNING:  terminating connection because of crash of another server process
+2024-12-03 11:22:20.816 CST [3571003] DETAIL:  The postmaster has commanded this server process to roll back the current transaction and exit, because another server process exited abnormally and possibly corrupted shared memory.
+2024-12-03 11:22:20.816 CST [3571003] HINT:  In a moment you should be able to reconnect to the database and repeat your command.
+2024-12-03 11:22:20.816 CST [3568268] WARNING:  terminating connection because of crash of another server process
+2024-12-03 11:22:20.816 CST [3568268] DETAIL:  The postmaster has commanded this server process to roll back the current transaction and exit, because another server process exited abnormally and possibly corrupted shared memory.
+2024-12-03 11:22:20.816 CST [3568268] HINT:  In a moment you should be able to reconnect to the database and repeat your command.
+2024-12-03 11:22:20.817 CST [3568262] LOG:  all server processes terminated; reinitializing
+2024-12-03 11:22:20.845 CST [3571006] LOG:  database system was interrupted; last known up at 2024-12-03 11:21:33 CST
+2024-12-03 11:22:20.939 CST [3571006] LOG:  database system was not properly shut down; automatic recovery in progress
+2024-12-03 11:22:20.941 CST [3571006] LOG:  redo starts at 0/157EC50
+2024-12-03 11:22:20.941 CST [3571006] LOG:  invalid record length at 0/157EC88: wanted 24, got 0
+2024-12-03 11:22:20.941 CST [3571006] LOG:  redo done at 0/157EC50
+2024-12-03 11:22:20.953 CST [3568262] LOG:  database system is ready to accept connections
+2024-12-03 11:23:15.433 CST [3574133] LOG:  statement: select * from pg_extension;
+2024-12-03 11:23:15.464 CST [3568262] LOG:  server process (PID 3574133) was terminated by signal 11: Segmentation fault
+2024-12-03 11:23:15.464 CST [3568262] DETAIL:  Failed process was running: select * from pg_extension;
+2024-12-03 11:23:15.464 CST [3568262] LOG:  terminating any other active server processes
+2024-12-03 11:23:15.464 CST [3574187] WARNING:  terminating connection because of crash of another server process
+2024-12-03 11:23:15.464 CST [3574187] DETAIL:  The postmaster has commanded this server process to roll back the current transaction and exit, because another server process exited abnormally and possibly corrupted shared memory.
+2024-12-03 11:23:15.464 CST [3574187] HINT:  In a moment you should be able to reconnect to the database and repeat your command.
+2024-12-03 11:23:15.464 CST [3571032] WARNING:  terminating connection because of crash of another server process
+2024-12-03 11:23:15.464 CST [3571032] DETAIL:  The postmaster has commanded this server process to roll back the current transaction and exit, because another server process exited abnormally and possibly corrupted shared memory.
+2024-12-03 11:23:15.464 CST [3571032] HINT:  In a moment you should be able to reconnect to the database and repeat your command.
+2024-12-03 11:23:15.465 CST [3568262] LOG:  all server processes terminated; reinitializing
+2024-12-03 11:23:15.493 CST [3574205] LOG:  database system was interrupted; last known up at 2024-12-03 11:22:20 CST
+2024-12-03 11:23:15.584 CST [3574205] LOG:  database system was not properly shut down; automatic recovery in progress
+2024-12-03 11:23:15.586 CST [3574205] LOG:  redo starts at 0/157ED00
+2024-12-03 11:23:15.586 CST [3574205] LOG:  invalid record length at 0/157ED38: wanted 24, got 0
+2024-12-03 11:23:15.586 CST [3574205] LOG:  redo done at 0/157ED00
+2024-12-03 11:23:15.598 CST [3568262] LOG:  database system is ready to accept connections
+2024-12-03 11:23:28.536 CST [3574726] LOG:  statement: select * from pg_extension;
+2024-12-03 11:23:28.574 CST [3568262] LOG:  server process (PID 3574726) was terminated by signal 11: Segmentation fault
+2024-12-03 11:23:28.574 CST [3568262] DETAIL:  Failed process was running: select * from pg_extension;
+2024-12-03 11:23:28.574 CST [3568262] LOG:  terminating any other active server processes
+2024-12-03 11:23:28.574 CST [3574965] WARNING:  terminating connection because of crash of another server process
+2024-12-03 11:23:28.574 CST [3574965] DETAIL:  The postmaster has commanded this server process to roll back the current transaction and exit, because another server process exited abnormally and possibly corrupted shared memory.
+2024-12-03 11:23:28.574 CST [3574965] HINT:  In a moment you should be able to reconnect to the database and repeat your command.
+2024-12-03 11:23:28.574 CST [3574224] WARNING:  terminating connection because of crash of another server process
+2024-12-03 11:23:28.574 CST [3574224] DETAIL:  The postmaster has commanded this server process to roll back the current transaction and exit, because another server process exited abnormally and possibly corrupted shared memory.
+2024-12-03 11:23:28.574 CST [3574224] HINT:  In a moment you should be able to reconnect to the database and repeat your command.
+2024-12-03 11:23:28.575 CST [3568262] LOG:  all server processes terminated; reinitializing
+2024-12-03 11:23:28.603 CST [3574966] LOG:  database system was interrupted; last known up at 2024-12-03 11:23:15 CST
+2024-12-03 11:23:28.695 CST [3574966] LOG:  database system was not properly shut down; automatic recovery in progress
+2024-12-03 11:23:28.697 CST [3574966] LOG:  invalid record length at 0/157EDB0: wanted 24, got 0
+2024-12-03 11:23:28.697 CST [3574966] LOG:  redo is not required
+2024-12-03 11:23:28.709 CST [3568262] LOG:  database system is ready to accept connections
+2024-12-03 11:24:24.847 CST [3568262] LOG:  received fast shutdown request
+2024-12-03 11:24:24.848 CST [3568262] LOG:  aborting any active transactions
+2024-12-03 11:24:24.849 CST [3568262] LOG:  background worker "logical replication launcher" (PID 3574980) exited with exit code 1
+2024-12-03 11:24:24.850 CST [3574975] LOG:  shutting down
+2024-12-03 11:24:24.857 CST [3568262] LOG:  database system is shut down

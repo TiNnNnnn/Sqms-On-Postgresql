@@ -1,0 +1,1 @@
+/home/yyk/postgresql-13.10/bin/postgres "-D" "../data/" "-p" "33333"

@@ -1,0 +1,193 @@
+2024-11-26 09:43:14.751 CST [2328930] LOG:  starting PostgreSQL 13.10 on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 11.4.0-2ubuntu1~20.04) 11.4.0, 64-bit
+2024-11-26 09:43:14.752 CST [2328930] LOG:  listening on IPv4 address "127.0.0.1", port 33333
+2024-11-26 09:43:14.754 CST [2328930] LOG:  listening on Unix socket "/tmp/.s.PGSQL.33333"
+2024-11-26 09:43:14.758 CST [2328938] LOG:  database system was interrupted; last known up at 2024-11-23 23:08:13 CST
+2024-11-26 09:43:14.853 CST [2328938] LOG:  database system was not properly shut down; automatic recovery in progress
+2024-11-26 09:43:14.855 CST [2328938] LOG:  redo starts at 0/1565258
+2024-11-26 09:43:14.855 CST [2328938] LOG:  invalid record length at 0/1565340: wanted 24, got 0
+2024-11-26 09:43:14.855 CST [2328938] LOG:  redo done at 0/1565308
+2024-11-26 09:43:14.863 CST [2328930] LOG:  database system is ready to accept connections
+2024-11-26 09:44:01.140 CST [2330393] LOG:  statement: select a, sum(b) from t group by a having a > 10 and max(c) > 10;
+2024-11-26 09:44:01.150 CST [2330393] LOG:  duration: 0.217 ms  plan:
+	{
+	  "Query Text": "select a, sum(b) from t group by a having a > 10 and max(c) > 10;",
+	  "Plan": {
+	    "Node Type": "Aggregate",
+	    "Strategy": "Hashed",
+	    "Partial Mode": "Simple",
+	    "Parallel Aware": false,
+	    "Startup Cost": 40.60,
+	    "Total Cost": 43.06,
+	    "Plan Rows": 66,
+	    "Plan Width": 12,
+	    "Actual Startup Time": 0.186,
+	    "Actual Total Time": 0.191,
+	    "Actual Rows": 2,
+	    "Actual Loops": 1,
+	    "Output": ["a", "sum(b)"],
+	    "Group Key": ["t.a"],
+	    "Filter": "(max(t.c) > 10)",
+	    "Planned Partitions": 0,
+	    "HashAgg Batches": 1,
+	    "Peak Memory Usage": 40,
+	    "Disk Usage": 0,
+	    "Rows Removed by Filter": 0,
+	    "Shared Hit Blocks": 0,
+	    "Shared Read Blocks": 1,
+	    "Shared Dirtied Blocks": 0,
+	    "Shared Written Blocks": 0,
+	    "Local Hit Blocks": 0,
+	    "Local Read Blocks": 0,
+	    "Local Dirtied Blocks": 0,
+	    "Local Written Blocks": 0,
+	    "Temp Read Blocks": 0,
+	    "Temp Written Blocks": 0,
+	    "WAL Records": 0,
+	    "WAL FPI": 0,
+	    "WAL Bytes": 0,
+	    "Plans": [
+	      {
+	        "Node Type": "Seq Scan",
+	        "Parent Relationship": "Outer",
+	        "Parallel Aware": false,
+	        "Relation Name": "t",
+	        "Schema": "public",
+	        "Alias": "t",
+	        "Startup Cost": 0.00,
+	        "Total Cost": 35.50,
+	        "Plan Rows": 680,
+	        "Plan Width": 12,
+	        "Actual Startup Time": 0.148,
+	        "Actual Total Time": 0.150,
+	        "Actual Rows": 2,
+	        "Actual Loops": 1,
+	        "Output": ["a", "b", "c"],
+	        "Filter": "(t.a > 10)",
+	        "Rows Removed by Filter": 2,
+	        "Shared Hit Blocks": 0,
+	        "Shared Read Blocks": 1,
+	        "Shared Dirtied Blocks": 0,
+	        "Shared Written Blocks": 0,
+	        "Local Hit Blocks": 0,
+	        "Local Read Blocks": 0,
+	        "Local Dirtied Blocks": 0,
+	        "Local Written Blocks": 0,
+	        "Temp Read Blocks": 0,
+	        "Temp Written Blocks": 0,
+	        "WAL Records": 0,
+	        "WAL FPI": 0,
+	        "WAL Bytes": 0
+	      }
+	    ]
+	  }
+	}
+2024-11-26 09:46:14.131 CST [2330393] LOG:  statement: SELECT pg_backend_pid();
+2024-11-26 09:46:14.132 CST [2330393] LOG:  duration: 0.017 ms  plan:
+	{
+	  "Query Text": "SELECT pg_backend_pid();",
+	  "Plan": {
+	    "Node Type": "Result",
+	    "Parallel Aware": false,
+	    "Startup Cost": 0.00,
+	    "Total Cost": 0.01,
+	    "Plan Rows": 1,
+	    "Plan Width": 4,
+	    "Actual Startup Time": 0.003,
+	    "Actual Total Time": 0.004,
+	    "Actual Rows": 1,
+	    "Actual Loops": 1,
+	    "Output": ["pg_backend_pid()"],
+	    "Shared Hit Blocks": 0,
+	    "Shared Read Blocks": 0,
+	    "Shared Dirtied Blocks": 0,
+	    "Shared Written Blocks": 0,
+	    "Local Hit Blocks": 0,
+	    "Local Read Blocks": 0,
+	    "Local Dirtied Blocks": 0,
+	    "Local Written Blocks": 0,
+	    "Temp Read Blocks": 0,
+	    "Temp Written Blocks": 0,
+	    "WAL Records": 0,
+	    "WAL FPI": 0,
+	    "WAL Bytes": 0
+	  }
+	}
+2024-11-26 09:46:32.697 CST [2330393] LOG:  statement: select a, sum(b) from t group by a having a > 10 and max(c) > 10;
+2024-11-26 10:37:10.455 CST [2330393] LOG:  duration: 0.052 ms  plan:
+	{
+	  "Query Text": "select a, sum(b) from t group by a having a > 10 and max(c) > 10;",
+	  "Plan": {
+	    "Node Type": "Aggregate",
+	    "Strategy": "Hashed",
+	    "Partial Mode": "Simple",
+	    "Parallel Aware": false,
+	    "Startup Cost": 40.60,
+	    "Total Cost": 43.06,
+	    "Plan Rows": 66,
+	    "Plan Width": 12,
+	    "Actual Startup Time": 0.035,
+	    "Actual Total Time": 0.040,
+	    "Actual Rows": 2,
+	    "Actual Loops": 1,
+	    "Output": ["a", "sum(b)"],
+	    "Group Key": ["t.a"],
+	    "Filter": "(max(t.c) > 10)",
+	    "Planned Partitions": 0,
+	    "HashAgg Batches": 1,
+	    "Peak Memory Usage": 40,
+	    "Disk Usage": 0,
+	    "Rows Removed by Filter": 0,
+	    "Shared Hit Blocks": 1,
+	    "Shared Read Blocks": 0,
+	    "Shared Dirtied Blocks": 0,
+	    "Shared Written Blocks": 0,
+	    "Local Hit Blocks": 0,
+	    "Local Read Blocks": 0,
+	    "Local Dirtied Blocks": 0,
+	    "Local Written Blocks": 0,
+	    "Temp Read Blocks": 0,
+	    "Temp Written Blocks": 0,
+	    "WAL Records": 0,
+	    "WAL FPI": 0,
+	    "WAL Bytes": 0,
+	    "Plans": [
+	      {
+	        "Node Type": "Seq Scan",
+	        "Parent Relationship": "Outer",
+	        "Parallel Aware": false,
+	        "Relation Name": "t",
+	        "Schema": "public",
+	        "Alias": "t",
+	        "Startup Cost": 0.00,
+	        "Total Cost": 35.50,
+	        "Plan Rows": 680,
+	        "Plan Width": 12,
+	        "Actual Startup Time": 0.016,
+	        "Actual Total Time": 0.018,
+	        "Actual Rows": 2,
+	        "Actual Loops": 1,
+	        "Output": ["a", "b", "c"],
+	        "Filter": "(t.a > 10)",
+	        "Rows Removed by Filter": 2,
+	        "Shared Hit Blocks": 1,
+	        "Shared Read Blocks": 0,
+	        "Shared Dirtied Blocks": 0,
+	        "Shared Written Blocks": 0,
+	        "Local Hit Blocks": 0,
+	        "Local Read Blocks": 0,
+	        "Local Dirtied Blocks": 0,
+	        "Local Written Blocks": 0,
+	        "Temp Read Blocks": 0,
+	        "Temp Written Blocks": 0,
+	        "WAL Records": 0,
+	        "WAL FPI": 0,
+	        "WAL Bytes": 0
+	      }
+	    ]
+	  }
+	}
+2024-11-26 10:37:15.882 CST [2328930] LOG:  received fast shutdown request
+2024-11-26 10:37:15.883 CST [2328930] LOG:  aborting any active transactions
+2024-11-26 10:37:15.884 CST [2328930] LOG:  background worker "logical replication launcher" (PID 2328953) exited with exit code 1
+2024-11-26 10:37:15.884 CST [2328948] LOG:  shutting down
+2024-11-26 10:37:15.894 CST [2328930] LOG:  database system is shut down

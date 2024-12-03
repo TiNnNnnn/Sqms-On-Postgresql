@@ -1,0 +1,17 @@
+2024-12-03 11:01:35.783 CST [3498771] LOG:  starting PostgreSQL 13.10 on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 11.4.0-2ubuntu1~20.04) 11.4.0, 64-bit
+2024-12-03 11:01:35.784 CST [3498771] LOG:  listening on IPv4 address "127.0.0.1", port 33333
+2024-12-03 11:01:35.785 CST [3498771] LOG:  listening on Unix socket "/tmp/.s.PGSQL.33333"
+2024-12-03 11:01:35.789 CST [3498808] LOG:  database system was shut down at 2024-12-03 11:01:34 CST
+2024-12-03 11:01:35.792 CST [3498771] LOG:  database system is ready to accept connections
+2024-12-03 11:01:43.909 CST [3498992] LOG:  statement: CREATE EXTENSION sqms;
+2024-12-03 11:01:43.910 CST [3498992] ERROR:  extension "sqms" has no installation script nor update path for version "1.0"
+2024-12-03 11:01:43.910 CST [3498992] STATEMENT:  CREATE EXTENSION sqms;
+2024-12-03 11:02:42.494 CST [3498992] LOG:  statement: CREATE EXTENSION sqms;
+2024-12-03 11:02:42.494 CST [3498992] ERROR:  extension "sqms" has no installation script nor update path for version "1.0"
+2024-12-03 11:02:42.494 CST [3498992] STATEMENT:  CREATE EXTENSION sqms;
+2024-12-03 11:05:01.791 CST [3498771] LOG:  received fast shutdown request
+2024-12-03 11:05:01.792 CST [3498771] LOG:  aborting any active transactions
+2024-12-03 11:05:01.792 CST [3498992] FATAL:  terminating connection due to administrator command
+2024-12-03 11:05:01.793 CST [3498771] LOG:  background worker "logical replication launcher" (PID 3498815) exited with exit code 1
+2024-12-03 11:05:01.793 CST [3498810] LOG:  shutting down
+2024-12-03 11:05:01.801 CST [3498771] LOG:  database system is shut down

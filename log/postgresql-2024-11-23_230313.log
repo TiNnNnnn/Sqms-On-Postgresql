@@ -1,0 +1,79 @@
+2024-11-23 23:03:13.407 CST [664426] LOG:  starting PostgreSQL 13.10 on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 11.4.0-2ubuntu1~20.04) 11.4.0, 64-bit
+2024-11-23 23:03:13.408 CST [664426] LOG:  listening on IPv4 address "127.0.0.1", port 33333
+2024-11-23 23:03:13.409 CST [664426] LOG:  listening on Unix socket "/tmp/.s.PGSQL.33333"
+2024-11-23 23:03:13.413 CST [664461] LOG:  database system was shut down at 2024-11-21 10:05:26 CST
+2024-11-23 23:03:13.417 CST [664426] LOG:  database system is ready to accept connections
+2024-11-23 23:03:46.439 CST [665779] LOG:  statement: select a, sum(b) from t group by a having a > 10 and max(c) > 10;
+2024-11-23 23:03:46.450 CST [665779] LOG:  duration: 0.280 ms  plan:
+	{
+	  "Query Text": "select a, sum(b) from t group by a having a > 10 and max(c) > 10;",
+	  "Plan": {
+	    "Node Type": "Aggregate",
+	    "Strategy": "Hashed",
+	    "Partial Mode": "Simple",
+	    "Parallel Aware": false,
+	    "Startup Cost": 40.60,
+	    "Total Cost": 43.06,
+	    "Plan Rows": 66,
+	    "Plan Width": 12,
+	    "Actual Startup Time": 0.241,
+	    "Actual Total Time": 0.247,
+	    "Actual Rows": 2,
+	    "Actual Loops": 1,
+	    "Output": ["a", "sum(b)"],
+	    "Group Key": ["t.a"],
+	    "Filter": "(max(t.c) > 10)",
+	    "Planned Partitions": 0,
+	    "HashAgg Batches": 1,
+	    "Peak Memory Usage": 40,
+	    "Disk Usage": 0,
+	    "Rows Removed by Filter": 0,
+	    "Shared Hit Blocks": 0,
+	    "Shared Read Blocks": 1,
+	    "Shared Dirtied Blocks": 0,
+	    "Shared Written Blocks": 0,
+	    "Local Hit Blocks": 0,
+	    "Local Read Blocks": 0,
+	    "Local Dirtied Blocks": 0,
+	    "Local Written Blocks": 0,
+	    "Temp Read Blocks": 0,
+	    "Temp Written Blocks": 0,
+	    "WAL Records": 0,
+	    "WAL FPI": 0,
+	    "WAL Bytes": 0,
+	    "Plans": [
+	      {
+	        "Node Type": "Seq Scan",
+	        "Parent Relationship": "Outer",
+	        "Parallel Aware": false,
+	        "Relation Name": "t",
+	        "Schema": "public",
+	        "Alias": "t",
+	        "Startup Cost": 0.00,
+	        "Total Cost": 35.50,
+	        "Plan Rows": 680,
+	        "Plan Width": 12,
+	        "Actual Startup Time": 0.162,
+	        "Actual Total Time": 0.166,
+	        "Actual Rows": 2,
+	        "Actual Loops": 1,
+	        "Output": ["a", "b", "c"],
+	        "Filter": "(t.a > 10)",
+	        "Rows Removed by Filter": 2,
+	        "Shared Hit Blocks": 0,
+	        "Shared Read Blocks": 1,
+	        "Shared Dirtied Blocks": 0,
+	        "Shared Written Blocks": 0,
+	        "Local Hit Blocks": 0,
+	        "Local Read Blocks": 0,
+	        "Local Dirtied Blocks": 0,
+	        "Local Written Blocks": 0,
+	        "Temp Read Blocks": 0,
+	        "Temp Written Blocks": 0,
+	        "WAL Records": 0,
+	        "WAL FPI": 0,
+	        "WAL Bytes": 0
+	      }
+	    ]
+	  }
+	}

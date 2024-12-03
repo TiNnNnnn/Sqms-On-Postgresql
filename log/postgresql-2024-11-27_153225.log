@@ -1,0 +1,132 @@
+2024-11-27 15:32:25.738 CST [2953205] LOG:  starting PostgreSQL 13.10 on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 11.4.0-2ubuntu1~20.04) 11.4.0, 64-bit
+2024-11-27 15:32:25.738 CST [2953205] LOG:  listening on IPv4 address "127.0.0.1", port 33333
+2024-11-27 15:32:25.740 CST [2953205] LOG:  listening on Unix socket "/tmp/.s.PGSQL.33333"
+2024-11-27 15:32:25.744 CST [2953207] LOG:  database system was shut down at 2024-11-27 15:32:24 CST
+2024-11-27 15:32:25.746 CST [2953205] LOG:  database system is ready to accept connections
+2024-11-27 15:32:30.032 CST [2953351] LOG:  statement: select a from t where a > 10 and b > 10;
+2024-11-27 15:32:30.033 CST [2953351] LOG:  duration: 0.034 ms  plan:
+	<explain xmlns="http://www.postgresql.org/2009/explain">
+	  <Query-Text>select a from t where a &gt; 10 and b &gt; 10;</Query-Text>
+	  <Plan>
+	    <Node-Type>Seq Scan</Node-Type>
+	    <Parallel-Aware>false</Parallel-Aware>
+	    <Relation-Name>t</Relation-Name>
+	    <Schema>public</Schema>
+	    <Alias>t</Alias>
+	    <Startup-Cost>0.00</Startup-Cost>
+	    <Total-Cost>40.60</Total-Cost>
+	    <Plan-Rows>227</Plan-Rows>
+	    <Plan-Width>4</Plan-Width>
+	    <Actual-Startup-Time>0.023</Actual-Startup-Time>
+	    <Actual-Total-Time>0.024</Actual-Total-Time>
+	    <Actual-Rows>0</Actual-Rows>
+	    <Actual-Loops>1</Actual-Loops>
+	    <Output>
+	      <Item>a</Item>
+	    </Output>
+	    <Filter>((t.a &gt; 10) AND (t.b &gt; 10))</Filter>
+	    <Rows-Removed-by-Filter>4</Rows-Removed-by-Filter>
+	    <Shared-Hit-Blocks>0</Shared-Hit-Blocks>
+	    <Shared-Read-Blocks>1</Shared-Read-Blocks>
+	    <Shared-Dirtied-Blocks>0</Shared-Dirtied-Blocks>
+	    <Shared-Written-Blocks>0</Shared-Written-Blocks>
+	    <Local-Hit-Blocks>0</Local-Hit-Blocks>
+	    <Local-Read-Blocks>0</Local-Read-Blocks>
+	    <Local-Dirtied-Blocks>0</Local-Dirtied-Blocks>
+	    <Local-Written-Blocks>0</Local-Written-Blocks>
+	    <Temp-Read-Blocks>0</Temp-Read-Blocks>
+	    <Temp-Written-Blocks>0</Temp-Written-Blocks>
+	    <WAL-Records>0</WAL-Records>
+	    <WAL-FPI>0</WAL-FPI>
+	    <WAL-Bytes>0</WAL-Bytes>
+	  </Plan>
+	</explain>
+2024-11-27 15:33:07.558 CST [2953351] LOG:  statement: select a, sum(b) from t group by a having a > 10 and max(c) > 10;
+2024-11-27 15:33:07.559 CST [2953351] LOG:  duration: 0.053 ms  plan:
+	<explain xmlns="http://www.postgresql.org/2009/explain">
+	  <Query-Text>select a, sum(b) from t group by a having a &gt; 10 and max(c) &gt; 10;</Query-Text>
+	  <Plan>
+	    <Node-Type>Aggregate</Node-Type>
+	    <Strategy>Hashed</Strategy>
+	    <Partial-Mode>Simple</Partial-Mode>
+	    <Parallel-Aware>false</Parallel-Aware>
+	    <Startup-Cost>40.60</Startup-Cost>
+	    <Total-Cost>43.06</Total-Cost>
+	    <Plan-Rows>66</Plan-Rows>
+	    <Plan-Width>12</Plan-Width>
+	    <Actual-Startup-Time>0.030</Actual-Startup-Time>
+	    <Actual-Total-Time>0.035</Actual-Total-Time>
+	    <Actual-Rows>2</Actual-Rows>
+	    <Actual-Loops>1</Actual-Loops>
+	    <Output>
+	      <Item>a</Item>
+	      <Item>sum(b)</Item>
+	    </Output>
+	    <Group-Key>
+	      <Item>t.a</Item>
+	    </Group-Key>
+	    <Filter>(max(t.c) &gt; 10)</Filter>
+	    <Planned-Partitions>0</Planned-Partitions>
+	    <HashAgg-Batches>1</HashAgg-Batches>
+	    <Peak-Memory-Usage>40</Peak-Memory-Usage>
+	    <Disk-Usage>0</Disk-Usage>
+	    <Rows-Removed-by-Filter>0</Rows-Removed-by-Filter>
+	    <Shared-Hit-Blocks>1</Shared-Hit-Blocks>
+	    <Shared-Read-Blocks>0</Shared-Read-Blocks>
+	    <Shared-Dirtied-Blocks>0</Shared-Dirtied-Blocks>
+	    <Shared-Written-Blocks>0</Shared-Written-Blocks>
+	    <Local-Hit-Blocks>0</Local-Hit-Blocks>
+	    <Local-Read-Blocks>0</Local-Read-Blocks>
+	    <Local-Dirtied-Blocks>0</Local-Dirtied-Blocks>
+	    <Local-Written-Blocks>0</Local-Written-Blocks>
+	    <Temp-Read-Blocks>0</Temp-Read-Blocks>
+	    <Temp-Written-Blocks>0</Temp-Written-Blocks>
+	    <WAL-Records>0</WAL-Records>
+	    <WAL-FPI>0</WAL-FPI>
+	    <WAL-Bytes>0</WAL-Bytes>
+	    <Plans>
+	      <Plan>
+	        <Node-Type>Seq Scan</Node-Type>
+	        <Parent-Relationship>Outer</Parent-Relationship>
+	        <Parallel-Aware>false</Parallel-Aware>
+	        <Relation-Name>t</Relation-Name>
+	        <Schema>public</Schema>
+	        <Alias>t</Alias>
+	        <Startup-Cost>0.00</Startup-Cost>
+	        <Total-Cost>35.50</Total-Cost>
+	        <Plan-Rows>680</Plan-Rows>
+	        <Plan-Width>12</Plan-Width>
+	        <Actual-Startup-Time>0.013</Actual-Startup-Time>
+	        <Actual-Total-Time>0.015</Actual-Total-Time>
+	        <Actual-Rows>2</Actual-Rows>
+	        <Actual-Loops>1</Actual-Loops>
+	        <Output>
+	          <Item>a</Item>
+	          <Item>b</Item>
+	          <Item>c</Item>
+	        </Output>
+	        <Filter>(t.a &gt; 10)</Filter>
+	        <Rows-Removed-by-Filter>2</Rows-Removed-by-Filter>
+	        <Shared-Hit-Blocks>1</Shared-Hit-Blocks>
+	        <Shared-Read-Blocks>0</Shared-Read-Blocks>
+	        <Shared-Dirtied-Blocks>0</Shared-Dirtied-Blocks>
+	        <Shared-Written-Blocks>0</Shared-Written-Blocks>
+	        <Local-Hit-Blocks>0</Local-Hit-Blocks>
+	        <Local-Read-Blocks>0</Local-Read-Blocks>
+	        <Local-Dirtied-Blocks>0</Local-Dirtied-Blocks>
+	        <Local-Written-Blocks>0</Local-Written-Blocks>
+	        <Temp-Read-Blocks>0</Temp-Read-Blocks>
+	        <Temp-Written-Blocks>0</Temp-Written-Blocks>
+	        <WAL-Records>0</WAL-Records>
+	        <WAL-FPI>0</WAL-FPI>
+	        <WAL-Bytes>0</WAL-Bytes>
+	      </Plan>
+	    </Plans>
+	  </Plan>
+	</explain>
+2024-11-27 15:33:57.719 CST [2953205] LOG:  received fast shutdown request
+2024-11-27 15:33:57.719 CST [2953205] LOG:  aborting any active transactions
+2024-11-27 15:33:57.719 CST [2953351] FATAL:  terminating connection due to administrator command
+2024-11-27 15:33:57.720 CST [2953205] LOG:  background worker "logical replication launcher" (PID 2953213) exited with exit code 1
+2024-11-27 15:33:57.720 CST [2953208] LOG:  shutting down
+2024-11-27 15:33:57.728 CST [2953205] LOG:  database system is shut down

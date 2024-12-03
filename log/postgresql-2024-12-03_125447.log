@@ -1,0 +1,13 @@
+2024-12-03 12:54:47.275 CST [3933358] LOG:  starting PostgreSQL 13.10 on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 11.4.0-2ubuntu1~20.04) 11.4.0, 64-bit
+2024-12-03 12:54:47.276 CST [3933358] LOG:  listening on IPv4 address "127.0.0.1", port 33333
+2024-12-03 12:54:47.278 CST [3933358] LOG:  listening on Unix socket "/tmp/.s.PGSQL.33333"
+2024-12-03 12:54:47.282 CST [3933360] LOG:  database system was shut down at 2024-12-03 12:52:33 CST
+2024-12-03 12:54:47.285 CST [3933358] LOG:  database system is ready to accept connections
+2024-12-03 12:54:50.284 CST [3933501] LOG:  statement: select * from pg_extension;
+StmtExecutorStart
+2024-12-03 12:54:58.925 CST [3933358] LOG:  received fast shutdown request
+2024-12-03 12:54:58.926 CST [3933358] LOG:  aborting any active transactions
+2024-12-03 12:54:58.926 CST [3933501] FATAL:  terminating connection due to administrator command
+2024-12-03 12:54:58.927 CST [3933358] LOG:  background worker "logical replication launcher" (PID 3933366) exited with exit code 1
+2024-12-03 12:54:58.927 CST [3933361] LOG:  shutting down
+2024-12-03 12:54:58.935 CST [3933358] LOG:  database system is shut down

@@ -1,0 +1,7 @@
+# auto_explain.control
+# contrib/auto_explain
+
+comment = 'Automatically logs execution plans of slow queries'
+default_version = '1.0'
+module_pathname = '$libdir/auto_explain'
+relocatable = true

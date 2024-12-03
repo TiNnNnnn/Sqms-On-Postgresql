@@ -1,0 +1,9 @@
+2024-12-03 16:33:21.756 CST [509435] LOG:  starting PostgreSQL 13.10 on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 11.4.0-2ubuntu1~20.04) 11.4.0, 64-bit
+2024-12-03 16:33:21.756 CST [509435] LOG:  listening on IPv4 address "127.0.0.1", port 33333
+2024-12-03 16:33:21.758 CST [509435] LOG:  listening on Unix socket "/tmp/.s.PGSQL.33333"
+2024-12-03 16:33:21.762 CST [509437] LOG:  database system was shut down at 2024-12-03 16:32:12 CST
+2024-12-03 16:33:21.765 CST [509435] LOG:  database system is ready to accept connections
+2024-12-03 16:33:25.267 CST [509542] LOG:  statement: SELECT pg_backend_pid();
+StmtExecutorStart
+2024-12-03 16:33:36.472 CST [509542] LOG:  statement: select a, sum(b) from t group by a having a > 10 and max(c) > 10;
+StmtExecutorStart

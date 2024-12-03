@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+message HistorySlowPlanStat{
+    double estimate_start_up_cost_ = 1;
+	double estimate_total_cost_ = 2;
+	double estimate_plan_rows_ = 3;
+	double estimate_plan_width_ = 4;
+
+	double actual_nloops_ = 5;
+	double actual_start_up_ = 6;
+	double actual_total_ = 7;
+	double actual_rows_ = 8;
+
+    repeated HistorySlowPlanStat  childs = 9;
+    
+    string node_type_ = 10;
+	string strategy_ = 11;
+	//for aggregate
+	string partial_mode_ = 12;
+	//for subplan
+	string sub_plan_name_ = 13;
+	//for insert/update/delete
+	string operation_ = 14;
+
+    //for scan
+	string object_name_ = 15;
+	string schema_ = 16;
+	string object_tag_ = 17;
+	string alia_name_ = 18;
+
+	//addtional info for indexscan/indexonlyscan
+	string scan_dir_ =19;
+	string idx_name_ = 20;
+
+	//for join
+	string join_type_ = 21;
+	bool inner_unique_ = 22;
+
+	//for setOp
+	string command_ = 23;
+	//output cols
+	repeated string output_ = 24;
+
+	string relationship_ = 25;
+
+	double total_cost_ = 26;
+
+	string sample_method_ = 27;
+	string sampling_parameters_ = 28;
+	string repeatable_seed_ = 29;
+
+	double sub_cost_ = 30;
+	string json_plan_ = 31; 
+}

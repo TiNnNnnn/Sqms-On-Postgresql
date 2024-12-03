@@ -1,0 +1,185 @@
+2024-11-27 00:12:35.379 CST [262346] LOG:  starting PostgreSQL 13.10 on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 11.4.0-2ubuntu1~20.04) 11.4.0, 64-bit
+2024-11-27 00:12:35.379 CST [262346] LOG:  listening on IPv4 address "127.0.0.1", port 33333
+2024-11-27 00:12:35.381 CST [262346] LOG:  listening on Unix socket "/tmp/.s.PGSQL.33333"
+2024-11-27 00:12:35.384 CST [262348] LOG:  database system was shut down at 2024-11-26 22:02:44 CST
+2024-11-27 00:12:35.387 CST [262346] LOG:  database system is ready to accept connections
+2024-11-27 00:13:07.619 CST [262565] LOG:  statement: select a from t where a > 10 and b > 10;
+2024-11-27 00:13:07.620 CST [262565] LOG:  duration: 0.028 ms  plan:
+	{
+	  "Query Text": "select a from t where a > 10 and b > 10;",
+	  "Plan": {
+	    "Node Type": "Seq Scan",
+	    "Parallel Aware": false,
+	    "Relation Name": "t",
+	    "Schema": "public",
+	    "Alias": "t",
+	    "Startup Cost": 0.00,
+	    "Total Cost": 40.60,
+	    "Plan Rows": 227,
+	    "Plan Width": 4,
+	    "Actual Startup Time": 0.018,
+	    "Actual Total Time": 0.019,
+	    "Actual Rows": 0,
+	    "Actual Loops": 1,
+	    "Output": ["a"],
+	    "Filter": "((t.a > 10) AND (t.b > 10))",
+	    "Rows Removed by Filter": 4,
+	    "Shared Hit Blocks": 0,
+	    "Shared Read Blocks": 1,
+	    "Shared Dirtied Blocks": 0,
+	    "Shared Written Blocks": 0,
+	    "Local Hit Blocks": 0,
+	    "Local Read Blocks": 0,
+	    "Local Dirtied Blocks": 0,
+	    "Local Written Blocks": 0,
+	    "Temp Read Blocks": 0,
+	    "Temp Written Blocks": 0,
+	    "WAL Records": 0,
+	    "WAL FPI": 0,
+	    "WAL Bytes": 0
+	  }
+	}
+2024-11-27 00:13:25.942 CST [262565] LOG:  statement: SELECT pg_backend_pid();
+2024-11-27 00:13:25.943 CST [262565] LOG:  duration: 0.013 ms  plan:
+	{
+	  "Query Text": "SELECT pg_backend_pid();",
+	  "Plan": {
+	    "Node Type": "Result",
+	    "Parallel Aware": false,
+	    "Startup Cost": 0.00,
+	    "Total Cost": 0.01,
+	    "Plan Rows": 1,
+	    "Plan Width": 4,
+	    "Actual Startup Time": 0.003,
+	    "Actual Total Time": 0.004,
+	    "Actual Rows": 1,
+	    "Actual Loops": 1,
+	    "Output": ["pg_backend_pid()"],
+	    "Shared Hit Blocks": 0,
+	    "Shared Read Blocks": 0,
+	    "Shared Dirtied Blocks": 0,
+	    "Shared Written Blocks": 0,
+	    "Local Hit Blocks": 0,
+	    "Local Read Blocks": 0,
+	    "Local Dirtied Blocks": 0,
+	    "Local Written Blocks": 0,
+	    "Temp Read Blocks": 0,
+	    "Temp Written Blocks": 0,
+	    "WAL Records": 0,
+	    "WAL FPI": 0,
+	    "WAL Bytes": 0
+	  }
+	}
+2024-11-27 00:14:34.280 CST [262565] LOG:  statement: select a from t where a > 10 and b > 10;
+2024-11-27 00:14:34.280 CST [262565] LOG:  duration: 0.024 ms  plan:
+	{
+	  "Query Text": "select a from t where a > 10 and b > 10;",
+	  "Plan": {
+	    "Node Type": "Seq Scan",
+	    "Parallel Aware": false,
+	    "Relation Name": "t",
+	    "Schema": "public",
+	    "Alias": "t",
+	    "Startup Cost": 0.00,
+	    "Total Cost": 40.60,
+	    "Plan Rows": 227,
+	    "Plan Width": 4,
+	    "Actual Startup Time": 0.017,
+	    "Actual Total Time": 0.018,
+	    "Actual Rows": 0,
+	    "Actual Loops": 1,
+	    "Output": ["a"],
+	    "Filter": "((t.a > 10) AND (t.b > 10))",
+	    "Rows Removed by Filter": 4,
+	    "Shared Hit Blocks": 1,
+	    "Shared Read Blocks": 0,
+	    "Shared Dirtied Blocks": 0,
+	    "Shared Written Blocks": 0,
+	    "Local Hit Blocks": 0,
+	    "Local Read Blocks": 0,
+	    "Local Dirtied Blocks": 0,
+	    "Local Written Blocks": 0,
+	    "Temp Read Blocks": 0,
+	    "Temp Written Blocks": 0,
+	    "WAL Records": 0,
+	    "WAL FPI": 0,
+	    "WAL Bytes": 0
+	  }
+	}
+2024-11-27 00:15:05.007 CST [262565] LOG:  statement: select a from t where a > 10 and b > 10;
+2024-11-27 00:16:27.028 CST [262565] LOG:  duration: 0.023 ms  plan:
+	{
+	  "Query Text": "select a from t where a > 10 and b > 10;",
+	  "Plan": {
+	    "Node Type": "Seq Scan",
+	    "Parallel Aware": false,
+	    "Relation Name": "t",
+	    "Schema": "public",
+	    "Alias": "t",
+	    "Startup Cost": 0.00,
+	    "Total Cost": 40.60,
+	    "Plan Rows": 227,
+	    "Plan Width": 4,
+	    "Actual Startup Time": 0.017,
+	    "Actual Total Time": 0.018,
+	    "Actual Rows": 0,
+	    "Actual Loops": 1,
+	    "Output": ["a"],
+	    "Filter": "((t.a > 10) AND (t.b > 10))",
+	    "Rows Removed by Filter": 4,
+	    "Shared Hit Blocks": 1,
+	    "Shared Read Blocks": 0,
+	    "Shared Dirtied Blocks": 0,
+	    "Shared Written Blocks": 0,
+	    "Local Hit Blocks": 0,
+	    "Local Read Blocks": 0,
+	    "Local Dirtied Blocks": 0,
+	    "Local Written Blocks": 0,
+	    "Temp Read Blocks": 0,
+	    "Temp Written Blocks": 0,
+	    "WAL Records": 0,
+	    "WAL FPI": 0,
+	    "WAL Bytes": 0
+	  }
+	}
+2024-11-27 00:17:42.826 CST [262565] LOG:  statement: select a from t where a > 10 and b > 10;
+2024-11-27 00:19:52.740 CST [262565] LOG:  duration: 0.023 ms  plan:
+	{
+	  "Query Text": "select a from t where a > 10 and b > 10;",
+	  "Plan": {
+	    "Node Type": "Seq Scan",
+	    "Parallel Aware": false,
+	    "Relation Name": "t",
+	    "Schema": "public",
+	    "Alias": "t",
+	    "Startup Cost": 0.00,
+	    "Total Cost": 40.60,
+	    "Plan Rows": 227,
+	    "Plan Width": 4,
+	    "Actual Startup Time": 0.017,
+	    "Actual Total Time": 0.018,
+	    "Actual Rows": 0,
+	    "Actual Loops": 1,
+	    "Output": ["a"],
+	    "Filter": "((t.a > 10) AND (t.b > 10))",
+	    "Rows Removed by Filter": 4,
+	    "Shared Hit Blocks": 1,
+	    "Shared Read Blocks": 0,
+	    "Shared Dirtied Blocks": 0,
+	    "Shared Written Blocks": 0,
+	    "Local Hit Blocks": 0,
+	    "Local Read Blocks": 0,
+	    "Local Dirtied Blocks": 0,
+	    "Local Written Blocks": 0,
+	    "Temp Read Blocks": 0,
+	    "Temp Written Blocks": 0,
+	    "WAL Records": 0,
+	    "WAL FPI": 0,
+	    "WAL Bytes": 0
+	  }
+	}
+2024-11-27 00:20:17.625 CST [262346] LOG:  received fast shutdown request
+2024-11-27 00:20:17.626 CST [262346] LOG:  aborting any active transactions
+2024-11-27 00:20:17.627 CST [262346] LOG:  background worker "logical replication launcher" (PID 262354) exited with exit code 1
+2024-11-27 00:20:17.627 CST [262349] LOG:  shutting down
+2024-11-27 00:20:17.633 CST [262346] LOG:  database system is shut down
