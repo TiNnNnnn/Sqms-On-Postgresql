@@ -1,5 +1,4 @@
 #pragma once
-
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -8,7 +7,7 @@
 #include <vector>
 #include <functional>
 #include <boost/bimap.hpp>
-#include "../common/config.h"
+#include "common/config.h"
 /**
  * a temp implemetaion of postingList,it will be replaced by another one 
  */

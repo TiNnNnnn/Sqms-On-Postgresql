@@ -7,3 +7,9 @@
 StmtExecutorStart
 2024-12-03 16:33:36.472 CST [509542] LOG:  statement: select a, sum(b) from t group by a having a > 10 and max(c) > 10;
 StmtExecutorStart
+2024-12-03 16:44:47.935 CST [509435] LOG:  received fast shutdown request
+2024-12-03 16:44:47.936 CST [509435] LOG:  aborting any active transactions
+2024-12-03 16:44:47.937 CST [509435] LOG:  background worker "logical replication launcher" (PID 509443) exited with exit code 1
+2024-12-03 16:44:49.840 CST [509542] FATAL:  terminating connection due to administrator command
+2024-12-03 16:44:49.842 CST [509438] LOG:  shutting down
+2024-12-03 16:44:49.852 CST [509435] LOG:  database system is shut down

@@ -74,14 +74,13 @@ void StatCollecter::StmtExecutorStartWrapper(QueryDesc *queryDesc, int eflags){
 
     if(auto_explain_enabled()){
 		/* Enable per-node instrumentation iff log_analyze is required. */
-		if (stat_analyze && (eflags & EXEC_FLAG_EXPLAIN_ONLY) == 0)
+		if ((eflags & EXEC_FLAG_EXPLAIN_ONLY) == 0)
 		{
-			if (stat_timing)
-				queryDesc->instrument_options |= INSTRUMENT_TIMER;
-			else
-				queryDesc->instrument_options |= INSTRUMENT_ROWS;
+		
+			queryDesc->instrument_options |= INSTRUMENT_TIMER;
 			if (stat_buffers)
 				queryDesc->instrument_options |= INSTRUMENT_BUFFERS;
+			
 			if (stat_wal)
 				queryDesc->instrument_options |= INSTRUMENT_WAL;
 		}
@@ -168,7 +167,6 @@ void StatCollecter::StmtExecutorEndWrapper(QueryDesc *queryDesc)
 	else
 		standard_ExecutorEnd(queryDesc);
 }
-
 
 
 extern "C" void StmtExecutorStart(QueryDesc *queryDesc, int eflags) {

@@ -18,7 +18,6 @@
 #include <ctype.h>
 #include <unistd.h>
 #include <fcntl.h>
-
 #include "access/amapi.h"
 #include "access/htup_details.h"
 #include "access/relation.h"
@@ -75,7 +74,6 @@
 #include "utils/typcache.h"
 #include "utils/varlena.h"
 #include "utils/xml.h"
-
 /* ----------
  * Pretty formatting constants
  * ----------

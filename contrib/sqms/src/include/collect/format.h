@@ -17,21 +17,15 @@
 #include "executor/executor.h"
 #include "lib/stringinfo.h"
 #include "parser/parse_node.h"
-
+#include "collect/format.pb-c.h"
+#include "common/config.h"
 
 typedef struct RecureState{
     double cost_;
 	StringInfo canonical_str_;
 	List* node_type_set_;
+	HistorySlowPlanStat hps_;
 } RecureState;
-
-static RecureState NewRecureState(){
-	RecureState rs; 
-	rs.canonical_str_ = makeStringInfo();
-	rs.node_type_set_ = NULL;
-	rs.cost_ = 0;
-	return rs;
-}
 
 
 typedef const char *(*explain_get_index_name_hook_type) (Oid indexId);
@@ -39,7 +33,9 @@ extern PGDLLIMPORT explain_get_index_name_hook_type explain_get_index_name_hook;
 
 extern ExplainState *NewFormatState(void);
 
-extern void FormatPrintPlan(ExplainState *es, QueryDesc *queryDesc);
+extern void FreeFormatState(ExplainState*es);
+
+extern HistorySlowPlanStat FormatPrintPlan(ExplainState *es, QueryDesc *queryDesc);
 
 extern void FormatPrintTriggers(ExplainState *es, QueryDesc *queryDesc);
 

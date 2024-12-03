@@ -42,7 +42,6 @@
 #include "utils/tuplesort.h"
 #include "utils/typcache.h"
 #include "utils/xml.h"
-#include "collect/format.pb-c.h"
 
 
 /* Hook for plugins to get control in explain_get_index_name() */
@@ -154,6 +153,26 @@ static void ExplainYAMLLineStarting(ExplainState *es);
 static void escape_yaml(StringInfo buf, const char *str);
 
 
+static RecureState NewRecureState(){
+	RecureState rs; 
+	rs.canonical_str_ = makeStringInfo();
+	rs.node_type_set_ = NULL;
+	rs.cost_ = 0;
+	rs.hps_ =  (HistorySlowPlanStat){0};
+	return rs;
+}
+
+/**
+ * append src into the tail of the dst
+ * TODO: maybe we need type check for src & dst listcell
+ */
+static void push_node_type_set(List* dst, List* src){
+	ListCell   *lst;
+	foreach(lst, src){
+		dst = lappend(dst,lst);
+	}
+}
+
 /*
  * Create a new ExplainState struct initialized with default options.
  */
@@ -168,6 +187,14 @@ NewFormatState(void)
 	es->str = makeStringInfo();
 
 	return es;
+}
+
+void FreeFormatState(ExplainState*es)
+{
+	assert(es == NULL);
+	resetStringInfo(es->str);
+	free(es);
+	es = NULL;
 }
 
 /*
@@ -244,7 +271,7 @@ ExplainPrintSettings(ExplainState *es)
  *
  * NB: will not work on utility statements
  */
-void FormatPrintPlan(ExplainState *es, QueryDesc *queryDesc)
+HistorySlowPlanStat FormatPrintPlan(ExplainState *es, QueryDesc *queryDesc)
 {
 	Bitmapset  *rels_used = NULL;
 	PlanState  *ps;
@@ -275,8 +302,9 @@ void FormatPrintPlan(ExplainState *es, QueryDesc *queryDesc)
 		ps = outerPlanState(ps);
 		es->hide_workers = true;
 	}
-	ExplainNode(ps, NIL, NULL, NULL, es);
-
+	
+	RecureState ret = ExplainNode(ps, NIL, NULL, NULL, es);
+	return ret.hps_;
 	/*
 	 * If requested, include information about GUC parameters with values that
 	 * don't match the built-in defaults.
@@ -639,7 +667,6 @@ ExplainNode(PlanState *planstate, List *ancestors,
 			const char *relationship, const char *plan_name,
 			ExplainState *total_es)
 {
-
 	Plan	   *plan = planstate->plan;
 	const char *pname;			/* node type name for text output */
 	const char *sname;			/* node type name for non-text output */
@@ -651,10 +678,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	ExplainWorkersState *save_workers_state = total_es->workers_state;
 	
 	bool		haschildren;
-
-	RecureState rs = NewRecureState();
-	HistorySlowPlanStat * hsp = (HistorySlowPlanStat*)malloc(sizeof(HistorySlowPlanStat));
-
+	HistorySlowPlanStat hsp = HISTORY_SLOW_PLAN_STAT__INIT;
 	/*
 	 * Prepare per-worker output buffers, if needed.  We'll append the data in
 	 * these to the main output string further down.
@@ -1499,25 +1523,38 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		ancestors = lcons(plan, ancestors);
 	}
 
+	RecureState rs = NewRecureState();
+	rs.node_type_set_ = lappend_int(rs.node_type_set_,(void*)nodeTag(plan));
+	hsp.childs = (HistorySlowPlanStat**)malloc(sizeof(HistorySlowPlanStat*)*2);
+
 	/* initPlan-s */
 	if (planstate->initPlan){
-        RecureState ret = ExplainSubPlans(planstate->initPlan, ancestors, "InitPlan", es);
-		rs.cost_ += ret.cost_;
-		appendStringInfoString(rs.canonical_str_,ret.canonical_str_->data);
+        RecureState ret = ExplainSubPlans(planstate->initPlan, ancestors, "InitPlan", total_es);
+		cumulate_cost += ret.cost_;
+		appendStringInfoString(es->str,ret.canonical_str_->data);
+		push_node_type_set(rs.node_type_set_,ret.node_type_set_);
+		hsp.childs[0] = malloc(sizeof(HistorySlowPlanStat));
+		*hsp.childs[0] = ret.hps_;
     }
 	/* lefttree */
 	if (outerPlanState(planstate)){
         RecureState ret =  ExplainNode(outerPlanState(planstate), ancestors,
-					"Outer", NULL, es);
-        rs.cost_ += ret.cost_;
-		appendStringInfoString(rs.canonical_str_,ret.canonical_str_->data);
+					"Outer", NULL, total_es);
+        cumulate_cost += ret.cost_;
+		appendStringInfoString(es->str,ret.canonical_str_->data);
+		push_node_type_set(rs.node_type_set_,ret.node_type_set_);
+		hsp.childs[0] = malloc(sizeof(HistorySlowPlanStat));
+		*hsp.childs[0] = ret.hps_;
     }
 	/* righttree */
 	if (innerPlanState(planstate)){
         RecureState ret = ExplainNode(innerPlanState(planstate), ancestors,
-					"Inner", NULL, es);
-        rs.cost_ += ret.cost_;
-		appendStringInfoString(rs.canonical_str_,ret.canonical_str_->data);
+					"Inner", NULL, total_es);
+        cumulate_cost += ret.cost_;
+		appendStringInfoString(es->str,ret.canonical_str_->data);
+		push_node_type_set(rs.node_type_set_,ret.node_type_set_);
+		hsp.childs[1] = malloc(sizeof(HistorySlowPlanStat));
+		*hsp.childs[1] = ret.hps_;
     }
 	/* special child plans */
 	switch (nodeTag(plan))
@@ -1562,23 +1599,34 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	/* subPlan-s */
 	if (planstate->subPlan){
 		RecureState ret = ExplainSubPlans(planstate->subPlan, ancestors, "SubPlan", total_es);
-		rs.cost_ += ret.cost_;
-		appendStringInfoString(rs.canonical_str_,ret.canonical_str_->data);
-		//rs.node_type_set_ = lappend(rs.node_type_set_,sps);
+		cumulate_cost += ret.cost_;
+		appendStringInfoString(es->str,ret.canonical_str_->data);
+		push_node_type_set(rs.node_type_set_,ret.node_type_set_);
+		hsp.childs[0] = malloc(sizeof(HistorySlowPlanStat));
+		*hsp.childs[0] = ret.hps_;
 	}
 
 	/* end of child plans */
-	if (haschildren)
-	{
+	if (haschildren){
 		ancestors = list_delete_first(ancestors);
 		FormatCloseGroup("Plans", "Plans", false, es);
 	}
 
-
+	/**
+	 * note the history stat plan for storaging
+	 * TODO: maybe we need simultaneously retain both standardized and non standardized plans
+	 */
+	hsp.json_plan_ = es->str->data;
+	hsp.sub_cost_ = cumulate_cost;
+	/*mark the recurestat for parent to use,we need a deep copy for infostring*/
 	FormatCloseGroup("Plan",relationship ? NULL : "Plan",true, es);
 	rs.cost_ = cumulate_cost;
-	rs.canonical_str_ = es->str;
+	appendStringInfoString(rs.canonical_str_,es->str->data);
 	rs.node_type_set_ =  lappend(rs.node_type_set_,planstate);
+	rs.hps_ = hsp;
+
+	/*here we can't free es, hsp still use its data*/
+	/*FreeFormatState(es);*/
 	return rs;
 }
 
@@ -3293,12 +3341,21 @@ ExplainSubPlans(List *plans, List *ancestors,
 {
 	ListCell   *lst;
 	RecureState rs = NewRecureState();
+	size_t idx = 0;	
+	// if(strcmp(relationship,"SubPlan")){
+	// 	rs.node_type_set_ = lappend(rs.node_type_set_,T_SubPlan);
+	// }else if(strcmp(relationship,"InitPlan")){
+	// 	rs.node_type_set_ = lappend(rs.node_type_set_);
+	// }
+	HistorySlowPlanStat hsp = HISTORY_SLOW_PLAN_STAT__INIT;
 
+	size_t p_size = list_length(plans);
+	hsp.childs = (HistorySlowPlanStat**)malloc(sizeof(HistorySlowPlanStat*)*p_size);
 	foreach(lst, plans)
 	{
+		
 		SubPlanState *sps = (SubPlanState *) lfirst(lst);
 		SubPlan    *sp = sps->subplan;
-
 		/*
 		 * There can be multiple SubPlan nodes referencing the same physical
 		 * subplan (same plan_id, which is its index in PlannedStmt.subplans).
@@ -3313,29 +3370,23 @@ ExplainSubPlans(List *plans, List *ancestors,
 			continue;
 		total_es->printed_subplans = bms_add_member(total_es->printed_subplans,
 											  sp->plan_id);
-
-		//ExplainState* es = (ExplainState*)malloc(sizeof(ExplainState));
-		ExplainState *es = NewFormatState();
-		es = total_es;
-		es->str = makeStringInfo();
-
 		/*
 		 * Treat the SubPlan node as an ancestor of the plan node(s) within
 		 * it, so that ruleutils.c can find the referents of subplan
 		 * parameters.
 		 */
-		
 		ancestors = lcons(sp, ancestors);
-		RecureState ret = ExplainNode(sps->planstate, ancestors,
-					relationship, sp->plan_name, es);
+		RecureState ret = ExplainNode(sps->planstate, ancestors,relationship, sp->plan_name, total_es);
 		rs.cost_ += ret.cost_;
 		appendStringInfoString(rs.canonical_str_,ret.canonical_str_->data);
-		rs.node_type_set_ = lappend(rs.node_type_set_,sps);
-		/**
-		 * how to deal with rs.stringinfo
-		 */
+		push_node_type_set(rs.node_type_set_,ret.node_type_set_);
 		ancestors = list_delete_first(ancestors);
+
+		hsp.childs[idx] = malloc(sizeof(HistorySlowPlanStat));
+		*hsp.childs[idx] = ret.hps_;
+		idx++;
 	}
+	hsp.json_plan_ = rs.canonical_str_->data;
 	return rs;
 }
 

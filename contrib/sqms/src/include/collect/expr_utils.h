@@ -10,8 +10,7 @@
  *
  *-------------------------------------------------------------------------
  */
-#ifndef EXPRUTILS_H
-#define EXPRUTILS_H
+#pragma once
 
 #include "nodes/nodes.h"
 #include "nodes/parsenodes.h"
@@ -41,4 +40,4 @@ extern char *generate_collation_name_format(Oid collid);
 extern char *generate_opclass_name_format(Oid opclass);
 extern char *get_range_partbound_string_format(List *bound_datums);
 
-#endif							
+						

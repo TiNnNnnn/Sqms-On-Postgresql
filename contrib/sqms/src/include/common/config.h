@@ -1,43 +1,30 @@
 #pragma once
 #include <limits.h>
-
+#include <stdbool.h>
+#include <stdlib.h>
 #include "utils/guc.h"
+#include "access/parallel.h"
+#include "commands/explain.h"
+#include "executor/instrument.h"
+#include "jit/jit.h"
+#include "postgres.h"
 
 /* GUC variables */
-static int	query_min_duration = -1; /* msec or -1 */
-static bool stat_analyze = false;
+extern int	query_min_duration;
+extern double late_tolerance;
 //static bool stat_verbose = false;
-static bool stat_buffers = false;
-static bool stat_wal = false;
+extern bool stat_buffers;
+extern bool stat_wal ;
 //static bool stat_triggers = false;
-static bool stat_timing = true;
+//static bool stat_timing = true;
 //static bool statsettings = false;
 //static int	stat_format = EXPLAIN_FORMAT_JSON;
 //static int	stat_log_level = LOG;
-static bool stat_nested_statements = false;
-static double stat_sample_rate = 1;
+extern bool stat_nested_statements;
+extern double stat_sample_rate;
 
-static const int bit_map_size = 100;
+extern const size_t bit_map_size;
+extern const struct config_enum_entry format_options[];
 
-static const struct config_enum_entry format_options[] = {
-	{"text", EXPLAIN_FORMAT_TEXT, false},
-	{"xml", EXPLAIN_FORMAT_XML, false},
-	{"json", EXPLAIN_FORMAT_JSON, false},
-	{"yaml", EXPLAIN_FORMAT_YAML, false},
-	{NULL, 0, false}
-};
-
-static const struct config_enum_entry loglevel_options[] = {
-	{"debug5", DEBUG5, false},
-	{"debug4", DEBUG4, false},
-	{"debug3", DEBUG3, false},
-	{"debug2", DEBUG2, false},
-	{"debug1", DEBUG1, false},
-	{"debug", DEBUG2, true},
-	{"info", INFO, false},
-	{"notice", NOTICE, false},
-	{"warning", WARNING, false},
-	{"log", LOG, false},
-	{NULL, 0, false}
-};
+extern const struct config_enum_entry loglevel_options[];
 

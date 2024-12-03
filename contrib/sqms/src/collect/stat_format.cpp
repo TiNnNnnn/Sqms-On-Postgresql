@@ -11,25 +11,39 @@ PlanStatFormat::~PlanStatFormat() {
 }
 
 PlanStatFormat::PlanStatFormat()
-    : ps_(nullptr), pool_(new ThreadPool(pool_size_)){}
+    : pool_(new ThreadPool(pool_size_)){}
 
 bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd){
     ExcavateContext *context = new ExcavateContext();
     Preprocessing(qd);
-    // pool_->submit([&]() -> bool {
-    //     context->setStrategy(std::make_shared<CostBasedExcavateStrategy>(ps_));
-    //     context->executeStrategy();
-    //     /**
-    //      * TODO: 11-23 storage the slow sub query
-    //      */
-    //     return true;
-    // });
+
+    size_t msg_size = history_slow_plan_stat__get_packed_size(hsps_);
+    uint8_t *buffer = (uint8_t*)malloc(msg_size);
+    if (buffer == NULL) {
+        perror("Failed to allocate memory");
+        return 1;
+    }
+    history_slow_plan_stat__pack(hsps_,buffer);
+    pool_->submit([&]() -> bool {
+        /**
+         * Due to the use of thread separation to ensure the main thread flow, we need 
+         * to deeply copy the proto structure to the child threads
+         */
+        HistorySlowPlanStat *hsps = history_slow_plan_stat__unpack(NULL, msg_size, buffer);
+        context->setStrategy(std::make_shared<CostBasedExcavateStrategy>(hsps));
+        context->executeStrategy();
+        /**
+         * TODO: 11-23 storage the slow sub query
+         */
+        return true;
+    });
     return true;
 }
 
 bool PlanStatFormat::Preprocessing(QueryDesc* qd){
     ExplainState *es = NewExplainState();
-    
+    if(es == NULL)return false;
+
     es->format = EXPLAIN_FORMAT_JSON;
 	es->verbose = true;
 	es->analyze = true;
@@ -38,12 +52,7 @@ bool PlanStatFormat::Preprocessing(QueryDesc* qd){
     es->summary = true;
 
     FormatBeginOutput(es);
-    FormatPrintPlan(es,qd);
+    *hsps_ = FormatPrintPlan(es,qd);
     FormatEndOutput(es);
-    
     return true;
-}
-
-void PlanStatFormat::ParsePlan(QueryDesc *qd, List *ancestors,const char *relationship, const char *plan_name){
-	
 }

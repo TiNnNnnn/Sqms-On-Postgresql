@@ -1,6 +1,6 @@
 #include <iostream>
 #include <memory>
-
+#include "collect/format.pb-c.h"
 
 class PlanState;
 class AbstractExcavateStrategy {
@@ -11,12 +11,12 @@ public:
 
 class CostBasedExcavateStrategy: public AbstractExcavateStrategy{
 public:
-    CostBasedExcavateStrategy(PlanState* plan_state){
-        plan_state_ = plan_state;
+    CostBasedExcavateStrategy(HistorySlowPlanStat* hsps){
+        hsps_ = hsps;
     }
     bool excavate() const override;
 private:
-    PlanState* plan_state_;
+    HistorySlowPlanStat* hsps_;
 };
 
 class ExternalResourceExcavateStrategy : public AbstractExcavateStrategy{

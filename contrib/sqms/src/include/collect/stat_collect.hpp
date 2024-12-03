@@ -1,17 +1,15 @@
 #pragma once
 #include <limits.h>
 
-extern "C" {
-    #include "postgres.h"
-    #include "access/parallel.h"
-    //#include "commands/explain.h"
-    #include "collect/format.h"
-    #include "executor/executor.h"
-    #include "executor/instrument.h"
-    #include "jit/jit.h"
-    #include "utils/guc.h"
-    #include "common/config.h"
-}
+#include "postgres.h"
+#include "access/parallel.h"
+//#include "commands/explain.h"
+#include "collect/format.h"
+#include "executor/executor.h"
+#include "executor/instrument.h"
+#include "jit/jit.h"
+#include "utils/guc.h"
+#include "common/config.h"
 
 class StatCollecter{
 public:
