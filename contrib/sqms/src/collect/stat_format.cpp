@@ -53,7 +53,6 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd){
             std::string hash_val = HashCanonicalPlan(q->json_plan_);
             storage_->PutStat(hash_val,hsps);
         }
-
         return true;
     });
     return true;

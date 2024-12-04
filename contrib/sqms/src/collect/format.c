@@ -273,7 +273,7 @@ ExplainPrintSettings(ExplainState *es)
  */
 HistorySlowPlanStat FormatPrintPlan(ExplainState *es, QueryDesc *queryDesc)
 {
-	Bitmapset  *rels_used = NULL;
+	Bitmapset  *rels_used = NULL; 
 	PlanState  *ps;
 
 	/* Set up ExplainState fields associated with this plan tree */
@@ -304,6 +304,7 @@ HistorySlowPlanStat FormatPrintPlan(ExplainState *es, QueryDesc *queryDesc)
 	}
 	
 	RecureState ret = ExplainNode(ps, NIL, NULL, NULL, es);
+
 	return ret.hps_;
 	/*
 	 * If requested, include information about GUC parameters with values that
@@ -1609,7 +1610,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	/* end of child plans */
 	if (haschildren){
 		ancestors = list_delete_first(ancestors);
-		FormatCloseGroup("Plans", "Plans", false, es);
+		FormatCloseGroup("Plan", "Plan", false, es);
 	}
 
 	/**
@@ -1624,6 +1625,11 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	appendStringInfoString(rs.canonical_str_,es->str->data);
 	rs.node_type_set_ =  lappend(rs.node_type_set_,planstate);
 	rs.hps_ = hsp;
+
+	if(debug){
+		ereport(stat_log_level,(errmsg("plan:\n%s",es->str->data),
+					 errhidestmt(true)));
+	}
 
 	/*here we can't free es, hsp still use its data*/
 	/*FreeFormatState(es);*/
@@ -3765,7 +3771,7 @@ FormatCloseGroup(const char *objtype, const char *labelname,
 {
 	es->indent--;
 	appendStringInfoChar(es->str, '\n');
-	appendStringInfoSpaces(es->str, 2 * es->indent);
+	//appendStringInfoSpaces(es->str, 2 * es->indent);
 	appendStringInfoChar(es->str, labeled ? '}' : ']');
 	es->grouping_stack = list_delete_first(es->grouping_stack);
 }

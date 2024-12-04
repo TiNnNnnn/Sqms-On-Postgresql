@@ -13,7 +13,7 @@ bool stat_wal = false;
 //static bool stat_timing = true;
 //static bool statsettings = false;
 //static int	stat_format = EXPLAIN_FORMAT_JSON;
-//static int	stat_log_level = LOG;
+int	stat_log_level = LOG;
 bool stat_nested_statements = false;
 double stat_sample_rate = 1;
 
@@ -24,6 +24,8 @@ int redis_port = 99999;
 long totalFetchTimeoutMillis = 1000;
 long totalSetTimeMillis = 1000;
 long defaultTTLSeconds = INT_MAX;
+
+bool debug = true;
 
 // const struct config_enum_entry format_options[] = {
 // 	{"text", EXPLAIN_FORMAT_TEXT, false},

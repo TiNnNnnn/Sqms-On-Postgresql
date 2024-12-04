@@ -49,10 +49,10 @@ extern "C" {
     }
 
     void _PG_fini(void){
-        // ExecutorStart_hook = prev_ExecutorStart;
-        // ExecutorRun_hook = prev_ExecutorRun;
-        // ExecutorFinish_hook = prev_ExecutorFinish;
-        // ExecutorEnd_hook = prev_ExecutorEnd;       
+        ExecutorStart_hook = prev_ExecutorStart;
+        ExecutorRun_hook = prev_ExecutorRun;
+        ExecutorFinish_hook = prev_ExecutorFinish;
+        ExecutorEnd_hook = prev_ExecutorEnd;       
     }
 };
 

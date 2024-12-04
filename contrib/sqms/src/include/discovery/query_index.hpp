@@ -1,12 +1,14 @@
 #include "inverted_index.hpp"
 #include "collect/format.pb-c.h"
+
 class HistoryQueryIndexNode{
 public:
     HistoryQueryIndexNode();
     ~HistoryQueryIndexNode();
     
     std::shared_ptr<HistoryQueryIndex> Child(std::string str){
-        return childs_.at(str);
+        return nullptr;
+        //return childs_.at(str);
     }
 private:
     bool Insert();
@@ -24,5 +26,5 @@ public:
     bool Search(); 
 private:
     std::shared_ptr<HistoryQueryIndexNode> root_;
-    int height = 8;
+    size_t height_ = 8;
 };

@@ -18,7 +18,7 @@ extern bool stat_wal ;
 //static bool stat_timing = true;
 //static bool statsettings = false;
 //static int	stat_format = EXPLAIN_FORMAT_JSON;
-//static int	stat_log_level = LOG;
+extern int	stat_log_level;
 extern bool stat_nested_statements;
 extern double stat_sample_rate;
 
@@ -29,6 +29,8 @@ extern int redis_port;
 extern long totalFetchTimeoutMillis;
 extern long totalSetTimeMillis;
 extern long defaultTTLSeconds;
+
+extern bool debug;
 
 // extern const struct config_enum_entry format_options[];
 
