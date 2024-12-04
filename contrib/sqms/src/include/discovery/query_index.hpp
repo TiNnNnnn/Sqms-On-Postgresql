@@ -1,5 +1,5 @@
 #include "inverted_index.hpp"
-
+#include "collect/format.pb-c.h"
 class HistoryQueryIndexNode{
 public:
     HistoryQueryIndexNode();
@@ -8,6 +8,7 @@ public:
     std::shared_ptr<HistoryQueryIndex> Child(std::string str){
         return childs_.at(str);
     }
+private:
     bool Insert();
     bool Remove();
     bool Search(); 

@@ -6,14 +6,12 @@
 #include <atomic>
 #include <vector>
 #include <functional>
+#include <shared_mutex>
 #include <boost/bimap.hpp>
 #include "common/config.h"
 /**
  * a temp implemetaion of postingList,it will be replaced by another one 
  */
-
-//const int bit_map_size =30;
-
 typedef std::vector<std::string> SET;
 static std::string EncodingSets(const SET&sets){
     std::string encoding;
@@ -99,6 +97,7 @@ class InvertedIndex{
 public:
 
     void Insert(const SET& set){
+        std::unique_lock<std::shared_mutex> lock(rw_mutex_);
         for(auto item : set){
             if(sets2id_.find(set) == sets2id_.end()){
                 set_cnt_++;
@@ -111,6 +110,7 @@ public:
     }
 
     void Erase(const SET&set){
+        std::unique_lock<std::shared_mutex> lock(rw_mutex_);
         if(sets2id_.find(set) == sets2id_.end())return;
         for(auto item : set){
             inverted_map_[item].Erase(set,sets2id_[set]);    
@@ -119,6 +119,7 @@ public:
     }
 
     std::unordered_set<SET,SetHasher> SuperSets(const SET&set){
+        std::shared_lock<std::shared_mutex> lock(rw_mutex_);
         std::unordered_set<SET,SetHasher> set_list;
         auto map = inverted_map_[set[0]].GetBitSet();
         for(int i=1;i<set.size();i++){
@@ -134,6 +135,7 @@ public:
     }
 
     std::unordered_set<SET,SetHasher> SubSets(const SET&set){
+        std::shared_lock<std::shared_mutex> lock(rw_mutex_);
         std::unordered_set<SET,SetHasher> set_list;
         for(auto item : set){
             auto temp_sets = inverted_map_[item].SubSets(set);
@@ -152,5 +154,6 @@ private:
     /*id generate for the set id*/
     std::atomic<long long> set_cnt_{-1}; 
     std::atomic<int>items_cnt_{0};
+    std::shared_mutex rw_mutex_;
 };
 

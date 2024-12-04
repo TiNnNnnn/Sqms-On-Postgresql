@@ -1,10 +1,10 @@
-#include "storage/RedisPlanStatProvider.h"
+#include "storage/RedisPlanStatProvider.hpp"
 
 void ConnectCallback(const redisAsyncContext *c, int status) {
     if (status != REDIS_OK) {
         printf("Redis connection error: %s\n", c->errstr);
     } else {
-        printf("Redis connected\n");
+        printf("Redis connected success\n");
     }
 }
 
@@ -20,7 +20,7 @@ RedisSlowPlanStatProvider::RedisSlowPlanStatProvider(const std::string& redis_ho
         : totalFetchTimeoutMillis_(totalFetchTimeoutMillis),
           totalSetTimeMillis_(totalSetTimeMillis),
           defaultTTLSeconds_(defaultTTLSeconds) {
-        
+        /*async connect to redis*/
         redisContext_ = redisAsyncConnect(redis_host.c_str(), redis_port);
         if (redisContext_ == nullptr || redisContext_->err) {
             throw std::runtime_error("Unable to connect to Redis server");
@@ -34,7 +34,7 @@ std::string RedisSlowPlanStatProvider::getName(){
     return "redis";
 }
 
-void RedisSlowPlanStatProvider::PutStat(){
+void RedisSlowPlanStatProvider::PutStat(std::string hash_plan, HistorySlowPlanStat* hsps){
     redisProviderApiStats_.execute<void>([&](){
         
     }, RedisProviderApiStats::Operation::PutStats);

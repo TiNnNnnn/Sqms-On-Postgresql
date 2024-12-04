@@ -34,6 +34,7 @@ lib*.pc
 
 data/
 log/
+.vscode/
 
 # Local excludes in root directory
 /GNUmakefile

@@ -19,6 +19,11 @@ double stat_sample_rate = 1;
 
 const size_t bit_map_size = 100;
 
+const char* redis_host = "127.0.0.1";
+int redis_port = 99999;
+long totalFetchTimeoutMillis = 1000;
+long totalSetTimeMillis = 1000;
+long defaultTTLSeconds = INT_MAX;
 
 // const struct config_enum_entry format_options[] = {
 // 	{"text", EXPLAIN_FORMAT_TEXT, false},

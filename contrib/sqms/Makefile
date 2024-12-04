@@ -11,7 +11,7 @@ src/excavate/ExcavateProvider.o \
 
 SHLIB_LINK_INTERNAL = $(libpq) -lstdc++ 
 CFLAGS += -std=c11 -I/home/yyk/postgresql-13.10/contrib/sqms/src/include 
-PG_CPPFLAGS = -std=c++11 -fPIC -I$(libpq_srcdir) -lstdc++ -fno-rtti -I/home/yyk/postgresql-13.10/contrib/sqms/src/include
+PG_CPPFLAGS = -std=c++11 -fPIC -I$(libpq_srcdir) -lstdc++  -I/home/yyk/postgresql-13.10/contrib/sqms/src/include
 
 # pg extend config 
 EXTENSION = sqms

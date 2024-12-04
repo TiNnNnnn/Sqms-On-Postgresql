@@ -7,6 +7,23 @@
 
 class CounterStat;
 class TimeStat;
+class TimeoutException;
+
+class Logger {
+public:
+    static Logger& get(const std::string& name) {
+        static Logger logger;
+        return logger;
+    }
+
+    void error(const std::string& message) {
+        std::cerr << "[ERROR] " << message << std::endl;
+    }
+
+    void debug(const std::string& message) {
+        std::cerr << "[DEBUG] " << message << std::endl;
+    }
+};
 
 class RedisProviderApiStats{
 public:
@@ -47,9 +64,7 @@ public:
     V execute(std::function<V()> callable, Operation operation) {
         try {
             return wrap(callable, operation)();
-        } catch (const TimeoutException& e) {
-            handleException(e, operation, "Timeout Error");
-        } catch (const std::runtime_error& e) {
+        }catch (const std::runtime_error& e) {
             handleException(e, operation, "Redis Exception Error");
         } catch (const std::exception& e) {
             handleException(e, operation, "Generic Error");
@@ -95,18 +110,5 @@ private:
 
 };
 
-class Logger {
-public:
-    static Logger& get(const std::string& name) {
-        static Logger logger;
-        return logger;
-    }
 
-    void error(const std::string& message) {
-        std::cerr << "[ERROR] " << message << std::endl;
-    }
 
-    void debug(const std::string& message) {
-        std::cerr << "[DEBUG] " << message << std::endl;
-    }
-};

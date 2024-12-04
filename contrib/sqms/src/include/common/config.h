@@ -23,6 +23,13 @@ extern bool stat_nested_statements;
 extern double stat_sample_rate;
 
 extern const size_t bit_map_size;
+
+extern const char* redis_host;
+extern int redis_port;
+extern long totalFetchTimeoutMillis;
+extern long totalSetTimeMillis;
+extern long defaultTTLSeconds;
+
 // extern const struct config_enum_entry format_options[];
 
 // extern const struct config_enum_entry loglevel_options[];
