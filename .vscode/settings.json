@@ -56,7 +56,8 @@
         "bitset": "cpp",
         "future": "cpp",
         "expr_utils.h": "c",
-        "postgres.h": "c"
+        "postgres.h": "c",
+        "explain.h": "c"
     },
     "makefile.configureOnOpen": true
 }

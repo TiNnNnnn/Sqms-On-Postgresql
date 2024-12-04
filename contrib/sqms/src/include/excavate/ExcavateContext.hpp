@@ -1,3 +1,4 @@
+#pragma once
 #include<memory>
 #include "ExcavateProvider.hpp"
 
@@ -7,9 +8,9 @@ public:
         strategy = Strategy;
     }
 
-    void executeStrategy() const {
+    void executeStrategy(std::vector<HistorySlowPlanStat*>& list) const {
         if (strategy) {
-            strategy->excavate();
+            strategy->excavate(list);
         } else {
             std::cerr << "No excavate strategy set!" << std::endl;
         }

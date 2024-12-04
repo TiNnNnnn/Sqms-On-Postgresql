@@ -2,12 +2,11 @@
 #include <limits.h>
 #include <stdbool.h>
 #include <stdlib.h>
-#include "utils/guc.h"
-#include "access/parallel.h"
-#include "commands/explain.h"
-#include "executor/instrument.h"
-#include "jit/jit.h"
-#include "postgres.h"
+// extern "C" {
+//     #include "utils/guc.h"
+// };
+
+
 
 /* GUC variables */
 extern int	query_min_duration;
@@ -24,7 +23,7 @@ extern bool stat_nested_statements;
 extern double stat_sample_rate;
 
 extern const size_t bit_map_size;
-extern const struct config_enum_entry format_options[];
+// extern const struct config_enum_entry format_options[];
 
-extern const struct config_enum_entry loglevel_options[];
+// extern const struct config_enum_entry loglevel_options[];
 

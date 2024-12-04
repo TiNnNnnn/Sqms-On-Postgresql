@@ -1,4 +1,5 @@
 #include "collect/stat_format.hpp"
+#include <vector>
 
 PlanStatFormat& PlanStatFormat::getInstance() {
     static PlanStatFormat instance;
@@ -30,11 +31,15 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd){
          * to deeply copy the proto structure to the child threads
          */
         HistorySlowPlanStat *hsps = history_slow_plan_stat__unpack(NULL, msg_size, buffer);
+        
         context->setStrategy(std::make_shared<CostBasedExcavateStrategy>(hsps));
-        context->executeStrategy();
+        std::vector<HistorySlowPlanStat*> list;
+        context->executeStrategy(list);
+
         /**
          * TODO: 11-23 storage the slow sub query
          */
+        
         return true;
     });
     return true;
