@@ -81,12 +81,28 @@ struct  _HistorySlowPlanStat
   char *sample_method_;
   char *sampling_parameters_;
   char *repeatable_seed_;
+  /*
+   *total cost of current subquery
+   */
   double sub_cost_;
+  /*
+   *json of current subquery
+   */
   char *json_plan_;
+  /*
+   *all node type of current subquery
+   */
+  size_t n_sub_node_type_set;
+  char **sub_node_type_set;
+  /*
+   *all prdicates of current subquery
+   */
+  size_t n_sub_pref_type_set;
+  char **sub_pref_type_set;
 };
 #define HISTORY_SLOW_PLAN_STAT__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&history_slow_plan_stat__descriptor) \
-    , 0, 0, 0, 0, 0, 0, 0, 0, 0,NULL, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, 0,NULL, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string }
+    , 0, 0, 0, 0, 0, 0, 0, 0, 0,NULL, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, 0,NULL, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, 0,NULL, 0,NULL }
 
 
 /* HistorySlowPlanStat methods */

@@ -1,5 +1,6 @@
 #pragma once
 #include <limits.h>
+#include "discovery/query_index.hpp"
 
 extern "C"{
     #include "postgres.h"
@@ -12,6 +13,7 @@ extern "C"{
     #include "common/config.h" 
 }
 
+extern HistoryQueryLevelTree* history_idx;
 
 class StatCollecter{
 public:

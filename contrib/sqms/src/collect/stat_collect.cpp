@@ -1,5 +1,6 @@
 #include "collect/stat_collect.hpp"
 #include "collect/stat_format.hpp"
+#include <threads.h>
 
 extern "C" {
 	PG_MODULE_MAGIC;
@@ -34,7 +35,7 @@ extern "C" {
 							NULL,
 							NULL); 
 		EmitWarningsOnPlaceholders("sqms");
-        //StatCollectCreate();
+
         prev_ExecutorStart = ExecutorStart_hook;
         ExecutorStart_hook = StmtExecutorStart;
 
@@ -58,6 +59,8 @@ extern "C" {
 
 int StatCollecter::nesting_level = 0;
 bool StatCollecter::current_query_sampled = false;
+/*we hope the index built while database starting*/
+HistoryQueryLevelTree* history_idx = new HistoryQueryLevelTree();
 
 
 StatCollecter::StatCollecter(){					 

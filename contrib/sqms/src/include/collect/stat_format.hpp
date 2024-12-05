@@ -3,6 +3,7 @@
 #include "excavate/ExcavateContext.hpp"
 #include "common/thread_pool.hpp"
 #include "storage/RedisPlanStatProvider.hpp"
+#include "discovery/query_index.hpp"
 
 extern "C"{
 #include "postgres.h"
@@ -12,8 +13,6 @@ extern "C"{
 #include <postgres_ext.h>
 #include "canonical_strategy.h"
 };
-
-
 
 class PlanStatFormat{
     typedef const char *(*explain_get_index_name_hook_type) (Oid indexId);

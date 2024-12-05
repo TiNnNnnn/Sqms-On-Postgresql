@@ -8,14 +8,19 @@
 #include <functional>
 #include <shared_mutex>
 #include <boost/bimap.hpp>
-#include "common/config.h"
+#include <mutex>
+
+extern "C" {
+    #include "common/config.h"
+}
+
 /**
  * a temp implemetaion of postingList,it will be replaced by another one 
  */
 typedef std::vector<std::string> SET;
 static std::string EncodingSets(const SET&sets){
     std::string encoding;
-    for(int i=0;i<sets.size();i++){
+    for(size_t i=0;i<sets.size();i++){
         if(i!=0){
             encoding+=",";
         }
@@ -36,11 +41,12 @@ public:
     typedef std::vector<std::string> SET;
     void Insert(const SET &set,int id){
         list_.insert(set);
-        bit_set_[id] = 1;
+        bit_set_.set(id,1);
     }
+
     void Erase(const SET &set,int id){
         list_.erase(set);
-        bit_set_[id] = 0;
+        bit_set_.set(id,0);
     }
 
     std::vector<SET> SubSets(const SET &set){
@@ -70,7 +76,7 @@ private:
     
     static std::string EncodingSets(const SET&sets){
         std::string encoding;
-        for(int i=0;i<sets.size();i++){
+        for(size_t i=0;i<sets.size();i++){
             if(i!=0){
                 encoding+=",";
             }

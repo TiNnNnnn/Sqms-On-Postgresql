@@ -12,7 +12,6 @@ message HistorySlowPlanStat{
 	double actual_rows_ = 8;
 
     repeated HistorySlowPlanStat  childs = 9;
-    
     string node_type_ = 10;
 	string strategy_ = 11;
 	//for aggregate
@@ -21,34 +20,66 @@ message HistorySlowPlanStat{
 	string sub_plan_name_ = 13;
 	//for insert/update/delete
 	string operation_ = 14;
-
     //for scan
 	string object_name_ = 15;
 	string schema_ = 16;
 	string object_tag_ = 17;
 	string alia_name_ = 18;
-
 	//addtional info for indexscan/indexonlyscan
 	string scan_dir_ =19;
 	string idx_name_ = 20;
-
 	//for join
 	string join_type_ = 21;
 	bool inner_unique_ = 22;
-
 	//for setOp
 	string command_ = 23;
 	//output cols
 	repeated string output_ = 24;
-
 	string relationship_ = 25;
-
 	double total_cost_ = 26;
-
 	string sample_method_ = 27;
 	string sampling_parameters_ = 28;
 	string repeatable_seed_ = 29;
 
+	/*total cost of current subquery*/
 	double sub_cost_ = 30;
+	/*json of current subquery*/
 	string json_plan_ = 31; 
+	/*all node type of current subquery*/
+	repeated string sub_node_type_set = 32;
+	/*all prdicates of current subquery*/
+	repeated Expression preds = 33;
+}
+
+/**
+* expression
+*/
+message Expression {
+    oneof expr {
+        Operator op = 1;
+        Operand operand = 2;
+    }
+}
+
+enum OperatorType {
+    ADD = 0;     // +
+    SUB = 1;     // -
+    MUL = 2;     // *
+    DIV = 3;     // /
+    EQ = 4;      // ==
+    LT = 5;      // <
+    GT = 6;      // >
+}
+
+message Operator {
+    OperatorType type = 1;
+    Expression left = 2; 
+    Expression right = 3; 
+}
+
+message Operand {
+    oneof value {
+        double constant = 1;
+        string variable = 2;
+    }
 }

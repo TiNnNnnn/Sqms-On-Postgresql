@@ -15,7 +15,7 @@ src/storage/RedisPlanStatProvider.o\
 
 SHLIB_LINK_INTERNAL = $(libpq) -lstdc++ -lprotobuf -lprotobuf-c -L/usr/local/lib -lhiredis -luv
 CFLAGS += -std=c11 -I/home/yyk/postgresql-13.10/contrib/sqms/src/include -I/usr/local/include 
-PG_CPPFLAGS = -std=c++11 -fPIC -I$(libpq_srcdir) -lstdc++  -I/home/yyk/postgresql-13.10/contrib/sqms/src/include
+PG_CPPFLAGS = -std=c++17 -fPIC -I$(libpq_srcdir) -lstdc++  -I/home/yyk/postgresql-13.10/contrib/sqms/src/include
 
 # pg extend config 
 EXTENSION = sqms

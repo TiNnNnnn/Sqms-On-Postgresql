@@ -24,9 +24,9 @@ typedef struct RecureState{
     double cost_;
 	StringInfo canonical_str_;
 	List* node_type_set_;
+	List* pred_set_;
 	HistorySlowPlanStat hps_;
 } RecureState;
-
 
 typedef const char *(*explain_get_index_name_hook_type) (Oid indexId);
 extern PGDLLIMPORT explain_get_index_name_hook_type explain_get_index_name_hook;

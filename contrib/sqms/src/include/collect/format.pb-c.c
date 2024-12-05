@@ -52,7 +52,7 @@ void   history_slow_plan_stat__free_unpacked
   assert(message->base.descriptor == &history_slow_plan_stat__descriptor);
   protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
 }
-static const ProtobufCFieldDescriptor history_slow_plan_stat__field_descriptors[31] =
+static const ProtobufCFieldDescriptor history_slow_plan_stat__field_descriptors[33] =
 {
   {
     "estimate_start_up_cost_",
@@ -426,6 +426,30 @@ static const ProtobufCFieldDescriptor history_slow_plan_stat__field_descriptors[
     0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
+  {
+    "sub_node_type_set",
+    32,
+    PROTOBUF_C_LABEL_REPEATED,
+    PROTOBUF_C_TYPE_STRING,
+    offsetof(HistorySlowPlanStat, n_sub_node_type_set),
+    offsetof(HistorySlowPlanStat, sub_node_type_set),
+    NULL,
+    &protobuf_c_empty_string,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "sub_pref_type_set",
+    33,
+    PROTOBUF_C_LABEL_REPEATED,
+    PROTOBUF_C_TYPE_STRING,
+    offsetof(HistorySlowPlanStat, n_sub_pref_type_set),
+    offsetof(HistorySlowPlanStat, sub_pref_type_set),
+    NULL,
+    &protobuf_c_empty_string,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
 };
 static const unsigned history_slow_plan_stat__field_indices_by_name[] = {
   4,   /* field[4] = actual_nloops_ */
@@ -457,13 +481,15 @@ static const unsigned history_slow_plan_stat__field_indices_by_name[] = {
   15,   /* field[15] = schema_ */
   10,   /* field[10] = strategy_ */
   29,   /* field[29] = sub_cost_ */
+  31,   /* field[31] = sub_node_type_set */
   12,   /* field[12] = sub_plan_name_ */
+  32,   /* field[32] = sub_pref_type_set */
   25,   /* field[25] = total_cost_ */
 };
 static const ProtobufCIntRange history_slow_plan_stat__number_ranges[1 + 1] =
 {
   { 1, 0 },
-  { 0, 31 }
+  { 0, 33 }
 };
 const ProtobufCMessageDescriptor history_slow_plan_stat__descriptor =
 {
@@ -473,7 +499,7 @@ const ProtobufCMessageDescriptor history_slow_plan_stat__descriptor =
   "HistorySlowPlanStat",
   "",
   sizeof(HistorySlowPlanStat),
-  31,
+  33,
   history_slow_plan_stat__field_descriptors,
   history_slow_plan_stat__field_indices_by_name,
   1,  history_slow_plan_stat__number_ranges,

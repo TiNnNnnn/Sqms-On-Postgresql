@@ -70,7 +70,8 @@ bool PlanStatFormat::Preprocessing(QueryDesc* qd){
     FormatBeginOutput(total_es);
     hsps_ = FormatPrintPlan(total_es,qd);
     FormatEndOutput(total_es);
-    
+
+    pfree(total_es);
     return true;
 }
 

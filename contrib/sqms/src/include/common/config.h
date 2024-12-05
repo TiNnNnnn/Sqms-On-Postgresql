@@ -6,8 +6,6 @@
 //     #include "utils/guc.h"
 // };
 
-
-
 /* GUC variables */
 extern int	query_min_duration;
 extern double late_tolerance;
@@ -22,7 +20,9 @@ extern int	stat_log_level;
 //extern bool stat_nested_statements;
 //extern double stat_sample_rate;
 
-extern const size_t bit_map_size;
+//extern constexpr size_t bit_map_size;
+#define bit_map_size 100
+
 
 extern const char* redis_host;
 extern int redis_port;
