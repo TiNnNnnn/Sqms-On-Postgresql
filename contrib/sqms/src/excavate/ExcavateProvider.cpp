@@ -17,7 +17,7 @@ bool CostBasedExcavateStrategy::excavate(std::vector<HistorySlowPlanStat*>& list
              * TODO: 12-04 We need to handle the subquery operator specifically
              */
             for(size_t i = 0;i<child_num;i++){
-                if(node->childs[i]->sub_cost_ < t){
+                if(node->childs[i] && node->childs[i]->sub_cost_ < t){
                     cnt++;
                 }
             }
@@ -31,6 +31,7 @@ bool CostBasedExcavateStrategy::excavate(std::vector<HistorySlowPlanStat*>& list
             list.push_back(node);
         }else{
             for(size_t i = 0; i<node->n_childs; i++){
+                if(!node->childs[i])continue;
                 q.push(node->childs[i]);
             }
         }

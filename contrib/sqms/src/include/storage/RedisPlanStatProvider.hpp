@@ -8,10 +8,14 @@
 #include <thread>
 #include <vector>
 #include <chrono>
-#include <hiredis/hiredis.h>
-#include <hiredis/async.h>
-#include <uv.h>
-#include <hiredis/adapters/libuv.h>
+
+extern "C"{
+    #include <hiredis/hiredis.h>
+    #include <hiredis/async.h>
+    #include <uv.h>
+    #include <hiredis/adapters/libuv.h>
+}
+
 
 class RedisSlowPlanStatProvider: public SlowPlanStatProvider{
 public:

@@ -1,15 +1,17 @@
 #pragma once
 #include <limits.h>
 
-#include "postgres.h"
-#include "access/parallel.h"
-//#include "commands/explain.h"
-#include "collect/format.h"
-#include "executor/executor.h"
-#include "executor/instrument.h"
-#include "jit/jit.h"
-#include "utils/guc.h"
-#include "common/config.h"
+extern "C"{
+    #include "postgres.h"
+    #include "access/parallel.h"
+    #include "collect/format.h"
+    #include "executor/executor.h"
+    #include "executor/instrument.h"
+    #include "jit/jit.h"
+    #include "utils/guc.h"
+    #include "common/config.h" 
+}
+
 
 class StatCollecter{
 public:
@@ -23,9 +25,7 @@ public:
 
 private:
     static bool auto_explain_enabled(){
-        return (query_min_duration >= 0 && 
-        (nesting_level == 0 || stat_nested_statements) && 
-        current_query_sampled);
+        return query_min_duration >= 0;
     }
 public:
     static int nesting_level;

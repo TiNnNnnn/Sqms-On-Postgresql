@@ -7,15 +7,15 @@
 int	query_min_duration = -1; /* msec or -1 */
 double late_tolerance = 1.00;
 //static bool stat_verbose = false;
-bool stat_buffers = false;
-bool stat_wal = false;
+//bool stat_buffers = false;
+//bool stat_wal = false;
 //static bool stat_triggers = false;
 //static bool stat_timing = true;
 //static bool statsettings = false;
 //static int	stat_format = EXPLAIN_FORMAT_JSON;
 int	stat_log_level = LOG;
-bool stat_nested_statements = false;
-double stat_sample_rate = 1;
+//bool stat_nested_statements = false;
+//double stat_sample_rate = 1;
 
 const size_t bit_map_size = 100;
 

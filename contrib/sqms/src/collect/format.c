@@ -147,7 +147,6 @@ static void ExplainRestoreGroup(ExplainState *es, int depth, int *state_save);
 static void ExplainDummyGroup(const char *objtype, const char *labelname,
 							  ExplainState *es);
 static void ExplainXMLTag(const char *tagname, int flags, ExplainState *es);
-static void ExplainIndentText(ExplainState *es);
 static void ExplainJSONLineEnding(ExplainState *es);
 static void ExplainYAMLLineStarting(ExplainState *es);
 static void escape_yaml(StringInfo buf, const char *str);
@@ -180,13 +179,29 @@ ExplainState *
 NewFormatState(void)
 {
 	ExplainState *es = (ExplainState *) palloc0(sizeof(ExplainState));
-
+	if(es == NULL){
+		elog(stat_log_level,"new explain state failed");
+		exit(-1);
+	}
+	es->format = EXPLAIN_FORMAT_JSON;
+	es->verbose = true;
+	es->analyze = true;
+	es->costs = true;
+    es->wal = false;
+    es->summary = true;
+    es->timing = true;
 	/* Set default options (most fields can be left as zeroes). */
 	es->costs = true;
 	/* Prepare output buffer. */
 	es->str = makeStringInfo();
 
 	return es;
+}
+
+void FormatStateCopyStr(ExplainState* dst, ExplainState*src)
+{
+	*dst = *src;
+	dst->str = makeStringInfo();
 }
 
 void FreeFormatState(ExplainState*es)
@@ -214,50 +229,32 @@ ExplainPrintSettings(ExplainState *es)
 	/* request an array of relevant settings */
 	gucs = get_explain_guc_options(&num);
 
-	if (es->format != EXPLAIN_FORMAT_TEXT)
-	{
-		FormatOpenGroup("Settings", "Settings", true, es);
 
-		for (int i = 0; i < num; i++)
-		{
-			char	   *setting;
-			struct config_generic *conf = gucs[i];
-
-			setting = GetConfigOptionByName(conf->name, NULL, true);
-
-			FormatPropertyText(conf->name, setting, es);
-		}
-
-		FormatCloseGroup("Settings", "Settings", true, es);
-	}
-	else
-	{
-		StringInfoData str;
+	StringInfoData str;
 
 		/* In TEXT mode, print nothing if there are no options */
-		if (num <= 0)
-			return;
+	if (num <= 0)
+		return;
 
-		initStringInfo(&str);
+	initStringInfo(&str);
 
-		for (int i = 0; i < num; i++)
-		{
-			char	   *setting;
-			struct config_generic *conf = gucs[i];
+	for (int i = 0; i < num; i++)
+	{
+		char	   *setting;
+		struct config_generic *conf = gucs[i];
 
-			if (i > 0)
-				appendStringInfoString(&str, ", ");
+		if (i > 0)
+			appendStringInfoString(&str, ", ");
 
-			setting = GetConfigOptionByName(conf->name, NULL, true);
+		setting = GetConfigOptionByName(conf->name, NULL, true);
 
-			if (setting)
-				appendStringInfo(&str, "%s = '%s'", conf->name, setting);
-			else
-				appendStringInfo(&str, "%s = NULL", conf->name);
-		}
-
-		FormatPropertyText("Settings", str.data, es);
+		if (setting)
+			appendStringInfo(&str, "%s = '%s'", conf->name, setting);
+		else
+			appendStringInfo(&str, "%s = NULL", conf->name);
 	}
+
+	FormatPropertyText("Settings", str.data, es);
 }
 
 /*
@@ -412,69 +409,37 @@ ExplainPrintJIT(ExplainState *es, int jit_flags, JitInstrumentation *ji)
 
 	FormatOpenGroup("JIT", "JIT", true, es);
 
-	/* for higher density, open code the text output format */
-	if (es->format == EXPLAIN_FORMAT_TEXT)
+	
+	FormatPropertyInteger("Functions", NULL, ji->created_functions, es);
+
+	FormatOpenGroup("Options", "Options", true, es);
+	FormatPropertyBool("Inlining", jit_flags & PGJIT_INLINE, es);
+	FormatPropertyBool("Optimization", jit_flags & PGJIT_OPT3, es);
+	FormatPropertyBool("Expressions", jit_flags & PGJIT_EXPR, es);
+	FormatPropertyBool("Deforming", jit_flags & PGJIT_DEFORM, es);
+	FormatCloseGroup("Options", "Options", true, es);
+
+	if (es->analyze && es->timing)
 	{
-		ExplainIndentText(es);
-		appendStringInfoString(es->str, "JIT:\n");
-		es->indent++;
+		FormatOpenGroup("Timing", "Timing", true, es);
 
-		FormatPropertyInteger("Functions", NULL, ji->created_functions, es);
-
-		ExplainIndentText(es);
-		appendStringInfo(es->str, "Options: %s %s, %s %s, %s %s, %s %s\n",
-						 "Inlining", jit_flags & PGJIT_INLINE ? "true" : "false",
-						 "Optimization", jit_flags & PGJIT_OPT3 ? "true" : "false",
-						 "Expressions", jit_flags & PGJIT_EXPR ? "true" : "false",
-						 "Deforming", jit_flags & PGJIT_DEFORM ? "true" : "false");
-
-		if (es->analyze && es->timing)
-		{
-			ExplainIndentText(es);
-			appendStringInfo(es->str,
-							 "Timing: %s %.3f ms, %s %.3f ms, %s %.3f ms, %s %.3f ms, %s %.3f ms\n",
-							 "Generation", 1000.0 * INSTR_TIME_GET_DOUBLE(ji->generation_counter),
-							 "Inlining", 1000.0 * INSTR_TIME_GET_DOUBLE(ji->inlining_counter),
-							 "Optimization", 1000.0 * INSTR_TIME_GET_DOUBLE(ji->optimization_counter),
-							 "Emission", 1000.0 * INSTR_TIME_GET_DOUBLE(ji->emission_counter),
-							 "Total", 1000.0 * INSTR_TIME_GET_DOUBLE(total_time));
-		}
-
-		es->indent--;
-	}
-	else
-	{
-		FormatPropertyInteger("Functions", NULL, ji->created_functions, es);
-
-		FormatOpenGroup("Options", "Options", true, es);
-		FormatPropertyBool("Inlining", jit_flags & PGJIT_INLINE, es);
-		FormatPropertyBool("Optimization", jit_flags & PGJIT_OPT3, es);
-		FormatPropertyBool("Expressions", jit_flags & PGJIT_EXPR, es);
-		FormatPropertyBool("Deforming", jit_flags & PGJIT_DEFORM, es);
-		FormatCloseGroup("Options", "Options", true, es);
-
-		if (es->analyze && es->timing)
-		{
-			FormatOpenGroup("Timing", "Timing", true, es);
-
-			FormatPropertyFloat("Generation", "ms",
+		FormatPropertyFloat("Generation", "ms",
 								 1000.0 * INSTR_TIME_GET_DOUBLE(ji->generation_counter),
 								 3, es);
-			FormatPropertyFloat("Inlining", "ms",
+		FormatPropertyFloat("Inlining", "ms",
 								 1000.0 * INSTR_TIME_GET_DOUBLE(ji->inlining_counter),
 								 3, es);
-			FormatPropertyFloat("Optimization", "ms",
+		FormatPropertyFloat("Optimization", "ms",
 								 1000.0 * INSTR_TIME_GET_DOUBLE(ji->optimization_counter),
 								 3, es);
-			FormatPropertyFloat("Emission", "ms",
+		FormatPropertyFloat("Emission", "ms",
 								 1000.0 * INSTR_TIME_GET_DOUBLE(ji->emission_counter),
 								 3, es);
-			FormatPropertyFloat("Total", "ms",
+		FormatPropertyFloat("Total", "ms",
 								 1000.0 * INSTR_TIME_GET_DOUBLE(total_time),
 								 3, es);
 
-			FormatCloseGroup("Timing", "Timing", true, es);
-		}
+		FormatCloseGroup("Timing", "Timing", true, es);
 	}
 
 	FormatCloseGroup("JIT", "JIT", true, es);
@@ -680,6 +645,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	
 	bool		haschildren;
 	HistorySlowPlanStat hsp = HISTORY_SLOW_PLAN_STAT__INIT;
+
 	/*
 	 * Prepare per-worker output buffers, if needed.  We'll append the data in
 	 * these to the main output string further down.
@@ -688,6 +654,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		total_es->workers_state = ExplainCreateWorkersState(planstate->worker_instrument->num_workers);
 	else
 		total_es->workers_state = NULL;
+
 
 	/* Identify plan node type, and print generic details */
 	switch (nodeTag(plan))
@@ -916,13 +883,11 @@ ExplainNode(PlanState *planstate, List *ancestors,
 			break;
 	}
 
-	//ExplainState* es = (ExplainState*)malloc(sizeof(ExplainState));
 	ExplainState* es = NewFormatState();
-	es = total_es;
+	*es = *total_es;
 	es->str = makeStringInfo();
 
-	FormatOpenGroup("Plan",relationship ? NULL : "Plan",true, es);
-
+	FormatOpenGroup("Plan","Plan",true, es);
 	FormatPropertyText("Node Type", sname, es);
 	if (strategy)
 		FormatPropertyText("Strategy", strategy, es);
@@ -1075,7 +1040,6 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	 */
 	if (planstate->instrument)
 		InstrEndLoop(planstate->instrument);
-
 	if (es->analyze &&
 		planstate->instrument && planstate->instrument->nloops > 0)
 	{
@@ -1150,7 +1114,6 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		default:
 			break;
 	}
-
 	/* quals, sort keys, etc */
 	switch (nodeTag(plan))
 	{
@@ -1502,7 +1465,6 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		default:
 			break;
 	}
-
 	/* Get ready to display the child plans */
 	haschildren = planstate->initPlan ||
 		outerPlanState(planstate) ||
@@ -1519,15 +1481,13 @@ ExplainNode(PlanState *planstate, List *ancestors,
 
 	if (haschildren)
 	{
-		FormatOpenGroup("Plan", "Plan", false, es);
+		FormatOpenGroup("Plans", "Plans", false, es);
 		/* Pass current Plan as head of ancestors list for children */
 		ancestors = lcons(plan, ancestors);
 	}
-
 	RecureState rs = NewRecureState();
 	rs.node_type_set_ = lappend_int(rs.node_type_set_,(void*)nodeTag(plan));
 	hsp.childs = (HistorySlowPlanStat**)malloc(sizeof(HistorySlowPlanStat*)*2);
-
 	/* initPlan-s */
 	if (planstate->initPlan){
         RecureState ret = ExplainSubPlans(planstate->initPlan, ancestors, "InitPlan", total_es);
@@ -1610,7 +1570,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	/* end of child plans */
 	if (haschildren){
 		ancestors = list_delete_first(ancestors);
-		FormatCloseGroup("Plan", "Plan", false, es);
+		FormatCloseGroup("Plans", "Plans", false, es);
 	}
 
 	/**
@@ -1621,16 +1581,16 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	hsp.sub_cost_ = cumulate_cost;
 	/*mark the recurestat for parent to use,we need a deep copy for infostring*/
 	FormatCloseGroup("Plan",relationship ? NULL : "Plan",true, es);
+	//ExplainEndOutput(es);
+	
 	rs.cost_ = cumulate_cost;
 	appendStringInfoString(rs.canonical_str_,es->str->data);
-	rs.node_type_set_ =  lappend(rs.node_type_set_,planstate);
 	rs.hps_ = hsp;
 
 	if(debug){
-		ereport(stat_log_level,(errmsg("plan:\n%s",es->str->data),
-					 errhidestmt(true)));
+		elog(stat_log_level,es->str->data);
 	}
-
+	elog(stat_log_level,"finish a node format");
 	/*here we can't free es, hsp still use its data*/
 	/*FreeFormatState(es);*/
 	return rs;
@@ -2124,32 +2084,11 @@ show_tablesample(TableSampleClause *tsc, PlanState *planstate,
 	else
 		repeatable = NULL;
 
-	/* Print results */
-	if (es->format == EXPLAIN_FORMAT_TEXT)
-	{
-		bool		first = true;
 
-		ExplainIndentText(es);
-		appendStringInfo(es->str, "Sampling: %s (", method_name);
-		foreach(lc, params)
-		{
-			if (!first)
-				appendStringInfoString(es->str, ", ");
-			appendStringInfoString(es->str, (const char *) lfirst(lc));
-			first = false;
-		}
-		appendStringInfoChar(es->str, ')');
-		if (repeatable)
-			appendStringInfo(es->str, " REPEATABLE (%s)", repeatable);
-		appendStringInfoChar(es->str, '\n');
-	}
-	else
-	{
-		FormatPropertyText("Sampling Method", method_name, es);
-		FormatPropertyList("Sampling Parameters", params, es);
-		if (repeatable)
-			FormatPropertyText("Repeatable Seed", repeatable, es);
-	}
+	FormatPropertyText("Sampling Method", method_name, es);
+	FormatPropertyList("Sampling Parameters", params, es);
+	if (repeatable)
+		FormatPropertyText("Repeatable Seed", repeatable, es);
 }
 
 /*
@@ -2174,18 +2113,9 @@ show_sort_info(SortState *sortstate, ExplainState *es)
 		spaceType = tuplesort_space_type_name(stats.spaceType);
 		spaceUsed = stats.spaceUsed;
 
-		if (es->format == EXPLAIN_FORMAT_TEXT)
-		{
-			ExplainIndentText(es);
-			appendStringInfo(es->str, "Sort Method: %s  %s: " INT64_FORMAT "kB\n",
-							 sortMethod, spaceType, spaceUsed);
-		}
-		else
-		{
-			FormatPropertyText("Sort Method", sortMethod, es);
-			FormatPropertyInteger("Sort Space Used", "kB", spaceUsed, es);
-			FormatPropertyText("Sort Space Type", spaceType, es);
-		}
+		FormatPropertyText("Sort Method", sortMethod, es);
+		FormatPropertyInteger("Sort Space Used", "kB", spaceUsed, es);
+		FormatPropertyText("Sort Space Type", spaceType, es);
 	}
 
 	/*
@@ -2218,19 +2148,10 @@ show_sort_info(SortState *sortstate, ExplainState *es)
 			if (es->workers_state)
 				ExplainOpenWorker(n, es);
 
-			if (es->format == EXPLAIN_FORMAT_TEXT)
-			{
-				ExplainIndentText(es);
-				appendStringInfo(es->str,
-								 "Sort Method: %s  %s: " INT64_FORMAT "kB\n",
-								 sortMethod, spaceType, spaceUsed);
-			}
-			else
-			{
-				FormatPropertyText("Sort Method", sortMethod, es);
-				FormatPropertyInteger("Sort Space Used", "kB", spaceUsed, es);
-				FormatPropertyText("Sort Space Type", spaceType, es);
-			}
+		
+			FormatPropertyText("Sort Method", sortMethod, es);
+			FormatPropertyInteger("Sort Space Used", "kB", spaceUsed, es);
+			FormatPropertyText("Sort Space Type", spaceType, es);
 
 			if (es->workers_state)
 				ExplainCloseWorker(n, es);
@@ -2514,7 +2435,7 @@ show_hash_info(HashState *hashstate, ExplainState *es)
 		else if (hinstrument.nbatch_original != hinstrument.nbatch ||
 				 hinstrument.nbuckets_original != hinstrument.nbuckets)
 		{
-			ExplainIndentText(es);
+
 			appendStringInfo(es->str,
 							 "Buckets: %d (originally %d)  Batches: %d (originally %d)  Memory Usage: %ldkB\n",
 							 hinstrument.nbuckets,
@@ -2525,7 +2446,6 @@ show_hash_info(HashState *hashstate, ExplainState *es)
 		}
 		else
 		{
-			ExplainIndentText(es);
 			appendStringInfo(es->str,
 							 "Buckets: %d  Batches: %d  Memory Usage: %ldkB\n",
 							 hinstrument.nbuckets, hinstrument.nbatch,
@@ -2574,7 +2494,6 @@ show_hashagg_info(AggState *aggstate, ExplainState *es)
 
 		if (es->costs && aggstate->hash_planned_partitions > 0)
 		{
-			ExplainIndentText(es);
 			appendStringInfo(es->str, "Planned Partitions: %d",
 							 aggstate->hash_planned_partitions);
 			gotone = true;
@@ -2587,8 +2506,9 @@ show_hashagg_info(AggState *aggstate, ExplainState *es)
 		 */
 		if (es->analyze && aggstate->hash_mem_peak > 0)
 		{
-			if (!gotone)
-				ExplainIndentText(es);
+			if (!gotone){
+
+			}
 			else
 				appendStringInfoString(es->str, "  ");
 
@@ -2628,27 +2548,12 @@ show_hashagg_info(AggState *aggstate, ExplainState *es)
 			if (es->workers_state)
 				ExplainOpenWorker(n, es);
 
-			if (es->format == EXPLAIN_FORMAT_TEXT)
-			{
-				ExplainIndentText(es);
-
-				appendStringInfo(es->str, "Batches: %d  Memory Usage: " INT64_FORMAT "kB",
-								 hash_batches_used, memPeakKb);
-
-				/* Only display disk usage if we spilled to disk */
-				if (hash_batches_used > 1)
-					appendStringInfo(es->str, "  Disk Usage: " UINT64_FORMAT "kB",
-									 hash_disk_used);
-				appendStringInfoChar(es->str, '\n');
-			}
-			else
-			{
-				FormatPropertyInteger("HashAgg Batches", NULL,
+		
+			FormatPropertyInteger("HashAgg Batches", NULL,
 									   hash_batches_used, es);
-				FormatPropertyInteger("Peak Memory Usage", "kB", memPeakKb,
+			FormatPropertyInteger("Peak Memory Usage", "kB", memPeakKb,
 									   es);
-				FormatPropertyInteger("Disk Usage", "kB", hash_disk_used, es);
-			}
+			FormatPropertyInteger("Disk Usage", "kB", hash_disk_used, es);
 
 			if (es->workers_state)
 				ExplainCloseWorker(n, es);
@@ -2673,7 +2578,6 @@ show_tidbitmap_info(BitmapHeapScanState *planstate, ExplainState *es)
 	{
 		if (planstate->exact_pages > 0 || planstate->lossy_pages > 0)
 		{
-			ExplainIndentText(es);
 			appendStringInfoString(es->str, "Heap Blocks:");
 			if (planstate->exact_pages > 0)
 				appendStringInfo(es->str, " exact=%ld", planstate->exact_pages);
@@ -2813,7 +2717,6 @@ show_buffer_usage(ExplainState *es, const BufferUsage *usage, bool planning)
 
 		if (show_planning)
 		{
-			ExplainIndentText(es);
 			appendStringInfoString(es->str, "Planning:\n");
 			es->indent++;
 		}
@@ -2821,7 +2724,6 @@ show_buffer_usage(ExplainState *es, const BufferUsage *usage, bool planning)
 		/* Show only positive counter values. */
 		if (has_shared || has_local || has_temp)
 		{
-			ExplainIndentText(es);
 			appendStringInfoString(es->str, "Buffers:");
 
 			if (has_shared)
@@ -2876,7 +2778,6 @@ show_buffer_usage(ExplainState *es, const BufferUsage *usage, bool planning)
 		/* As above, show only positive counter values. */
 		if (has_timing)
 		{
-			ExplainIndentText(es);
 			appendStringInfoString(es->str, "I/O Timings:");
 			if (!INSTR_TIME_IS_ZERO(usage->blk_read_time))
 				appendStringInfo(es->str, " read=%0.3f",
@@ -2936,7 +2837,6 @@ show_wal_usage(ExplainState *es, const WalUsage *usage)
 		if ((usage->wal_records > 0) || (usage->wal_fpi > 0) ||
 			(usage->wal_bytes > 0))
 		{
-			ExplainIndentText(es);
 			appendStringInfoString(es->str, "WAL:");
 
 			if (usage->wal_records > 0)
@@ -3205,7 +3105,6 @@ show_modifytable_info(ModifyTableState *mtstate, List *ancestors,
 			 */
 			if (es->format == EXPLAIN_FORMAT_TEXT)
 			{
-				ExplainIndentText(es);
 				appendStringInfoString(es->str,
 									   fdwroutine ? foperation : operation);
 			}
@@ -3479,22 +3378,6 @@ ExplainOpenWorker(int n, ExplainState *es)
 		/* Restore formatting state saved by last ExplainCloseWorker() */
 		ExplainRestoreGroup(es, 2, &wstate->worker_state_save[n]);
 	}
-
-	/*
-	 * In TEXT format, prefix the first output line for this worker with
-	 * "Worker N:".  Then, any additional lines should be indented one more
-	 * stop than the "Worker N" line is.
-	 */
-	if (es->format == EXPLAIN_FORMAT_TEXT)
-	{
-		if (es->str->len == 0)
-		{
-			ExplainIndentText(es);
-			appendStringInfo(es->str, "Worker %d:  ", n);
-		}
-
-		es->indent++;
-	}
 }
 
 /*
@@ -3572,7 +3455,6 @@ FormatPropertyList(const char *qlabel, List *data, ExplainState *es)
 	ListCell   *lc;
 	bool		first = true;
 
-
 	ExplainJSONLineEnding(es);
 	//appendStringInfoSpaces(es->str, es->indent * 2);
 	escape_json(es->str, qlabel);
@@ -3624,50 +3506,15 @@ static void
 ExplainProperty(const char *qlabel, const char *unit, const char *value,
 				bool numeric, ExplainState *es)
 {
-	switch (es->format)
-	{
-		case EXPLAIN_FORMAT_TEXT:
-			ExplainIndentText(es);
-			if (unit)
-				appendStringInfo(es->str, "%s: %s %s\n", qlabel, value, unit);
-			else
-				appendStringInfo(es->str, "%s: %s\n", qlabel, value);
-			break;
 
-		case EXPLAIN_FORMAT_XML:
-			{
-				char	   *str;
-
-				//appendStringInfoSpaces(es->str, es->indent * 2);
-				ExplainXMLTag(qlabel, X_OPENING | X_NOWHITESPACE, es);
-				str = escape_xml(value);
-				appendStringInfoString(es->str, str);
-				pfree(str);
-				ExplainXMLTag(qlabel, X_CLOSING | X_NOWHITESPACE, es);
-				appendStringInfoChar(es->str, '\n');
-			}
-			break;
-
-		case EXPLAIN_FORMAT_JSON:
-			ExplainJSONLineEnding(es);
-			appendStringInfoSpaces(es->str, es->indent * 2);
-			escape_json(es->str, qlabel);
-			appendStringInfoString(es->str, ": ");
-			if (numeric)
-				appendStringInfoString(es->str, value);
-			else
-				escape_json(es->str, value);
-			break;
-
-		case EXPLAIN_FORMAT_YAML:
-			ExplainYAMLLineStarting(es);
-			appendStringInfo(es->str, "%s: ", qlabel);
-			if (numeric)
-				appendStringInfoString(es->str, value);
-			else
-				escape_yaml(es->str, value);
-			break;
-	}
+	ExplainJSONLineEnding(es);
+	//appendStringInfoSpaces(es->str, es->indent * 2);
+	escape_json(es->str, qlabel);
+	appendStringInfoString(es->str, ": ");
+	if (numeric)
+		appendStringInfoString(es->str, value);
+	else
+		escape_json(es->str, value);
 }
 
 /*
@@ -3750,7 +3597,6 @@ FormatOpenGroup(const char *objtype, const char *labelname,
 		appendStringInfoString(es->str, ": ");
 	}
 	appendStringInfoChar(es->str, labeled ? '{' : '[');
-
 	/*
 		* In JSON format, the grouping_stack is an integer list.  0 means
 		* we've emitted nothing at this grouping level, 1 means we've
@@ -3797,29 +3643,8 @@ static void
 ExplainOpenSetAsideGroup(const char *objtype, const char *labelname,
 						 bool labeled, int depth, ExplainState *es)
 {
-	switch (es->format)
-	{
-		case EXPLAIN_FORMAT_TEXT:
-			/* nothing to do */
-			break;
-
-		case EXPLAIN_FORMAT_XML:
-			es->indent += depth;
-			break;
-
-		case EXPLAIN_FORMAT_JSON:
-			es->grouping_stack = lcons_int(0, es->grouping_stack);
-			es->indent += depth;
-			break;
-
-		case EXPLAIN_FORMAT_YAML:
-			if (labelname)
-				es->grouping_stack = lcons_int(1, es->grouping_stack);
-			else
-				es->grouping_stack = lcons_int(0, es->grouping_stack);
-			es->indent += depth;
-			break;
-	}
+	es->grouping_stack = lcons_int(0, es->grouping_stack);
+	es->indent += depth;
 }
 
 /*
@@ -3835,28 +3660,10 @@ ExplainOpenSetAsideGroup(const char *objtype, const char *labelname,
 static void
 ExplainSaveGroup(ExplainState *es, int depth, int *state_save)
 {
-	switch (es->format)
-	{
-		case EXPLAIN_FORMAT_TEXT:
-			/* nothing to do */
-			break;
-
-		case EXPLAIN_FORMAT_XML:
-			es->indent -= depth;
-			break;
-
-		case EXPLAIN_FORMAT_JSON:
-			es->indent -= depth;
-			*state_save = linitial_int(es->grouping_stack);
-			es->grouping_stack = list_delete_first(es->grouping_stack);
-			break;
-
-		case EXPLAIN_FORMAT_YAML:
-			es->indent -= depth;
-			*state_save = linitial_int(es->grouping_stack);
-			es->grouping_stack = list_delete_first(es->grouping_stack);
-			break;
-	}
+	es->indent -= depth;
+	*state_save = linitial_int(es->grouping_stack);
+	es->grouping_stack = list_delete_first(es->grouping_stack);
+	
 }
 
 /*
@@ -3865,26 +3672,8 @@ ExplainSaveGroup(ExplainState *es, int depth, int *state_save)
 static void
 ExplainRestoreGroup(ExplainState *es, int depth, int *state_save)
 {
-	switch (es->format)
-	{
-		case EXPLAIN_FORMAT_TEXT:
-			/* nothing to do */
-			break;
-
-		case EXPLAIN_FORMAT_XML:
-			es->indent += depth;
-			break;
-
-		case EXPLAIN_FORMAT_JSON:
-			es->grouping_stack = lcons_int(*state_save, es->grouping_stack);
-			es->indent += depth;
-			break;
-
-		case EXPLAIN_FORMAT_YAML:
-			es->grouping_stack = lcons_int(*state_save, es->grouping_stack);
-			es->indent += depth;
-			break;
-	}
+	es->grouping_stack = lcons_int(*state_save, es->grouping_stack);
+	es->indent += depth;
 }
 
 /*
@@ -3896,41 +3685,15 @@ ExplainRestoreGroup(ExplainState *es, int depth, int *state_save)
 static void
 ExplainDummyGroup(const char *objtype, const char *labelname, ExplainState *es)
 {
-	switch (es->format)
+
+	ExplainJSONLineEnding(es);
+	//appendStringInfoSpaces(es->str, 2 * es->indent);
+	if (labelname)
 	{
-		case EXPLAIN_FORMAT_TEXT:
-			/* nothing to do */
-			break;
-
-		case EXPLAIN_FORMAT_XML:
-			ExplainXMLTag(objtype, X_CLOSE_IMMEDIATE, es);
-			break;
-
-		case EXPLAIN_FORMAT_JSON:
-			ExplainJSONLineEnding(es);
-			appendStringInfoSpaces(es->str, 2 * es->indent);
-			if (labelname)
-			{
-				escape_json(es->str, labelname);
-				appendStringInfoString(es->str, ": ");
-			}
-			escape_json(es->str, objtype);
-			break;
-
-		case EXPLAIN_FORMAT_YAML:
-			ExplainYAMLLineStarting(es);
-			if (labelname)
-			{
-				escape_yaml(es->str, labelname);
-				appendStringInfoString(es->str, ": ");
-			}
-			else
-			{
-				appendStringInfoString(es->str, "- ");
-			}
-			escape_yaml(es->str, objtype);
-			break;
+		escape_json(es->str, labelname);
+		appendStringInfoString(es->str, ": ");
 	}
+	escape_json(es->str, objtype);
 }
 
 /*
@@ -3943,7 +3706,7 @@ void
 FormatBeginOutput(ExplainState *es)
 {
 	/* top-level structure is an array of plans */
-	appendStringInfoChar(es->str, '[');
+	//appendStringInfoChar(es->str, '[');
 	es->grouping_stack = lcons_int(0, es->grouping_stack);
 	es->indent++;
 }
@@ -3955,7 +3718,7 @@ void
 FormatEndOutput(ExplainState *es)
 {
 	es->indent--;
-	appendStringInfoString(es->str, "\n]");
+	//appendStringInfoString(es->str, "\n]");
 	es->grouping_stack = list_delete_first(es->grouping_stack);
 }
 
@@ -4000,21 +3763,6 @@ ExplainXMLTag(const char *tagname, int flags, ExplainState *es)
 }
 
 /*
- * Indent a text-format line.
- *
- * We indent by two spaces per indentation level.  However, when emitting
- * data for a parallel worker there might already be data on the current line
- * (cf. ExplainOpenWorker); in that case, don't indent any more.
- */
-static void
-ExplainIndentText(ExplainState *es)
-{
-	Assert(es->format == EXPLAIN_FORMAT_TEXT);
-	if (es->str->len == 0 || es->str->data[es->str->len - 1] == '\n')
-		appendStringInfoSpaces(es->str, es->indent * 2);
-}
-
-/*
  * Emit a JSON line ending.
  *
  * JSON requires a comma after each property but the last.  To facilitate this,
@@ -4025,10 +3773,11 @@ static void
 ExplainJSONLineEnding(ExplainState *es)
 {
 	Assert(es->format == EXPLAIN_FORMAT_JSON);
-	if (linitial_int(es->grouping_stack) != 0)
+	if (linitial_int(es->grouping_stack) != 0){
 		appendStringInfoChar(es->str, ',');
-	else
+	}else{
 		linitial_int(es->grouping_stack) = 1;
+	}
 	appendStringInfoChar(es->str, '\n');
 }
 

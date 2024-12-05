@@ -1,4 +1,5 @@
 #include "collect/stat_format.hpp"
+#include <cstdlib>
 #include <vector>
 #include <functional>
 
@@ -16,20 +17,24 @@ PlanStatFormat::~PlanStatFormat() {
 
 PlanStatFormat::PlanStatFormat()
     : pool_(new ThreadPool(pool_size_)){
+    history_slow_plan_stat__init(&hsps_);
     storage_ = new RedisSlowPlanStatProvider(std::string(redis_host),redis_port,totalFetchTimeoutMillis,totalSetTimeMillis,defaultTTLSeconds); 
 }
 
 bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd){
     ExcavateContext *context = new ExcavateContext();
     Preprocessing(qd);
-
-    size_t msg_size = history_slow_plan_stat__get_packed_size(hsps_);
+    if(!&hsps_){
+        std::cout<<"hsps is nullptr"<<std::endl;
+        return -1;
+    }
+    size_t msg_size = history_slow_plan_stat__get_packed_size(&hsps_);
     uint8_t *buffer = (uint8_t*)malloc(msg_size);
     if (buffer == NULL) {
         perror("Failed to allocate memory");
         return 1;
     }
-    history_slow_plan_stat__pack(hsps_,buffer);
+    history_slow_plan_stat__pack(&hsps_,buffer);
     pool_->submit([&]() -> bool {
         /**
          * Due to the use of thread separation to ensure the main thread flow, we need 
@@ -59,19 +64,13 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd){
 }
 
 bool PlanStatFormat::Preprocessing(QueryDesc* qd){
-    ExplainState *es = NewExplainState();
-    if(es == NULL)return false;
+    ExplainState *total_es = NewFormatState();
+    if(total_es == NULL)return false;
 
-    es->format = EXPLAIN_FORMAT_JSON;
-	es->verbose = true;
-	es->analyze = true;
-	es->costs = true;
-    es->wal = false;
-    es->summary = true;
-
-    FormatBeginOutput(es);
-    *hsps_ = FormatPrintPlan(es,qd);
-    FormatEndOutput(es);
+    FormatBeginOutput(total_es);
+    hsps_ = FormatPrintPlan(total_es,qd);
+    FormatEndOutput(total_es);
+    
     return true;
 }
 

@@ -64,25 +64,14 @@ StatCollecter::StatCollecter(){
 }
 
 void StatCollecter::StmtExecutorStartWrapper(QueryDesc *queryDesc, int eflags){
-    if (nesting_level == 0){
-		if (query_min_duration >= 0 && !IsParallelWorker())
-			current_query_sampled = (random() < stat_sample_rate *
-									 ((double) MAX_RANDOM_VALUE + 1));
-		else
-			current_query_sampled = false;
-	}
-
+    
     if(auto_explain_enabled()){
 		/* Enable per-node instrumentation iff log_analyze is required. */
 		if ((eflags & EXEC_FLAG_EXPLAIN_ONLY) == 0)
 		{
-		
 			queryDesc->instrument_options |= INSTRUMENT_TIMER;
-			if (stat_buffers)
-				queryDesc->instrument_options |= INSTRUMENT_BUFFERS;
-			
-			if (stat_wal)
-				queryDesc->instrument_options |= INSTRUMENT_WAL;
+			queryDesc->instrument_options |= INSTRUMENT_BUFFERS;
+			queryDesc->instrument_options |= INSTRUMENT_WAL;
 		}
 		
         if (prev_ExecutorStart)
@@ -138,8 +127,7 @@ void StatCollecter::StmtExecutorFinishWrapper(QueryDesc *queryDesc){
 
 void StatCollecter::StmtExecutorEndWrapper(QueryDesc *queryDesc)
 {
-	if (queryDesc->totaltime && auto_explain_enabled())
-	{
+	if (queryDesc->totaltime && auto_explain_enabled()){
 		MemoryContext oldcxt;
 		double		msec;
 		/*
@@ -162,15 +150,15 @@ void StatCollecter::StmtExecutorEndWrapper(QueryDesc *queryDesc)
 		MemoryContextSwitchTo(oldcxt);
 	}
 
-	if (prev_ExecutorEnd)
+	if (prev_ExecutorEnd){
 		prev_ExecutorEnd(queryDesc);
-	else
+	}else{
 		standard_ExecutorEnd(queryDesc);
+	}
 }
 
 
 extern "C" void StmtExecutorStart(QueryDesc *queryDesc, int eflags) {
-	std::cout<<"StmtExecutorStart"<<std::endl;
     StatCollecter::StmtExecutorStartWrapper(queryDesc, eflags);
 }
 
