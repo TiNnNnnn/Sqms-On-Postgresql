@@ -905,6 +905,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 
 	switch (nodeTag(plan))
 	{
+		/*scan*/
 		case T_SeqScan:
 		case T_SampleScan:
 		case T_BitmapHeapScan:
@@ -951,9 +952,11 @@ ExplainNode(PlanState *planstate, List *ancestors,
 				FormatPropertyText("Index Name", indexname, es);
 			}
 			break;
+		/*insert,update,delete.merge*/
 		case T_ModifyTable:
 			ExplainModifyTarget((ModifyTable *) plan, es);
 			break;
+		/*join*/
 		case T_NestLoop:
 		case T_MergeJoin:
 		case T_HashJoin:
@@ -3020,25 +3023,11 @@ ExplainTargetRel(Plan *plan, Index rti, ExplainState *es)
 			break;
 	}
 
-	if (es->format == EXPLAIN_FORMAT_TEXT)
-	{
-		appendStringInfoString(es->str, " on");
-		if (namespace != NULL)
-			appendStringInfo(es->str, " %s.%s", quote_identifier(namespace),
-							 quote_identifier(objectname));
-		else if (objectname != NULL)
-			appendStringInfo(es->str, " %s", quote_identifier(objectname));
-		if (objectname == NULL || strcmp(refname, objectname) != 0)
-			appendStringInfo(es->str, " %s", quote_identifier(refname));
-	}
-	else
-	{
-		if (objecttag != NULL && objectname != NULL)
-			FormatPropertyText(objecttag, objectname, es);
-		if (namespace != NULL)
-			FormatPropertyText("Schema", namespace, es);
-		FormatPropertyText("Alias", refname, es);
-	}
+	if (objecttag != NULL && objectname != NULL)
+		FormatPropertyText(objecttag, objectname, es);
+	if (namespace != NULL)
+		FormatPropertyText("Schema", namespace, es);
+	FormatPropertyText("Alias", refname, es);
 }
 
 /*

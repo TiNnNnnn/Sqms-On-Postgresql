@@ -1,7 +1,8 @@
 #include "discovery/query_index.hpp"
 
 HistoryQueryLevelTree::HistoryQueryLevelTree(){
-
+    root_ = std::make_shared<HistoryQueryIndexNode>(0);
+    /* rebuild the history query level tree */
 }
 
 bool HistoryQueryLevelTree::Search(){

@@ -5,14 +5,10 @@
 class HistoryQueryIndexNode{
     typedef std::vector<std::string> SET;
 public:
-    HistoryQueryIndexNode();
+    HistoryQueryIndexNode(int l);
     ~HistoryQueryIndexNode();
     
-    std::shared_ptr<HistoryQueryIndexNode> Child(size_t l,HistorySlowPlanStat* hsps){
-
-        return nullptr;
-        //return childs_.at(str)
-    }
+    std::shared_ptr<HistoryQueryIndexNode> Child(size_t l,HistorySlowPlanStat* hsps);
 
     size_t Level(){return level_;}
 

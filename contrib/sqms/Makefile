@@ -11,6 +11,7 @@ src/collect/stat_format.o \
 src/discovery/discovery.o \
 src/excavate/ExcavateProvider.o \
 src/storage/RedisPlanStatProvider.o\
+src/discovery/levels.o \ 
 
 
 SHLIB_LINK_INTERNAL = $(libpq) -lstdc++ -lprotobuf -lprotobuf-c -L/usr/local/lib -lhiredis -luv
