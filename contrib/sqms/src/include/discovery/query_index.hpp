@@ -16,7 +16,7 @@ private:
     bool InsertSet(HistorySlowPlanStat* hsps);
     bool RemoveSet(HistorySlowPlanStat* hsps);
     bool SearchSet(HistorySlowPlanStat* hsps); 
-private:
+private: 
     /*set2node*/
     std::unordered_map<SET,std::shared_ptr<HistoryQueryIndexNode>,SetHasher>childs_;
     /*inverted_idx storage all sets in the node*/

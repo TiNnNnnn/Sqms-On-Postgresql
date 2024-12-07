@@ -829,7 +829,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 						pname = "Aggregate ???";
 						strategy = "???";
 						break;
-				}
+				} 
 
 				if (DO_AGGSPLIT_SKIPFINAL(agg->aggsplit))
 				{
@@ -902,7 +902,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	if (custom_name)
 		FormatPropertyText("Custom Plan Provider", custom_name, es);
 	FormatPropertyBool("Parallel Aware", plan->parallel_aware, es);
-
+ 
 	switch (nodeTag(plan))
 	{
 		/*scan*/
@@ -2873,35 +2873,25 @@ ExplainIndexScanDetails(Oid indexid, ScanDirection indexorderdir,
 						ExplainState *es)
 {
 	const char *indexname = explain_get_index_name(indexid);
+	const char *scandir;
 
-	if (es->format == EXPLAIN_FORMAT_TEXT)
+	switch (indexorderdir)
 	{
-		if (ScanDirectionIsBackward(indexorderdir))
-			appendStringInfoString(es->str, " Backward");
-		appendStringInfo(es->str, " using %s", quote_identifier(indexname));
+		case BackwardScanDirection:
+			scandir = "Backward";
+			break;
+		case NoMovementScanDirection:
+			scandir = "NoMovement";
+			break;
+		case ForwardScanDirection:
+			scandir = "Forward";
+			break;
+		default:
+			scandir = "???";
+			break;
 	}
-	else
-	{
-		const char *scandir;
-
-		switch (indexorderdir)
-		{
-			case BackwardScanDirection:
-				scandir = "Backward";
-				break;
-			case NoMovementScanDirection:
-				scandir = "NoMovement";
-				break;
-			case ForwardScanDirection:
-				scandir = "Forward";
-				break;
-			default:
-				scandir = "???";
-				break;
-		}
-		FormatPropertyText("Scan Direction", scandir, es);
-		FormatPropertyText("Index Name", indexname, es);
-	}
+	FormatPropertyText("Scan Direction", scandir, es);
+	FormatPropertyText("Index Name", indexname, es);
 }
 
 /*
