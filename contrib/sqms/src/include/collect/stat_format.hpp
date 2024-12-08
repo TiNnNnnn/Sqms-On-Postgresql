@@ -30,6 +30,8 @@ public:
 private:
     std::string HashCanonicalPlan(char *json_plan);
 
+    void ComputeEquivlenceClass();
+
     PlanStatFormat();
     ~PlanStatFormat();
 private:

@@ -1,5 +1,6 @@
 #pragma once
 #include <limits.h>
+#include <unordered_set>
 #include "discovery/query_index.hpp"
 
 extern "C"{
@@ -13,8 +14,19 @@ extern "C"{
     #include "common/config.h" 
 }
 
-extern HistoryQueryLevelTree* history_idx;
+class EquivlenceClass{
+private:
 
+public:
+    std::unordered_set<std::string>attrs_;
+    double lower_limit_;
+    double upper_limit_;
+};
+
+
+
+
+//extern HistoryQueryLevelTree* history_idx;
 class StatCollecter{
 public:
     StatCollecter();

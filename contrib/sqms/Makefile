@@ -4,6 +4,7 @@ OBJS = \
 $(WIN32RES) \
 src/common/config.o \
 src/include/collect/format.pb-c.o \
+src/include/collect/storage.pb.o \
 src/collect/format.o \
 src/collect/epxr_utils.o \
 src/collect/stat_collect.o \
@@ -11,7 +12,7 @@ src/collect/stat_format.o \
 src/discovery/discovery.o \
 src/excavate/ExcavateProvider.o \
 src/storage/RedisPlanStatProvider.o\
-src/discovery/levels.o \ 
+#src/discovery/levels.o\ 
 
 
 SHLIB_LINK_INTERNAL = $(libpq) -lstdc++ -lprotobuf -lprotobuf-c -L/usr/local/lib -lhiredis -luv

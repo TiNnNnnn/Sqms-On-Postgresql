@@ -12,22 +12,23 @@ public:
     virtual std::vector<std::string> findChildren(HistorySlowPlanStat* hsps) = 0;
     virtual std::string Name() = 0;
 };
-
+class LevelOneStrategy;
+class LevelTwoStrategy;
 class LevelStrategyContext{
     void executeStrategy(int l, HistorySlowPlanStat* hsps,std::shared_ptr<InvertedIndex<PostingList>> inverted_idx){
-        switch(l){
-            case 1 :{
-                strategy_ =  std::make_shared<LevelOneStrategy>(hsps);
-            }break;
-            case 2 :{
-                strategy_ =  std::make_shared<LevelOneStrategy>(hsps);
-            }break;
-        }
-        if (strategy_) {
-            strategy_->findChildren(hsps);
-        } else {
-            std::cerr << "No level strategy set!" << std::endl;
-        }
+        // switch(l){
+        //     case 1 :{
+        //         strategy_ =  std::make_shared<LevelOneStrategy>(hsps,inverted_idx);
+        //     }break;
+        //     case 2 :{
+        //         strategy_ =  std::make_shared<LevelOneStrategy>(hsps,inverted_idx);
+        //     }break;
+        // }
+        // if (strategy_) {
+        //     strategy_->findChildren(hsps);
+        // } else {
+        //     std::cerr << "No level strategy set!" << std::endl;
+        // }
     }
 private:
     std::shared_ptr<LevelStrategy> strategy_;

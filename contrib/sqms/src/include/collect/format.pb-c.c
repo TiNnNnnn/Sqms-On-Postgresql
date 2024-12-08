@@ -52,6 +52,141 @@ void   history_slow_plan_stat__free_unpacked
   assert(message->base.descriptor == &history_slow_plan_stat__descriptor);
   protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
 }
+void   expression__init
+                     (Expression         *message)
+{
+  static const Expression init_value = EXPRESSION__INIT;
+  *message = init_value;
+}
+size_t expression__get_packed_size
+                     (const Expression *message)
+{
+  assert(message->base.descriptor == &expression__descriptor);
+  return protobuf_c_message_get_packed_size ((const ProtobufCMessage*)(message));
+}
+size_t expression__pack
+                     (const Expression *message,
+                      uint8_t       *out)
+{
+  assert(message->base.descriptor == &expression__descriptor);
+  return protobuf_c_message_pack ((const ProtobufCMessage*)message, out);
+}
+size_t expression__pack_to_buffer
+                     (const Expression *message,
+                      ProtobufCBuffer *buffer)
+{
+  assert(message->base.descriptor == &expression__descriptor);
+  return protobuf_c_message_pack_to_buffer ((const ProtobufCMessage*)message, buffer);
+}
+Expression *
+       expression__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data)
+{
+  return (Expression *)
+     protobuf_c_message_unpack (&expression__descriptor,
+                                allocator, len, data);
+}
+void   expression__free_unpacked
+                     (Expression *message,
+                      ProtobufCAllocator *allocator)
+{
+  if(!message)
+    return;
+  assert(message->base.descriptor == &expression__descriptor);
+  protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
+}
+void   operator__init
+                     (Operator         *message)
+{
+  static const Operator init_value = OPERATOR__INIT;
+  *message = init_value;
+}
+size_t operator__get_packed_size
+                     (const Operator *message)
+{
+  assert(message->base.descriptor == &operator__descriptor);
+  return protobuf_c_message_get_packed_size ((const ProtobufCMessage*)(message));
+}
+size_t operator__pack
+                     (const Operator *message,
+                      uint8_t       *out)
+{
+  assert(message->base.descriptor == &operator__descriptor);
+  return protobuf_c_message_pack ((const ProtobufCMessage*)message, out);
+}
+size_t operator__pack_to_buffer
+                     (const Operator *message,
+                      ProtobufCBuffer *buffer)
+{
+  assert(message->base.descriptor == &operator__descriptor);
+  return protobuf_c_message_pack_to_buffer ((const ProtobufCMessage*)message, buffer);
+}
+Operator *
+       operator__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data)
+{
+  return (Operator *)
+     protobuf_c_message_unpack (&operator__descriptor,
+                                allocator, len, data);
+}
+void   operator__free_unpacked
+                     (Operator *message,
+                      ProtobufCAllocator *allocator)
+{
+  if(!message)
+    return;
+  assert(message->base.descriptor == &operator__descriptor);
+  protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
+}
+void   operand__init
+                     (Operand         *message)
+{
+  static const Operand init_value = OPERAND__INIT;
+  *message = init_value;
+}
+size_t operand__get_packed_size
+                     (const Operand *message)
+{
+  assert(message->base.descriptor == &operand__descriptor);
+  return protobuf_c_message_get_packed_size ((const ProtobufCMessage*)(message));
+}
+size_t operand__pack
+                     (const Operand *message,
+                      uint8_t       *out)
+{
+  assert(message->base.descriptor == &operand__descriptor);
+  return protobuf_c_message_pack ((const ProtobufCMessage*)message, out);
+}
+size_t operand__pack_to_buffer
+                     (const Operand *message,
+                      ProtobufCBuffer *buffer)
+{
+  assert(message->base.descriptor == &operand__descriptor);
+  return protobuf_c_message_pack_to_buffer ((const ProtobufCMessage*)message, buffer);
+}
+Operand *
+       operand__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data)
+{
+  return (Operand *)
+     protobuf_c_message_unpack (&operand__descriptor,
+                                allocator, len, data);
+}
+void   operand__free_unpacked
+                     (Operand *message,
+                      ProtobufCAllocator *allocator)
+{
+  if(!message)
+    return;
+  assert(message->base.descriptor == &operand__descriptor);
+  protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
+}
 static const ProtobufCFieldDescriptor history_slow_plan_stat__field_descriptors[33] =
 {
   {
@@ -439,14 +574,14 @@ static const ProtobufCFieldDescriptor history_slow_plan_stat__field_descriptors[
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
   {
-    "sub_pref_type_set",
+    "preds",
     33,
     PROTOBUF_C_LABEL_REPEATED,
-    PROTOBUF_C_TYPE_STRING,
-    offsetof(HistorySlowPlanStat, n_sub_pref_type_set),
-    offsetof(HistorySlowPlanStat, sub_pref_type_set),
+    PROTOBUF_C_TYPE_MESSAGE,
+    offsetof(HistorySlowPlanStat, n_preds),
+    offsetof(HistorySlowPlanStat, preds),
+    &expression__descriptor,
     NULL,
-    &protobuf_c_empty_string,
     0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
@@ -473,6 +608,7 @@ static const unsigned history_slow_plan_stat__field_indices_by_name[] = {
   13,   /* field[13] = operation_ */
   23,   /* field[23] = output_ */
   11,   /* field[11] = partial_mode_ */
+  32,   /* field[32] = preds */
   24,   /* field[24] = relationship_ */
   28,   /* field[28] = repeatable_seed_ */
   26,   /* field[26] = sample_method_ */
@@ -483,7 +619,6 @@ static const unsigned history_slow_plan_stat__field_indices_by_name[] = {
   29,   /* field[29] = sub_cost_ */
   31,   /* field[31] = sub_node_type_set */
   12,   /* field[12] = sub_plan_name_ */
-  32,   /* field[32] = sub_pref_type_set */
   25,   /* field[25] = total_cost_ */
 };
 static const ProtobufCIntRange history_slow_plan_stat__number_ranges[1 + 1] =
@@ -505,4 +640,208 @@ const ProtobufCMessageDescriptor history_slow_plan_stat__descriptor =
   1,  history_slow_plan_stat__number_ranges,
   (ProtobufCMessageInit) history_slow_plan_stat__init,
   NULL,NULL,NULL    /* reserved[123] */
+};
+static const ProtobufCFieldDescriptor expression__field_descriptors[2] =
+{
+  {
+    "op",
+    1,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_MESSAGE,
+    offsetof(Expression, expr_case),
+    offsetof(Expression, op),
+    &operator__descriptor,
+    NULL,
+    0 | PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "operand",
+    2,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_MESSAGE,
+    offsetof(Expression, expr_case),
+    offsetof(Expression, operand),
+    &operand__descriptor,
+    NULL,
+    0 | PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+};
+static const unsigned expression__field_indices_by_name[] = {
+  0,   /* field[0] = op */
+  1,   /* field[1] = operand */
+};
+static const ProtobufCIntRange expression__number_ranges[1 + 1] =
+{
+  { 1, 0 },
+  { 0, 2 }
+};
+const ProtobufCMessageDescriptor expression__descriptor =
+{
+  PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
+  "Expression",
+  "Expression",
+  "Expression",
+  "",
+  sizeof(Expression),
+  2,
+  expression__field_descriptors,
+  expression__field_indices_by_name,
+  1,  expression__number_ranges,
+  (ProtobufCMessageInit) expression__init,
+  NULL,NULL,NULL    /* reserved[123] */
+};
+static const ProtobufCFieldDescriptor operator__field_descriptors[3] =
+{
+  {
+    "type",
+    1,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_ENUM,
+    0,   /* quantifier_offset */
+    offsetof(Operator, type),
+    &operator_type__descriptor,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "left",
+    2,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_MESSAGE,
+    0,   /* quantifier_offset */
+    offsetof(Operator, left),
+    &expression__descriptor,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "right",
+    3,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_MESSAGE,
+    0,   /* quantifier_offset */
+    offsetof(Operator, right),
+    &expression__descriptor,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+};
+static const unsigned operator__field_indices_by_name[] = {
+  1,   /* field[1] = left */
+  2,   /* field[2] = right */
+  0,   /* field[0] = type */
+};
+static const ProtobufCIntRange operator__number_ranges[1 + 1] =
+{
+  { 1, 0 },
+  { 0, 3 }
+};
+const ProtobufCMessageDescriptor operator__descriptor =
+{
+  PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
+  "Operator",
+  "Operator",
+  "Operator",
+  "",
+  sizeof(Operator),
+  3,
+  operator__field_descriptors,
+  operator__field_indices_by_name,
+  1,  operator__number_ranges,
+  (ProtobufCMessageInit) operator__init,
+  NULL,NULL,NULL    /* reserved[123] */
+};
+static const ProtobufCFieldDescriptor operand__field_descriptors[2] =
+{
+  {
+    "constant",
+    1,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_DOUBLE,
+    offsetof(Operand, value_case),
+    offsetof(Operand, constant),
+    NULL,
+    NULL,
+    0 | PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "variable",
+    2,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_STRING,
+    offsetof(Operand, value_case),
+    offsetof(Operand, variable),
+    NULL,
+    &protobuf_c_empty_string,
+    0 | PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+};
+static const unsigned operand__field_indices_by_name[] = {
+  0,   /* field[0] = constant */
+  1,   /* field[1] = variable */
+};
+static const ProtobufCIntRange operand__number_ranges[1 + 1] =
+{
+  { 1, 0 },
+  { 0, 2 }
+};
+const ProtobufCMessageDescriptor operand__descriptor =
+{
+  PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
+  "Operand",
+  "Operand",
+  "Operand",
+  "",
+  sizeof(Operand),
+  2,
+  operand__field_descriptors,
+  operand__field_indices_by_name,
+  1,  operand__number_ranges,
+  (ProtobufCMessageInit) operand__init,
+  NULL,NULL,NULL    /* reserved[123] */
+};
+static const ProtobufCEnumValue operator_type__enum_values_by_number[7] =
+{
+  { "ADD", "OPERATOR_TYPE__ADD", 0 },
+  { "SUB", "OPERATOR_TYPE__SUB", 1 },
+  { "MUL", "OPERATOR_TYPE__MUL", 2 },
+  { "DIV", "OPERATOR_TYPE__DIV", 3 },
+  { "EQ", "OPERATOR_TYPE__EQ", 4 },
+  { "LT", "OPERATOR_TYPE__LT", 5 },
+  { "GT", "OPERATOR_TYPE__GT", 6 },
+};
+static const ProtobufCIntRange operator_type__value_ranges[] = {
+{0, 0},{0, 7}
+};
+static const ProtobufCEnumValueIndex operator_type__enum_values_by_name[7] =
+{
+  { "ADD", 0 },
+  { "DIV", 3 },
+  { "EQ", 4 },
+  { "GT", 6 },
+  { "LT", 5 },
+  { "MUL", 2 },
+  { "SUB", 1 },
+};
+const ProtobufCEnumDescriptor operator_type__descriptor =
+{
+  PROTOBUF_C__ENUM_DESCRIPTOR_MAGIC,
+  "OperatorType",
+  "OperatorType",
+  "OperatorType",
+  "",
+  7,
+  operator_type__enum_values_by_number,
+  7,
+  operator_type__enum_values_by_name,
+  1,
+  operator_type__value_ranges,
+  NULL,NULL,NULL,NULL   /* reserved[1234] */
 };

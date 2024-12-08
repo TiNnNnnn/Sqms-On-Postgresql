@@ -16,10 +16,44 @@ PROTOBUF_C__BEGIN_DECLS
 
 
 typedef struct _HistorySlowPlanStat HistorySlowPlanStat;
+typedef struct _Expression Expression;
+typedef struct _Operator Operator;
+typedef struct _Operand Operand;
 
 
 /* --- enums --- */
 
+typedef enum _OperatorType {
+  /*
+   * +
+   */
+  OPERATOR_TYPE__ADD = 0,
+  /*
+   * -
+   */
+  OPERATOR_TYPE__SUB = 1,
+  /*
+   * *
+   */
+  OPERATOR_TYPE__MUL = 2,
+  /*
+   * /
+   */
+  OPERATOR_TYPE__DIV = 3,
+  /*
+   * ==
+   */
+  OPERATOR_TYPE__EQ = 4,
+  /*
+   * <
+   */
+  OPERATOR_TYPE__LT = 5,
+  /*
+   * >
+   */
+  OPERATOR_TYPE__GT = 6
+    PROTOBUF_C__FORCE_ENUM_TO_BE_INT_SIZE(OPERATOR_TYPE)
+} OperatorType;
 
 /* --- messages --- */
 
@@ -97,12 +131,70 @@ struct  _HistorySlowPlanStat
   /*
    *all prdicates of current subquery
    */
-  size_t n_sub_pref_type_set;
-  char **sub_pref_type_set;
+  size_t n_preds;
+  Expression **preds;
 };
 #define HISTORY_SLOW_PLAN_STAT__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&history_slow_plan_stat__descriptor) \
     , 0, 0, 0, 0, 0, 0, 0, 0, 0,NULL, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, 0,NULL, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, 0,NULL, 0,NULL }
+
+
+typedef enum {
+  EXPRESSION__EXPR__NOT_SET = 0,
+  EXPRESSION__EXPR_OP = 1,
+  EXPRESSION__EXPR_OPERAND = 2
+    PROTOBUF_C__FORCE_ENUM_TO_BE_INT_SIZE(EXPRESSION__EXPR)
+} Expression__ExprCase;
+
+/*
+ **
+ * expression
+ */
+struct  _Expression
+{
+  ProtobufCMessage base;
+  Expression__ExprCase expr_case;
+  union {
+    Operator *op;
+    Operand *operand;
+  };
+};
+#define EXPRESSION__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&expression__descriptor) \
+    , EXPRESSION__EXPR__NOT_SET, {0} }
+
+
+struct  _Operator
+{
+  ProtobufCMessage base;
+  OperatorType type;
+  Expression *left;
+  Expression *right;
+};
+#define OPERATOR__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&operator__descriptor) \
+    , OPERATOR_TYPE__ADD, NULL, NULL }
+
+
+typedef enum {
+  OPERAND__VALUE__NOT_SET = 0,
+  OPERAND__VALUE_CONSTANT = 1,
+  OPERAND__VALUE_VARIABLE = 2
+    PROTOBUF_C__FORCE_ENUM_TO_BE_INT_SIZE(OPERAND__VALUE)
+} Operand__ValueCase;
+
+struct  _Operand
+{
+  ProtobufCMessage base;
+  Operand__ValueCase value_case;
+  union {
+    double constant;
+    char *variable;
+  };
+};
+#define OPERAND__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&operand__descriptor) \
+    , OPERAND__VALUE__NOT_SET, {0} }
 
 
 /* HistorySlowPlanStat methods */
@@ -124,10 +216,76 @@ HistorySlowPlanStat *
 void   history_slow_plan_stat__free_unpacked
                      (HistorySlowPlanStat *message,
                       ProtobufCAllocator *allocator);
+/* Expression methods */
+void   expression__init
+                     (Expression         *message);
+size_t expression__get_packed_size
+                     (const Expression   *message);
+size_t expression__pack
+                     (const Expression   *message,
+                      uint8_t             *out);
+size_t expression__pack_to_buffer
+                     (const Expression   *message,
+                      ProtobufCBuffer     *buffer);
+Expression *
+       expression__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data);
+void   expression__free_unpacked
+                     (Expression *message,
+                      ProtobufCAllocator *allocator);
+/* Operator methods */
+void   operator__init
+                     (Operator         *message);
+size_t operator__get_packed_size
+                     (const Operator   *message);
+size_t operator__pack
+                     (const Operator   *message,
+                      uint8_t             *out);
+size_t operator__pack_to_buffer
+                     (const Operator   *message,
+                      ProtobufCBuffer     *buffer);
+Operator *
+       operator__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data);
+void   operator__free_unpacked
+                     (Operator *message,
+                      ProtobufCAllocator *allocator);
+/* Operand methods */
+void   operand__init
+                     (Operand         *message);
+size_t operand__get_packed_size
+                     (const Operand   *message);
+size_t operand__pack
+                     (const Operand   *message,
+                      uint8_t             *out);
+size_t operand__pack_to_buffer
+                     (const Operand   *message,
+                      ProtobufCBuffer     *buffer);
+Operand *
+       operand__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data);
+void   operand__free_unpacked
+                     (Operand *message,
+                      ProtobufCAllocator *allocator);
 /* --- per-message closures --- */
 
 typedef void (*HistorySlowPlanStat_Closure)
                  (const HistorySlowPlanStat *message,
+                  void *closure_data);
+typedef void (*Expression_Closure)
+                 (const Expression *message,
+                  void *closure_data);
+typedef void (*Operator_Closure)
+                 (const Operator *message,
+                  void *closure_data);
+typedef void (*Operand_Closure)
+                 (const Operand *message,
                   void *closure_data);
 
 /* --- services --- */
@@ -135,7 +293,11 @@ typedef void (*HistorySlowPlanStat_Closure)
 
 /* --- descriptors --- */
 
+extern const ProtobufCEnumDescriptor    operator_type__descriptor;
 extern const ProtobufCMessageDescriptor history_slow_plan_stat__descriptor;
+extern const ProtobufCMessageDescriptor expression__descriptor;
+extern const ProtobufCMessageDescriptor operator__descriptor;
+extern const ProtobufCMessageDescriptor operand__descriptor;
 
 PROTOBUF_C__END_DECLS
 

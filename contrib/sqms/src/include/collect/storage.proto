@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+message EquivlenceClass{
+    map<string,string> sets = 1;
+    double num_lower_limit = 2;
+    double num_upper_limit = 3;
+    string str_lower_limit = 4;
+    string str_upper_limit = 5;
+};
+
+/*plan stat in single level*/
+message SlowPlanLevelStat{
+    /*join,filter*/
+    repeated EquivlenceClass ec_list = 1;
+    repeated string output_col_set = 2;
+    /*Agg*/
+    repeated string group_by_set = 3;    
+    /*Limit*/
+};
+
+message SlowPlanStat{
+    /*size of stats is qual with slow plan's level num*/
+    repeated SlowPlanLevelStat stats = 1;
+}

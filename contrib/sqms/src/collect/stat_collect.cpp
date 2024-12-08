@@ -60,7 +60,7 @@ extern "C" {
 int StatCollecter::nesting_level = 0;
 bool StatCollecter::current_query_sampled = false;
 /*we hope the index built while database starting*/
-HistoryQueryLevelTree* history_idx = new HistoryQueryLevelTree();
+//HistoryQueryLevelTree* history_idx = new HistoryQueryLevelTree();
 
 
 StatCollecter::StatCollecter(){					 

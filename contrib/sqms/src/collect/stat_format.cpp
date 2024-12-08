@@ -49,7 +49,6 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd){
 
         /*build fast filter tree, here need ensure thread safe,moreover,we
         need rebuild it after db restarting*/
-        
 
         /**
          * TODO: 11-23 storage the slow sub query
@@ -63,6 +62,17 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd){
     return true;
 }
 
+/**
+ * ComputeEquivlenceClass: calulate the equivelence class and its containment for
+ * each level for plan
+ */
+void ComputeEquivlenceClass(){
+    
+}
+
+/**
+ *Preprocessing: parse all sub query (include itself) into json format 
+ */
 bool PlanStatFormat::Preprocessing(QueryDesc* qd){
     ExplainState *total_es = NewFormatState();
     if(total_es == NULL)return false;
