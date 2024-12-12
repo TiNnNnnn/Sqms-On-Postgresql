@@ -2160,12 +2160,12 @@ show_sortorder_options(StringInfo buf, Node *sortexpr,
 	if (nullsFirst && !reverse)
 	{
 		appendStringInfoString(buf, " NULLS FIRST");
-		hsp->group_sort_keys[keyno]->sorrt_null_pos = "NULLS FIRST";
+		hsp->group_sort_keys[keyno]->sort_null_pos = "NULLS FIRST";
 	}
 	else if (!nullsFirst && reverse)
 	{
 		appendStringInfoString(buf, " NULLS LAST");
-		hsp->group_sort_keys[keyno]->sorrt_null_pos = "NULLS LAST";
+		hsp->group_sort_keys[keyno]->sort_null_pos = "NULLS LAST";
 	}
 }
 

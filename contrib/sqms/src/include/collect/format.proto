@@ -79,7 +79,7 @@ message GroupSortKey{
 	bool sort_operators = 2;
 	string sort_collation = 3;
 	string sort_direction = 4; // DESC or ASC or NO_DEFAULT
-	string sorrt_null_pos = 5; // NULLS FIRST or NULLS LAST
+	string sort_null_pos = 5; // NULLS FIRST or NULLS LAST
 	bool presorted_key = 6;
 }
 

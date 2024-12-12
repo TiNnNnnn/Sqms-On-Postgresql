@@ -21,6 +21,11 @@
 struct Plan;					/* avoid including plannodes.h here */
 struct PlannedStmt;
 
+typedef struct ExprRecureState{
+	StringInfo detail_str_; 
+	int cnt_;
+}ExprRecureState;
+
 extern char *pg_get_indexdef_string_format(Oid indexrelid);
 extern char *pg_get_indexdef_columns_format(Oid indexrelid, bool pretty);
 

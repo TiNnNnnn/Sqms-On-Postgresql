@@ -18,6 +18,7 @@ PROTOBUF_C__BEGIN_DECLS
 typedef struct _HistorySlowPlanStat HistorySlowPlanStat;
 typedef struct _GroupSortKey GroupSortKey;
 typedef struct _GroupKeys GroupKeys;
+typedef struct _Equals Equals;
 typedef struct _EquivlenceClass EquivlenceClass;
 typedef struct _EquivlenceClass__SetsEntry EquivlenceClass__SetsEntry;
 typedef struct _SlowPlanLevelStat SlowPlanLevelStat;
@@ -121,10 +122,17 @@ struct  _HistorySlowPlanStat
   char *group_sort_qlabel;
   size_t n_group_sort_keys;
   GroupSortKey **group_sort_keys;
+  /*
+   *all prdicates of current subquery
+   */
+  size_t n_and_quals;
+  Equals **and_quals;
+  size_t n_or_quals;
+  Equals **or_quals;
 };
 #define HISTORY_SLOW_PLAN_STAT__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&history_slow_plan_stat__descriptor) \
-    , 0, 0, 0, 0, 0, 0, 0,NULL, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, 0,NULL, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0,NULL, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, 0,NULL, (char *)protobuf_c_empty_string, 0,NULL }
+    , 0, 0, 0, 0, 0, 0, 0,NULL, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, 0,NULL, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0,NULL, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, 0,NULL, (char *)protobuf_c_empty_string, 0,NULL, 0,NULL, 0,NULL }
 
 
 struct  _GroupSortKey
@@ -148,7 +156,7 @@ struct  _GroupSortKey
   /*
    * NULLS FIRST or NULLS LAST
    */
-  char *sorrt_null_pos;
+  char *sort_null_pos;
   protobuf_c_boolean presorted_key;
 };
 #define GROUP_SORT_KEY__INIT \
@@ -166,6 +174,18 @@ struct  _GroupKeys
 #define GROUP_KEYS__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&group_keys__descriptor) \
     , (char *)protobuf_c_empty_string, 0,NULL }
+
+
+struct  _Equals
+{
+  ProtobufCMessage base;
+  char *left;
+  char *right;
+  char *op;
+};
+#define EQUALS__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&equals__descriptor) \
+    , (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string }
 
 
 struct  _EquivlenceClass__SetsEntry
@@ -292,6 +312,25 @@ GroupKeys *
 void   group_keys__free_unpacked
                      (GroupKeys *message,
                       ProtobufCAllocator *allocator);
+/* Equals methods */
+void   equals__init
+                     (Equals         *message);
+size_t equals__get_packed_size
+                     (const Equals   *message);
+size_t equals__pack
+                     (const Equals   *message,
+                      uint8_t             *out);
+size_t equals__pack_to_buffer
+                     (const Equals   *message,
+                      ProtobufCBuffer     *buffer);
+Equals *
+       equals__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data);
+void   equals__free_unpacked
+                     (Equals *message,
+                      ProtobufCAllocator *allocator);
 /* EquivlenceClass__SetsEntry methods */
 void   equivlence_class__sets_entry__init
                      (EquivlenceClass__SetsEntry         *message);
@@ -363,6 +402,9 @@ typedef void (*GroupSortKey_Closure)
 typedef void (*GroupKeys_Closure)
                  (const GroupKeys *message,
                   void *closure_data);
+typedef void (*Equals_Closure)
+                 (const Equals *message,
+                  void *closure_data);
 typedef void (*EquivlenceClass__SetsEntry_Closure)
                  (const EquivlenceClass__SetsEntry *message,
                   void *closure_data);
@@ -384,6 +426,7 @@ typedef void (*SlowPlanStat_Closure)
 extern const ProtobufCMessageDescriptor history_slow_plan_stat__descriptor;
 extern const ProtobufCMessageDescriptor group_sort_key__descriptor;
 extern const ProtobufCMessageDescriptor group_keys__descriptor;
+extern const ProtobufCMessageDescriptor equals__descriptor;
 extern const ProtobufCMessageDescriptor equivlence_class__descriptor;
 extern const ProtobufCMessageDescriptor equivlence_class__sets_entry__descriptor;
 extern const ProtobufCMessageDescriptor slow_plan_level_stat__descriptor;
