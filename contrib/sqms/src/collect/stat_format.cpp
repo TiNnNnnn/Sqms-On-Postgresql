@@ -47,6 +47,11 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd){
         std::vector<HistorySlowPlanStat*> list;
         context->executeStrategy(list);
 
+        SlowPlanStat *sps= new SlowPlanStat();
+        for(const auto& p : list){
+            ComputeEquivlenceClass(p,sps);
+        }
+
         /*build fast filter tree, here need ensure thread safe,moreover,we
         need rebuild it after db restarting*/
 
@@ -54,7 +59,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd){
          * TODO: 11-23 storage the slow sub query
          */
         for(auto q : list){
-            std::string hash_val = HashCanonicalPlan(q->json_plan_);
+            std::string hash_val = HashCanonicalPlan(q->json_plan);
             storage_->PutStat(hash_val,hsps);
         }
         return true;
@@ -66,8 +71,31 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd){
  * ComputeEquivlenceClass: calulate the equivelence class and its containment for
  * each level for plan
  */
-void ComputeEquivlenceClass(){
+void PlanStatFormat::ComputeEquivlenceClass(HistorySlowPlanStat* hsps,SlowPlanStat *sps){
     
+    std::vector<HistorySlowPlanStat*>levels;
+    std::vector<HistorySlowPlanStat*>tmp_levels;
+
+    levels.push_back(hsps);
+    while(levels.size()){
+        size_t sz = levels.size();
+        for(size_t i=0;i<sz;i++){
+            for(size_t j = 0; j < levels[i]->n_childs ; j++){
+                if(levels[i]->childs[j]){
+                    tmp_levels.push_back(levels[i]);
+                }
+            }
+        }
+        ComputLevlEquivlenceClass(levels,sps);
+        levels.clear();
+        std::swap(levels,tmp_levels);
+    }
+}
+
+void PlanStatFormat::ComputLevlEquivlenceClass(const std::vector<HistorySlowPlanStat*>& list,SlowPlanStat *sps){
+    for(const auto& s : list){
+        
+    }
 }
 
 /**
@@ -75,13 +103,18 @@ void ComputeEquivlenceClass(){
  */
 bool PlanStatFormat::Preprocessing(QueryDesc* qd){
     ExplainState *total_es = NewFormatState();
+    ExplainState *total_ces = NewFormatState();
     if(total_es == NULL)return false;
 
     FormatBeginOutput(total_es);
-    hsps_ = FormatPrintPlan(total_es,qd);
+    FormatBeginOutput(total_ces);
+    hsps_ = FormatPrintPlan(total_es,total_ces,qd);
+    FormatEndOutput(total_ces);
     FormatEndOutput(total_es);
+    
 
     pfree(total_es);
+    pfree(total_ces);
     return true;
 }
 

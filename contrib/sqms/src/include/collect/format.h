@@ -22,6 +22,10 @@
 
 typedef struct RecureState{
     double cost_;
+	/*in detail_str_,we need reserve all detail about a physical node,it will used
+	  for compute equivlence class*/
+	StringInfo detail_str_;
+	/*in cannoical_str, we just reserve the Type info,it is enough for a basic screening*/
 	StringInfo canonical_str_;
 	List* node_type_set_;
 	List* pred_set_;
@@ -35,7 +39,7 @@ extern ExplainState *NewFormatState(void);
 
 extern void FreeFormatState(ExplainState*es);
 
-extern HistorySlowPlanStat FormatPrintPlan(ExplainState *es, QueryDesc *queryDesc);
+extern HistorySlowPlanStat FormatPrintPlan(ExplainState *es, ExplainState *ces,QueryDesc *queryDesc);
 
 extern void FormatPrintTriggers(ExplainState *es, QueryDesc *queryDesc);
 

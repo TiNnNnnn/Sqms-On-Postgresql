@@ -14,18 +14,6 @@ extern "C"{
     #include "common/config.h" 
 }
 
-class EquivlenceClass{
-private:
-
-public:
-    std::unordered_set<std::string>attrs_;
-    double lower_limit_;
-    double upper_limit_;
-};
-
-
-
-
 //extern HistoryQueryLevelTree* history_idx;
 class StatCollecter{
 public:

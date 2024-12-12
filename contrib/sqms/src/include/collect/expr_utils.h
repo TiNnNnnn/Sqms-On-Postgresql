@@ -15,6 +15,7 @@
 #include "nodes/nodes.h"
 #include "nodes/parsenodes.h"
 #include "nodes/pg_list.h"
+#include "format.pb-c.h"
 #include <postgres_ext.h>
 
 struct Plan;					/* avoid including plannodes.h here */
@@ -24,16 +25,16 @@ extern char *pg_get_indexdef_string_format(Oid indexrelid);
 extern char *pg_get_indexdef_columns_format(Oid indexrelid, bool pretty);
 
 extern char *pg_get_partkeydef_columns_format(Oid relid, bool pretty);
-extern char *pg_get_partconstrdef_string_format(Oid partitionId, char *aliasname);
+extern char *pg_get_partconstrdef_string_format(Oid partitionId, char *aliasnamem,HistorySlowPlanStat* hsp);
 
 extern char *pg_get_constraintdef_command_format(Oid constraintId);
 extern char *deparse_expression_format(Node *expr, List *dpcontext,
-								bool forceprefix, bool showimplicit);
+								bool forceprefix, bool showimplicit,HistorySlowPlanStat* hsp);
 extern List *deparse_context_for_format(const char *aliasname, Oid relid);
 extern List *deparse_context_for_plan_tree_format(struct PlannedStmt *pstmt,
 										   List *rtable_names);
 extern List *set_deparse_context_plan_format(List *dpcontext,
-									  struct Plan *plan, List *ancestors);
+									  struct Plan *plan, List *ancestors,HistorySlowPlanStat* hsp);
 extern List *select_rtable_names_for_explain_format(List *rtable,
 											 Bitmapset *rels_used);
 extern char *generate_collation_name_format(Oid collid);

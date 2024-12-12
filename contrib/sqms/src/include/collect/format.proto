@@ -1,85 +1,144 @@
 syntax = "proto3";
 
 message HistorySlowPlanStat{
-    double estimate_start_up_cost_ = 1;
-	double estimate_total_cost_ = 2;
-	double estimate_plan_rows_ = 3;
-	double estimate_plan_width_ = 4;
+	double custom_plan_provider = 1;
+	double estimate_plan_width = 4;
 
-	double actual_nloops_ = 5;
-	double actual_start_up_ = 6;
-	double actual_total_ = 7;
-	double actual_rows_ = 8;
+	double actual_nloops = 5;
+	double actual_start_up = 6;
+	double actual_total = 7;
+	double actual_rows = 8;
 
     repeated HistorySlowPlanStat  childs = 9;
-    string node_type_ = 10;
-	string strategy_ = 11;
+    string node_type = 10;
+	string strategy = 11;
 	//for aggregate
-	string partial_mode_ = 12;
+	string partial_mode = 12;
 	//for subplan
-	string sub_plan_name_ = 13;
+	string sub_plan_name = 13;
 	//for insert/update/delete
-	string operation_ = 14;
-    //for scan
-	string object_name_ = 15;
-	string schema_ = 16;
-	string object_tag_ = 17;
-	string alia_name_ = 18;
+	string operation = 14;
+    //for scan (object tag and object name is a kv)
+	string object_name = 15;
+	string schema = 16;
+	string object_tag = 17;
+	string alia_name = 18;
 	//addtional info for indexscan/indexonlyscan
-	string scan_dir_ =19;
-	string idx_name_ = 20;
+	string scan_dir =19;
+	string idx_name = 20;
 	//for join
-	string join_type_ = 21;
-	bool inner_unique_ = 22;
+	string join_type = 21;
+	bool inner_unique = 22;
 	//for setOp
-	string command_ = 23;
+	string command = 23;
 	//output cols
-	repeated string output_ = 24;
-	string relationship_ = 25;
-	double total_cost_ = 26;
-	string sample_method_ = 27;
-	string sampling_parameters_ = 28;
-	string repeatable_seed_ = 29;
+	repeated string output = 24;
+	string relationship = 25;
+	double total_cost = 26;
+	string sample_method = 27;
+	string sampling_parameters = 28;
+	string repeatable_seed = 29;
 
 	/*total cost of current subquery*/
-	double sub_cost_ = 30;
+	double sub_cost = 30;
 	/*json of current subquery*/
-	string json_plan_ = 31; 
+	string json_plan = 31; 
+	string canonical_json_plan = 32;
 	/*all node type of current subquery*/
-	repeated string sub_node_type_set = 32;
+	repeated string sub_node_type_set = 33;
+
+	/*for filter*/
+	string qlabel = 34;
+	string exprstr = 35;
+	
+	/*for groupby*/
+	string key_name = 36;
+	string keysetname = 37;
+	
+	bool is_g_keys = 38;
+	/*for groupby set, a set contains serval keys*/
+	repeated GroupKeys g_sets = 39;
+
+	/*for groupby or sort keys*/
+	string group_sort_qlabel = 40;
+	repeated GroupSortKey group_sort_keys = 41;
+
 	/*all prdicates of current subquery*/
-	repeated Expression preds = 33;
+	//repeated Expression preds = 34;
 }
 
-/**
-* expression
-*/
-message Expression {
-    oneof expr {
-        Operator op = 1;
-        Operand operand = 2;
-    }
+message GroupSortKey{
+	/*
+	* sort or groupby key
+	* group_sort_qlabel == "Group Key" --> groupby key
+	* group_sort_qlable == "Sort Key"  --> sort key
+	*/
+	string key = 1;
+	/*sort order options*/
+	bool sort_operators = 2;
+	string sort_collation = 3;
+	string sort_direction = 4; // DESC or ASC or NO_DEFAULT
+	string sorrt_null_pos = 5; // NULLS FIRST or NULLS LAST
+	bool presorted_key = 6;
 }
 
-enum OperatorType {
-    ADD = 0;     // +
-    SUB = 1;     // -
-    MUL = 2;     // *
-    DIV = 3;     // /
-    EQ = 4;      // ==
-    LT = 5;      // <
-    GT = 6;      // >
+message GroupKeys{
+	string key_name = 1;
+	repeated string keys = 2;
 }
 
-message Operator {
-    OperatorType type = 1;
-    Expression left = 2; 
-    Expression right = 3; 
+message EquivlenceClass{
+    map<string,string> sets = 1;
+    double num_lower_limit = 2;
+    double num_upper_limit = 3;
+    string str_lower_limit = 4;
+    string str_upper_limit = 5;
+};
+
+/*plan stat in single level*/
+message SlowPlanLevelStat{
+    /*join,filter*/
+    repeated EquivlenceClass ec_list = 1;
+    repeated string output_col_set = 2;
+    /*Agg*/
+    repeated string group_by_set = 3;    
+    /*Limit*/
+};
+
+message SlowPlanStat{
+    /*size of stats is qual with slow plan's level num*/
+    repeated SlowPlanLevelStat stats = 1;
 }
 
-message Operand {
-    oneof value {
-        double constant = 1;
-        string variable = 2;
-    }
-}
+// /**
+// * expression
+// */
+// message Expression {
+//     oneof expr {
+//         Operator op = 1;
+//         Operand operand = 2;
+//     }
+// }
+
+// enum OperatorType {
+//     ADD = 0;     // +
+//     SUB = 1;     // -
+//     MUL = 2;     // *
+//     DIV = 3;     // /
+//     EQ = 4;      // ==
+//     LT = 5;      // <
+//     GT = 6;      // >
+// }
+
+// message Operator {
+//     OperatorType type = 1;
+//     Expression left = 2; 
+//     Expression right = 3; 
+// }
+
+// message Operand {
+//     oneof value {
+//         double constant = 1;
+//         string variable = 2;
+//     }
+// }

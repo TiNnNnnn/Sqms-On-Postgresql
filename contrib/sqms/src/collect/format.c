@@ -66,45 +66,46 @@ static double elapsed_time(instr_time *starttime);
 static bool ExplainPreScanNode(PlanState *planstate, Bitmapset **rels_used);
 static RecureState ExplainNode(PlanState *planstate, List *ancestors,
 						const char *relationship, const char *plan_name,
-						ExplainState *es);
+						ExplainState *es,ExplainState *ces);
 static void show_plan_tlist(PlanState *planstate, List *ancestors,
-							ExplainState *es);
+							ExplainState *es,HistorySlowPlanStat * hsp);
 static void show_expression(Node *node, const char *qlabel,
 							PlanState *planstate, List *ancestors,
-							bool useprefix, ExplainState *es);
+							bool useprefix, ExplainState *es,HistorySlowPlanStat* hsp);
 static void show_qual(List *qual, const char *qlabel,
 					  PlanState *planstate, List *ancestors,
-					  bool useprefix, ExplainState *es);
+					  bool useprefix, ExplainState *es,HistorySlowPlanStat* hsp);
 static void show_scan_qual(List *qual, const char *qlabel,
 						   PlanState *planstate, List *ancestors,
-						   ExplainState *es);
+						   ExplainState *es,HistorySlowPlanStat* hsp);
 static void show_upper_qual(List *qual, const char *qlabel,
 							PlanState *planstate, List *ancestors,
-							ExplainState *es);
+							ExplainState *es,HistorySlowPlanStat* hsp);
 static void show_sort_keys(SortState *sortstate, List *ancestors,
-						   ExplainState *es);
+						   ExplainState *es,HistorySlowPlanStat* hsp);
 static void show_incremental_sort_keys(IncrementalSortState *incrsortstate,
-									   List *ancestors, ExplainState *es);
+									   List *ancestors, ExplainState *es,HistorySlowPlanStat* hsp);
 static void show_merge_append_keys(MergeAppendState *mstate, List *ancestors,
-								   ExplainState *es);
+								   ExplainState *es,HistorySlowPlanStat* hsp);
 static void show_agg_keys(AggState *astate, List *ancestors,
-						  ExplainState *es);
+						  ExplainState *es,HistorySlowPlanStat* hsp);
 static void show_grouping_sets(PlanState *planstate, Agg *agg,
-							   List *ancestors, ExplainState *es);
+							   List *ancestors, ExplainState *es,HistorySlowPlanStat* hsp);
 static void show_grouping_set_keys(PlanState *planstate,
 								   Agg *aggnode, Sort *sortnode,
 								   List *context, bool useprefix,
-								   List *ancestors, ExplainState *es);
+								   List *ancestors, ExplainState *es,HistorySlowPlanStat* hsp);
 static void show_group_keys(GroupState *gstate, List *ancestors,
-							ExplainState *es);
+							ExplainState *es,HistorySlowPlanStat * hsp);
 static void show_sort_group_keys(PlanState *planstate, const char *qlabel,
 								 int nkeys, int nPresortedKeys, AttrNumber *keycols,
 								 Oid *sortOperators, Oid *collations, bool *nullsFirst,
-								 List *ancestors, ExplainState *es);
+								 List *ancestors, ExplainState *es,HistorySlowPlanStat* hsp);
 static void show_sortorder_options(StringInfo buf, Node *sortexpr,
-								   Oid sortOperator, Oid collation, bool nullsFirst);
+								   Oid sortOperator, Oid collation, bool nullsFirst,
+								   HistorySlowPlanStat *hsp,int keyno);
 static void show_tablesample(TableSampleClause *tsc, PlanState *planstate,
-							 List *ancestors, ExplainState *es);
+							 List *ancestors, ExplainState *es,HistorySlowPlanStat* hsp);
 static void show_sort_info(SortState *sortstate, ExplainState *es);
 static void show_incremental_sort_info(IncrementalSortState *incrsortstate,
 									   ExplainState *es);
@@ -121,19 +122,19 @@ static void show_buffer_usage(ExplainState *es, const BufferUsage *usage,
 							  bool planning);
 static void show_wal_usage(ExplainState *es, const WalUsage *usage);
 static void ExplainIndexScanDetails(Oid indexid, ScanDirection indexorderdir,
-									ExplainState *es);
-static void ExplainScanTarget(Scan *plan, ExplainState *es);
-static void ExplainModifyTarget(ModifyTable *plan, ExplainState *es);
-static void ExplainTargetRel(Plan *plan, Index rti, ExplainState *es);
+									ExplainState *es,HistorySlowPlanStat* hsp);
+static void ExplainScanTarget(Scan *plan, ExplainState *es,HistorySlowPlanStat *hsp);
+static void ExplainModifyTarget(ModifyTable *plan, ExplainState *es,HistorySlowPlanStat *hsp);
+static void ExplainTargetRel(Plan *plan, Index rti, ExplainState *es,HistorySlowPlanStat *hsp);
 static void show_modifytable_info(ModifyTableState *mtstate, List *ancestors,
-								  ExplainState *es);
+								  ExplainState *es,HistorySlowPlanStat *hsp);
 static void ExplainMemberNodes(PlanState **planstates, int nplans,
-							   List *ancestors, ExplainState *es);
+							   List *ancestors, ExplainState *es,ExplainState *ces);
 static void ExplainMissingMembers(int nplans, int nchildren, ExplainState *es);
 static RecureState ExplainSubPlans(List *plans, List *ancestors,
-							const char *relationship, ExplainState *es);
+							const char *relationship, ExplainState *es,ExplainState *total_ces);
 static void ExplainCustomChildren(CustomScanState *css,
-								  List *ancestors, ExplainState *es);
+								  List *ancestors, ExplainState *es,ExplainState *ces);
 static ExplainWorkersState *ExplainCreateWorkersState(int num_workers);
 static void ExplainOpenWorker(int n, ExplainState *es);
 static void ExplainCloseWorker(int n, ExplainState *es);
@@ -155,6 +156,7 @@ static void escape_yaml(StringInfo buf, const char *str);
 static RecureState NewRecureState(){
 	RecureState rs; 
 	rs.canonical_str_ = makeStringInfo();
+	rs.detail_str_ = makeStringInfo();
 	rs.node_type_set_ = NULL;
 	rs.cost_ = 0;
 	rs.hps_ =  (HistorySlowPlanStat){0};
@@ -268,7 +270,7 @@ ExplainPrintSettings(ExplainState *es)
  *
  * NB: will not work on utility statements
  */
-HistorySlowPlanStat FormatPrintPlan(ExplainState *es, QueryDesc *queryDesc)
+HistorySlowPlanStat FormatPrintPlan(ExplainState *es, ExplainState *ces,QueryDesc *queryDesc)
 {
 	Bitmapset  *rels_used = NULL; 
 	PlanState  *ps;
@@ -300,7 +302,7 @@ HistorySlowPlanStat FormatPrintPlan(ExplainState *es, QueryDesc *queryDesc)
 		es->hide_workers = true;
 	}
 	
-	RecureState ret = ExplainNode(ps, NIL, NULL, NULL, es);
+	RecureState ret = ExplainNode(ps, NIL, NULL, NULL, es , ces);
 
 	return ret.hps_;
 	/*
@@ -631,7 +633,7 @@ ExplainPreScanNode(PlanState *planstate, Bitmapset **rels_used)
 static RecureState
 ExplainNode(PlanState *planstate, List *ancestors,
 			const char *relationship, const char *plan_name,
-			ExplainState *total_es)
+			ExplainState *total_es,ExplainState *total_ces)
 {
 	Plan	   *plan = planstate->plan;
 	const char *pname;			/* node type name for text output */
@@ -654,7 +656,6 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		total_es->workers_state = ExplainCreateWorkersState(planstate->worker_instrument->num_workers);
 	else
 		total_es->workers_state = NULL;
-
 
 	/* Identify plan node type, and print generic details */
 	switch (nodeTag(plan))
@@ -887,22 +888,51 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	*es = *total_es;
 	es->str = makeStringInfo();
 
+	ExplainState* ces = NewFormatState();
+	*ces = *total_ces;
+	es->str = makeStringInfo();
+
 	FormatOpenGroup("Plan","Plan",true, es);
-	FormatPropertyText("Node Type", sname, es);
-	if (strategy)
+
+	/*just note physical node type for ces*/
+	FormatPropertyText("Node Type",sname,ces);
+	FormatPropertyText("Node Type",sname,es);
+	hsp.node_type = sname;
+
+	if (strategy){
 		FormatPropertyText("Strategy", strategy, es);
-	if (partialmode)
+		FormatPropertyText("Strategy", strategy, ces);
+		hsp.strategy = strategy;
+	}
+	if (partialmode){
 		FormatPropertyText("Partial Mode", partialmode, es);
-	if (operation)
+		FormatPropertyText("Partial Mode", partialmode, ces);
+		hsp.partial_mode = partialmode;
+	}
+	if (operation){
 		FormatPropertyText("Operation", operation, es);
-	if (relationship)
+		FormatPropertyText("Operation", operation, ces);
+		hsp.operation = operation;
+	}
+	if (relationship){
 		FormatPropertyText("Parent Relationship", relationship, es);
-	if (plan_name)
+		FormatPropertyText("Parent Relationship", relationship, ces);
+		hsp.relationship = relationship;
+	}
+	if (plan_name){
 		FormatPropertyText("Subplan Name", plan_name, es);
-	if (custom_name)
+		FormatPropertyText("Subplan Name", plan_name, ces);
+		hsp.sub_plan_name = plan_name;
+	}
+
+	if (custom_name){
 		FormatPropertyText("Custom Plan Provider", custom_name, es);
+		FormatPropertyText("Custom Plan Provider", custom_name, ces);
+	}
+
 	FormatPropertyBool("Parallel Aware", plan->parallel_aware, es);
- 
+	FormatPropertyBool("Parallel Aware", plan->parallel_aware, ces);
+
 	switch (nodeTag(plan))
 	{
 		/*scan*/
@@ -916,12 +946,12 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		case T_ValuesScan:
 		case T_CteScan:
 		case T_WorkTableScan:
-			ExplainScanTarget((Scan *) plan, es);
+			ExplainScanTarget((Scan *) plan, es, &hsp);
 			break;
 		case T_ForeignScan:
 		case T_CustomScan:
 			if (((Scan *) plan)->scanrelid > 0)
-				ExplainScanTarget((Scan *) plan, es);
+				ExplainScanTarget((Scan *) plan, es,&hsp);
 			break;
 		case T_IndexScan:
 			{
@@ -929,8 +959,8 @@ ExplainNode(PlanState *planstate, List *ancestors,
 
 				ExplainIndexScanDetails(indexscan->indexid,
 										indexscan->indexorderdir,
-										es);
-				ExplainScanTarget((Scan *) indexscan, es);
+										es,&hsp);
+				ExplainScanTarget((Scan *) indexscan, es,&hsp);
 			}
 			break;
 		case T_IndexOnlyScan:
@@ -939,8 +969,8 @@ ExplainNode(PlanState *planstate, List *ancestors,
 
 				ExplainIndexScanDetails(indexonlyscan->indexid,
 										indexonlyscan->indexorderdir,
-										es);
-				ExplainScanTarget((Scan *) indexonlyscan, es);
+										es,&hsp);
+				ExplainScanTarget((Scan *) indexonlyscan, es, &hsp);
 			}
 			break;
 		case T_BitmapIndexScan:
@@ -954,7 +984,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 			break;
 		/*insert,update,delete.merge*/
 		case T_ModifyTable:
-			ExplainModifyTarget((ModifyTable *) plan, es);
+			ExplainModifyTarget((ModifyTable *) plan, es,&hsp);
 			break;
 		/*join*/
 		case T_NestLoop:
@@ -1029,6 +1059,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 								 0, es);
 		FormatPropertyInteger("Plan Width", NULL, plan->plan_width,
 								   es);
+		hsp.estimate_plan_width = plan->plan_width;
 	}
 
 	/*
@@ -1043,6 +1074,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	 */
 	if (planstate->instrument)
 		InstrEndLoop(planstate->instrument);
+
 	if (es->analyze &&
 		planstate->instrument && planstate->instrument->nloops > 0)
 	{
@@ -1055,12 +1087,16 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		{
 			FormatPropertyFloat("Actual Startup Time", "s", startup_ms,
 									 3, es);
+			hsp.actual_start_up = startup_ms;
 			FormatPropertyFloat("Actual Total Time", "s", total_ms,
 									 3, es);
+			hsp.actual_total = total_ms;
             cumulate_cost += total_ms;
 		}
 		FormatPropertyFloat("Actual Rows", NULL, rows, 0, es);
+		hsp.actual_rows = rows;
 		FormatPropertyFloat("Actual Loops", NULL, nloops, 0, es);
+		hsp.actual_nloops = nloops;
 	}
 
 	/* prepare per-worker general execution details */
@@ -1089,17 +1125,22 @@ ExplainNode(PlanState *planstate, List *ancestors,
 										 startup_ms, 3, es);
 				FormatPropertyFloat("Actual Total Time", "ms",
 										 total_ms, 3, es);
+				hsp.actual_start_up = startup_ms;
+				hsp.actual_total = total_ms;
 			}
             cumulate_cost = Max(total_ms,cumulate_cost);
 			FormatPropertyFloat("Actual Rows", NULL, rows, 0, es);
+			hsp.actual_rows = rows;
 			FormatPropertyFloat("Actual Loops", NULL, nloops, 0, es);
+			hsp.actual_nloops = nloops;
 			ExplainCloseWorker(n, es);
 		}
 	}
 
 	/* target list */
 	if (es->verbose)
-		show_plan_tlist(planstate, ancestors, es);
+		show_plan_tlist(planstate, ancestors, es, &hsp);
+
 
 	/* unique join */
 	switch (nodeTag(plan))
@@ -1109,39 +1150,41 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		case T_HashJoin:
 			/* try not to be too chatty about this in text mode */
 			if (es->format != EXPLAIN_FORMAT_TEXT ||
-				(es->verbose && ((Join *) plan)->inner_unique))
-				FormatPropertyBool("Inner Unique",
-									((Join *) plan)->inner_unique,
-									es);
+				(es->verbose && ((Join *) plan)->inner_unique)){
+				FormatPropertyBool("Inner Unique",((Join *) plan)->inner_unique,es);
+				hsp.inner_unique = ((Join *) plan)->inner_unique;
+			}
+
 			break;
 		default:
 			break;
 	}
+
 	/* quals, sort keys, etc */
 	switch (nodeTag(plan))
 	{
 		case T_IndexScan:
 			show_scan_qual(((IndexScan *) plan)->indexqualorig,
-						   "Index Cond", planstate, ancestors, es);
+						   "Index Cond", planstate, ancestors, es,&hsp);
 			if (((IndexScan *) plan)->indexqualorig)
 				show_instrumentation_count("Rows Removed by Index Recheck", 2,
 										   planstate, es);
 			show_scan_qual(((IndexScan *) plan)->indexorderbyorig,
-						   "Order By", planstate, ancestors, es);
-			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es);
+						   "Order By", planstate, ancestors, es,&hsp);
+			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
 			if (plan->qual)
 				show_instrumentation_count("Rows Removed by Filter", 1,
 										   planstate, es);
 			break;
 		case T_IndexOnlyScan:
 			show_scan_qual(((IndexOnlyScan *) plan)->indexqual,
-						   "Index Cond", planstate, ancestors, es);
+						   "Index Cond", planstate, ancestors, es,&hsp);
 			if (((IndexOnlyScan *) plan)->recheckqual)
 				show_instrumentation_count("Rows Removed by Index Recheck", 2,
 										   planstate, es);
 			show_scan_qual(((IndexOnlyScan *) plan)->indexorderby,
-						   "Order By", planstate, ancestors, es);
-			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es);
+						   "Order By", planstate, ancestors, es,&hsp);
+			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
 			if (plan->qual)
 				show_instrumentation_count("Rows Removed by Filter", 1,
 										   planstate, es);
@@ -1151,15 +1194,15 @@ ExplainNode(PlanState *planstate, List *ancestors,
 			break;
 		case T_BitmapIndexScan:
 			show_scan_qual(((BitmapIndexScan *) plan)->indexqualorig,
-						   "Index Cond", planstate, ancestors, es);
+						   "Index Cond", planstate, ancestors, es,&hsp);
 			break;
 		case T_BitmapHeapScan:
 			show_scan_qual(((BitmapHeapScan *) plan)->bitmapqualorig,
-						   "Recheck Cond", planstate, ancestors, es);
+						   "Recheck Cond", planstate, ancestors, es,&hsp);
 			if (((BitmapHeapScan *) plan)->bitmapqualorig)
 				show_instrumentation_count("Rows Removed by Index Recheck", 2,
 										   planstate, es);
-			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es);
+			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
 			if (plan->qual)
 				show_instrumentation_count("Rows Removed by Filter", 1,
 										   planstate, es);
@@ -1168,7 +1211,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 			break;
 		case T_SampleScan:
 			show_tablesample(((SampleScan *) plan)->tablesample,
-							 planstate, ancestors, es);
+							 planstate, ancestors, es,&hsp);
 			/* fall through to print additional fields the same as SeqScan */
 			/* FALLTHROUGH */
 		case T_SeqScan:
@@ -1177,7 +1220,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		case T_NamedTuplestoreScan:
 		case T_WorkTableScan:
 		case T_SubqueryScan:
-			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es);
+			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
 			if (plan->qual)
 				show_instrumentation_count("Rows Removed by Filter", 1,
 										   planstate, es);
@@ -1186,7 +1229,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 			{
 				Gather	   *gather = (Gather *) plan;
 
-				show_scan_qual(plan->qual, "Filter", planstate, ancestors, es);
+				show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
 				if (plan->qual)
 					show_instrumentation_count("Rows Removed by Filter", 1,
 											   planstate, es);
@@ -1214,7 +1257,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 			{
 				GatherMerge *gm = (GatherMerge *) plan;
 
-				show_scan_qual(plan->qual, "Filter", planstate, ancestors, es);
+				show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
 				if (plan->qual)
 					show_instrumentation_count("Rows Removed by Filter", 1,
 											   planstate, es);
@@ -1250,9 +1293,9 @@ ExplainNode(PlanState *planstate, List *ancestors,
 				/* We rely on show_expression to insert commas as needed */
 				show_expression((Node *) fexprs,
 								"Function Call", planstate, ancestors,
-								es->verbose, es);
+								es->verbose, es,&hsp);
 			}
-			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es);
+			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
 			if (plan->qual)
 				show_instrumentation_count("Rows Removed by Filter", 1,
 										   planstate, es);
@@ -1264,9 +1307,9 @@ ExplainNode(PlanState *planstate, List *ancestors,
 
 				show_expression((Node *) tablefunc,
 								"Table Function Call", planstate, ancestors,
-								es->verbose, es);
+								es->verbose, es,&hsp);
 			}
-			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es);
+			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
 			if (plan->qual)
 				show_instrumentation_count("Rows Removed by Filter", 1,
 										   planstate, es);
@@ -1281,15 +1324,15 @@ ExplainNode(PlanState *planstate, List *ancestors,
 
 				if (list_length(tidquals) > 1)
 					tidquals = list_make1(make_orclause(tidquals));
-				show_scan_qual(tidquals, "TID Cond", planstate, ancestors, es);
-				show_scan_qual(plan->qual, "Filter", planstate, ancestors, es);
+				show_scan_qual(tidquals, "TID Cond", planstate, ancestors, es,&hsp);
+				show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
 				if (plan->qual)
 					show_instrumentation_count("Rows Removed by Filter", 1,
 											   planstate, es);
 			}
 			break;
 		case T_ForeignScan:
-			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es);
+			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
 			if (plan->qual)
 				show_instrumentation_count("Rows Removed by Filter", 1,
 										   planstate, es);
@@ -1299,7 +1342,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 			{
 				CustomScanState *css = (CustomScanState *) planstate;
 
-				show_scan_qual(plan->qual, "Filter", planstate, ancestors, es);
+				show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
 				if (plan->qual)
 					show_instrumentation_count("Rows Removed by Filter", 1,
 											   planstate, es);
@@ -1309,81 +1352,81 @@ ExplainNode(PlanState *planstate, List *ancestors,
 			break;
 		case T_NestLoop:
 			show_upper_qual(((NestLoop *) plan)->join.joinqual,
-							"Join Filter", planstate, ancestors, es);
+							"Join Filter", planstate, ancestors, es,&hsp);
 			if (((NestLoop *) plan)->join.joinqual)
 				show_instrumentation_count("Rows Removed by Join Filter", 1,
 										   planstate, es);
-			show_upper_qual(plan->qual, "Filter", planstate, ancestors, es);
+			show_upper_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
 			if (plan->qual)
 				show_instrumentation_count("Rows Removed by Filter", 2,
 										   planstate, es);
 			break;
 		case T_MergeJoin:
 			show_upper_qual(((MergeJoin *) plan)->mergeclauses,
-							"Merge Cond", planstate, ancestors, es);
+							"Merge Cond", planstate, ancestors, es,&hsp);
 			show_upper_qual(((MergeJoin *) plan)->join.joinqual,
-							"Join Filter", planstate, ancestors, es);
+							"Join Filter", planstate, ancestors, es,&hsp);
 			if (((MergeJoin *) plan)->join.joinqual)
 				show_instrumentation_count("Rows Removed by Join Filter", 1,
 										   planstate, es);
-			show_upper_qual(plan->qual, "Filter", planstate, ancestors, es);
+			show_upper_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
 			if (plan->qual)
 				show_instrumentation_count("Rows Removed by Filter", 2,
 										   planstate, es);
 			break;
 		case T_HashJoin:
 			show_upper_qual(((HashJoin *) plan)->hashclauses,
-							"Hash Cond", planstate, ancestors, es);
+							"Hash Cond", planstate, ancestors, es,&hsp);
 			show_upper_qual(((HashJoin *) plan)->join.joinqual,
-							"Join Filter", planstate, ancestors, es);
+							"Join Filter", planstate, ancestors, es,&hsp);
 			if (((HashJoin *) plan)->join.joinqual)
 				show_instrumentation_count("Rows Removed by Join Filter", 1,
 										   planstate, es);
-			show_upper_qual(plan->qual, "Filter", planstate, ancestors, es);
+			show_upper_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
 			if (plan->qual)
 				show_instrumentation_count("Rows Removed by Filter", 2,
 										   planstate, es);
 			break;
 		case T_Agg:
-			show_agg_keys(castNode(AggState, planstate), ancestors, es);
-			show_upper_qual(plan->qual, "Filter", planstate, ancestors, es);
+			show_agg_keys(castNode(AggState, planstate), ancestors, es,&hsp);
+			show_upper_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
 			show_hashagg_info((AggState *) planstate, es);
 			if (plan->qual)
 				show_instrumentation_count("Rows Removed by Filter", 1,
 										   planstate, es);
 			break;
 		case T_Group:
-			show_group_keys(castNode(GroupState, planstate), ancestors, es);
-			show_upper_qual(plan->qual, "Filter", planstate, ancestors, es);
+			show_group_keys(castNode(GroupState, planstate), ancestors, es,&hsp);
+			show_upper_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
 			if (plan->qual)
 				show_instrumentation_count("Rows Removed by Filter", 1,
 										   planstate, es);
 			break;
 		case T_Sort:
-			show_sort_keys(castNode(SortState, planstate), ancestors, es);
+			show_sort_keys(castNode(SortState, planstate), ancestors, es,&hsp);
 			show_sort_info(castNode(SortState, planstate), es);
 			break;
 		case T_IncrementalSort:
 			show_incremental_sort_keys(castNode(IncrementalSortState, planstate),
-									   ancestors, es);
+									   ancestors, es,&hsp);
 			show_incremental_sort_info(castNode(IncrementalSortState, planstate),
 									   es);
 			break;
 		case T_MergeAppend:
 			show_merge_append_keys(castNode(MergeAppendState, planstate),
-								   ancestors, es);
+								   ancestors, es,&hsp);
 			break;
 		case T_Result:
 			show_upper_qual((List *) ((Result *) plan)->resconstantqual,
-							"One-Time Filter", planstate, ancestors, es);
-			show_upper_qual(plan->qual, "Filter", planstate, ancestors, es);
+							"One-Time Filter", planstate, ancestors, es,&hsp);
+			show_upper_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
 			if (plan->qual)
 				show_instrumentation_count("Rows Removed by Filter", 1,
 										   planstate, es);
 			break;
 		case T_ModifyTable:
 			show_modifytable_info(castNode(ModifyTableState, planstate), ancestors,
-								  es);
+								  es, &hsp);
 			break;
 		case T_Hash:
 			show_hash_info(castNode(HashState, planstate), es);
@@ -1487,15 +1530,23 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		FormatOpenGroup("Plans", "Plans", false, es);
 		/* Pass current Plan as head of ancestors list for children */
 		ancestors = lcons(plan, ancestors);
+		if(outerPlanState(planstate) && innerPlanState(planstate)){
+			hsp.childs = (HistorySlowPlanStat**)malloc(sizeof(HistorySlowPlanStat*)*2);
+		}else{
+			hsp.childs = (HistorySlowPlanStat**)malloc(sizeof(HistorySlowPlanStat*));
+		}
 	}
+
 	RecureState rs = NewRecureState();
+	
 	rs.node_type_set_ = lappend_int(rs.node_type_set_,(void*)nodeTag(plan));
-	hsp.childs = (HistorySlowPlanStat**)malloc(sizeof(HistorySlowPlanStat*)*2);
+	//hsp.childs = (HistorySlowPlanStat**)malloc(sizeof(HistorySlowPlanStat*)*2);
 	/* initPlan-s */
 	if (planstate->initPlan){
-        RecureState ret = ExplainSubPlans(planstate->initPlan, ancestors, "InitPlan", total_es);
+        RecureState ret = ExplainSubPlans(planstate->initPlan, ancestors, "InitPlan", total_es,total_ces);
 		cumulate_cost += ret.cost_;
-		appendStringInfoString(es->str,ret.canonical_str_->data);
+		appendStringInfoString(es->str,ret.detail_str_->data);
+		appendStringInfoString(ces->str,ret.canonical_str_->data);
 		push_node_type_set(rs.node_type_set_,ret.node_type_set_);
 		hsp.childs[0] = malloc(sizeof(HistorySlowPlanStat));
 		*hsp.childs[0] = ret.hps_;
@@ -1503,9 +1554,10 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	/* lefttree */
 	if (outerPlanState(planstate)){
         RecureState ret =  ExplainNode(outerPlanState(planstate), ancestors,
-					"Outer", NULL, total_es);
+					"Outer", NULL, total_es,total_ces);
         cumulate_cost += ret.cost_;
-		appendStringInfoString(es->str,ret.canonical_str_->data);
+		appendStringInfoString(es->str,ret.detail_str_->data);
+		appendStringInfoString(ces->str,ret.canonical_str_->data);
 		push_node_type_set(rs.node_type_set_,ret.node_type_set_);
 		hsp.childs[0] = malloc(sizeof(HistorySlowPlanStat));
 		*hsp.childs[0] = ret.hps_;
@@ -1513,48 +1565,54 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	/* righttree */
 	if (innerPlanState(planstate)){
         RecureState ret = ExplainNode(innerPlanState(planstate), ancestors,
-					"Inner", NULL, total_es);
+					"Inner", NULL, total_es,total_ces);
         cumulate_cost += ret.cost_;
-		appendStringInfoString(es->str,ret.canonical_str_->data);
+		appendStringInfoString(es->str,ret.detail_str_->data);
+		appendStringInfoString(ces->str,ret.canonical_str_->data);
 		push_node_type_set(rs.node_type_set_,ret.node_type_set_);
 		hsp.childs[1] = malloc(sizeof(HistorySlowPlanStat));
 		*hsp.childs[1] = ret.hps_;
     }
+	/**
+	 * TODO: we need update here
+	 */
 	/* special child plans */
 	switch (nodeTag(plan))
 	{
 		case T_ModifyTable:
 			ExplainMemberNodes(((ModifyTableState *) planstate)->mt_plans,
 							   ((ModifyTableState *) planstate)->mt_nplans,
-							   ancestors, es);
+							   ancestors, es,ces);
 			break;
 		case T_Append:
 			ExplainMemberNodes(((AppendState *) planstate)->appendplans,
 							   ((AppendState *) planstate)->as_nplans,
-							   ancestors, es);
+							   ancestors, es,ces);
 			break;
 		case T_MergeAppend:
 			ExplainMemberNodes(((MergeAppendState *) planstate)->mergeplans,
 							   ((MergeAppendState *) planstate)->ms_nplans,
-							   ancestors, es);
+							   ancestors, es,ces);
 			break;
 		case T_BitmapAnd:
 			ExplainMemberNodes(((BitmapAndState *) planstate)->bitmapplans,
 							   ((BitmapAndState *) planstate)->nplans,
-							   ancestors, es);
+							   ancestors, es,ces);
 			break;
 		case T_BitmapOr:
 			ExplainMemberNodes(((BitmapOrState *) planstate)->bitmapplans,
 							   ((BitmapOrState *) planstate)->nplans,
-							   ancestors, es);
+							   ancestors, es,ces);
 			break;
 		case T_SubqueryScan:
-			ExplainNode(((SubqueryScanState *) planstate)->subplan, ancestors,
-						"Subquery", NULL, es);
+			RecureState ret = ExplainNode(((SubqueryScanState *) planstate)->subplan, ancestors,
+						"Subquery", NULL, es,ces);
+			cumulate_cost += ret.cost_;
+
 			break;
 		case T_CustomScan:
 			ExplainCustomChildren((CustomScanState *) planstate,
-								  ancestors, es);
+								  ancestors, es,ces);
 			break;
 		default:
 			break;
@@ -1562,9 +1620,10 @@ ExplainNode(PlanState *planstate, List *ancestors,
 
 	/* subPlan-s */
 	if (planstate->subPlan){
-		RecureState ret = ExplainSubPlans(planstate->subPlan, ancestors, "SubPlan", total_es);
+		RecureState ret = ExplainSubPlans(planstate->subPlan, ancestors, "SubPlan", total_es,total_ces);
 		cumulate_cost += ret.cost_;
-		appendStringInfoString(es->str,ret.canonical_str_->data);
+		appendStringInfoString(es->str,ret.detail_str_->data);
+		appendStringInfoString(ces->str,ret.canonical_str_->data);
 		push_node_type_set(rs.node_type_set_,ret.node_type_set_);
 		hsp.childs[0] = malloc(sizeof(HistorySlowPlanStat));
 		*hsp.childs[0] = ret.hps_;
@@ -1580,18 +1639,21 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	 * note the history stat plan for storaging
 	 * TODO: maybe we need simultaneously retain both standardized and non standardized plans
 	 */
-	hsp.json_plan_ = es->str->data;
-	hsp.sub_cost_ = cumulate_cost;
+	hsp.json_plan = es->str->data;
+	hsp.canonical_json_plan = ces->str->data;
+	hsp.sub_cost = cumulate_cost;
 	/*mark the recurestat for parent to use,we need a deep copy for infostring*/
 	FormatCloseGroup("Plan",relationship ? NULL : "Plan",true, es);
 	//ExplainEndOutput(es);
 	
 	rs.cost_ = cumulate_cost;
-	appendStringInfoString(rs.canonical_str_,es->str->data);
+	appendStringInfoString(rs.detail_str_,es->str->data);
+	appendStringInfoString(rs.canonical_str_,ces->str->data);
 	rs.hps_ = hsp;
 
 	if(debug){
 		elog(stat_log_level,es->str->data);
+		elog(stat_log_level,ces->str->data);
 	}
 	elog(stat_log_level,"finish a node format");
 	/*here we can't free es, hsp still use its data*/
@@ -1603,7 +1665,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
  * Show the targetlist of a plan node
  */
 static void
-show_plan_tlist(PlanState *planstate, List *ancestors, ExplainState *es)
+show_plan_tlist(PlanState *planstate, List *ancestors, ExplainState *es, HistorySlowPlanStat* hsp)
 {
 	Plan	   *plan = planstate->plan;
 	List	   *context;
@@ -1640,7 +1702,7 @@ show_plan_tlist(PlanState *planstate, List *ancestors, ExplainState *es)
 	/* Set up deparsing context */
 	context = set_deparse_context_plan_format(es->deparse_cxt,
 									   plan,
-									   ancestors);
+									   ancestors,hsp);
 	useprefix = list_length(es->rtable) > 1;
 
 	/* Deparse each result column (we now include resjunk ones) */
@@ -1650,11 +1712,20 @@ show_plan_tlist(PlanState *planstate, List *ancestors, ExplainState *es)
 
 		result = lappend(result,
 						 deparse_expression_format((Node *) tle->expr, context,
-											useprefix, false));
+											useprefix, false,hsp));
 	}
 
-	/* Print results */
 	FormatPropertyList("Output", result, es);
+
+	hsp->output = (char**)malloc(list_length(result) * sizeof(char*));
+	if (!hsp->output) {
+        fprintf(stderr, "Memory allocation failed\n");
+        return 1;
+    }
+	hsp->n_output = list_length(result);
+	for(int i = 0;i <hsp->n_output;i++){
+		hsp->output[i] = result[i].elements;
+	}
 }
 
 /*
@@ -1663,7 +1734,7 @@ show_plan_tlist(PlanState *planstate, List *ancestors, ExplainState *es)
 static void
 show_expression(Node *node, const char *qlabel,
 				PlanState *planstate, List *ancestors,
-				bool useprefix, ExplainState *es)
+				bool useprefix, ExplainState *es,HistorySlowPlanStat* hsp)
 {
 	List	   *context;
 	char	   *exprstr;
@@ -1671,13 +1742,18 @@ show_expression(Node *node, const char *qlabel,
 	/* Set up deparsing context */
 	context = set_deparse_context_plan_format(es->deparse_cxt,
 									   planstate->plan,
-									   ancestors);
+									   ancestors,hsp);
 
 	/* Deparse the expression */
-	exprstr = deparse_expression_format(node, context, useprefix, false);
+	exprstr = deparse_expression_format(node, context, useprefix, false, hsp);
 
 	/* And add to es->str */
 	FormatPropertyText(qlabel, exprstr, es);
+
+	hsp->qlabel = qlabel;
+	/**we need a more fine-grained exprstr */
+	//hsp->exprstr = exprstr;
+	
 }
 
 /*
@@ -1686,7 +1762,7 @@ show_expression(Node *node, const char *qlabel,
 static void
 show_qual(List *qual, const char *qlabel,
 		  PlanState *planstate, List *ancestors,
-		  bool useprefix, ExplainState *es)
+		  bool useprefix, ExplainState *es,HistorySlowPlanStat *hsp)
 {
 	Node	   *node;
 
@@ -1698,21 +1774,21 @@ show_qual(List *qual, const char *qlabel,
 	node = (Node *) make_ands_explicit(qual);
 
 	/* And show it */
-	show_expression(node, qlabel, planstate, ancestors, useprefix, es);
+	show_expression(node, qlabel, planstate, ancestors, useprefix, es,hsp);
 }
- 
+
 /*
  * Show a qualifier expression for a scan plan node
  */
 static void
 show_scan_qual(List *qual, const char *qlabel,
 			   PlanState *planstate, List *ancestors,
-			   ExplainState *es)
+			   ExplainState *es,HistorySlowPlanStat* hsp)
 {
 	bool		useprefix;
 
 	useprefix = (IsA(planstate->plan, SubqueryScan) || es->verbose);
-	show_qual(qual, qlabel, planstate, ancestors, useprefix, es);
+	show_qual(qual, qlabel, planstate, ancestors, useprefix, es,hsp);
 }
 
 /*
@@ -1721,19 +1797,19 @@ show_scan_qual(List *qual, const char *qlabel,
 static void
 show_upper_qual(List *qual, const char *qlabel,
 				PlanState *planstate, List *ancestors,
-				ExplainState *es)
+				ExplainState *es,HistorySlowPlanStat* hsp)
 {
 	bool		useprefix;
 
 	useprefix = (list_length(es->rtable) > 1 || es->verbose);
-	show_qual(qual, qlabel, planstate, ancestors, useprefix, es);
+	show_qual(qual, qlabel, planstate, ancestors, useprefix, es,hsp);
 }
 
 /*
  * Show the sort keys for a Sort node.
  */
 static void
-show_sort_keys(SortState *sortstate, List *ancestors, ExplainState *es)
+show_sort_keys(SortState *sortstate, List *ancestors, ExplainState *es,HistorySlowPlanStat* hsp)
 {
 	Sort	   *plan = (Sort *) sortstate->ss.ps.plan;
 
@@ -1741,7 +1817,7 @@ show_sort_keys(SortState *sortstate, List *ancestors, ExplainState *es)
 						 plan->numCols, 0, plan->sortColIdx,
 						 plan->sortOperators, plan->collations,
 						 plan->nullsFirst,
-						 ancestors, es);
+						 ancestors, es, hsp);
 }
 
 /*
@@ -1749,7 +1825,7 @@ show_sort_keys(SortState *sortstate, List *ancestors, ExplainState *es)
  */
 static void
 show_incremental_sort_keys(IncrementalSortState *incrsortstate,
-						   List *ancestors, ExplainState *es)
+						   List *ancestors, ExplainState *es,HistorySlowPlanStat* hsp)
 {
 	IncrementalSort *plan = (IncrementalSort *) incrsortstate->ss.ps.plan;
 
@@ -1758,7 +1834,7 @@ show_incremental_sort_keys(IncrementalSortState *incrsortstate,
 						 plan->sort.sortColIdx,
 						 plan->sort.sortOperators, plan->sort.collations,
 						 plan->sort.nullsFirst,
-						 ancestors, es);
+						 ancestors, es,hsp);
 }
 
 /*
@@ -1766,7 +1842,7 @@ show_incremental_sort_keys(IncrementalSortState *incrsortstate,
  */
 static void
 show_merge_append_keys(MergeAppendState *mstate, List *ancestors,
-					   ExplainState *es)
+					   ExplainState *es,HistorySlowPlanStat* hsp)
 {
 	MergeAppend *plan = (MergeAppend *) mstate->ps.plan;
 
@@ -1774,7 +1850,7 @@ show_merge_append_keys(MergeAppendState *mstate, List *ancestors,
 						 plan->numCols, 0, plan->sortColIdx,
 						 plan->sortOperators, plan->collations,
 						 plan->nullsFirst,
-						 ancestors, es);
+						 ancestors, es,hsp);
 }
 
 /*
@@ -1782,7 +1858,7 @@ show_merge_append_keys(MergeAppendState *mstate, List *ancestors,
  */
 static void
 show_agg_keys(AggState *astate, List *ancestors,
-			  ExplainState *es)
+			  ExplainState *es,HistorySlowPlanStat* hsp)
 {
 	Agg		   *plan = (Agg *) astate->ss.ps.plan;
 
@@ -1792,12 +1868,12 @@ show_agg_keys(AggState *astate, List *ancestors,
 		ancestors = lcons(plan, ancestors);
 
 		if (plan->groupingSets)
-			show_grouping_sets(outerPlanState(astate), plan, ancestors, es);
+			show_grouping_sets(outerPlanState(astate), plan, ancestors, es,hsp);
 		else
 			show_sort_group_keys(outerPlanState(astate), "Group Key",
 								 plan->numCols, 0, plan->grpColIdx,
 								 NULL, NULL, NULL,
-								 ancestors, es);
+								 ancestors, es,hsp);
 
 		ancestors = list_delete_first(ancestors);
 	}
@@ -1805,7 +1881,7 @@ show_agg_keys(AggState *astate, List *ancestors,
 
 static void
 show_grouping_sets(PlanState *planstate, Agg *agg,
-				   List *ancestors, ExplainState *es)
+				   List *ancestors, ExplainState *es,HistorySlowPlanStat* hsp)
 {
 	List	   *context;
 	bool		useprefix;
@@ -1814,13 +1890,13 @@ show_grouping_sets(PlanState *planstate, Agg *agg,
 	/* Set up deparsing context */
 	context = set_deparse_context_plan_format(es->deparse_cxt,
 									   planstate->plan,
-									   ancestors);
+									   ancestors,hsp);
 	useprefix = (list_length(es->rtable) > 1 || es->verbose);
 
 	FormatOpenGroup("Grouping Sets", "Grouping Sets", false, es);
 
 	show_grouping_set_keys(planstate, agg, NULL,
-						   context, useprefix, ancestors, es);
+						   context, useprefix, ancestors, es, hsp);
 
 	foreach(lc, agg->chain)
 	{
@@ -1828,7 +1904,7 @@ show_grouping_sets(PlanState *planstate, Agg *agg,
 		Sort	   *sortnode = (Sort *) aggnode->plan.lefttree;
 
 		show_grouping_set_keys(planstate, aggnode, sortnode,
-							   context, useprefix, ancestors, es);
+							   context, useprefix, ancestors, es,hsp);
 	}
 
 	FormatCloseGroup("Grouping Sets", "Grouping Sets", false, es);
@@ -1838,7 +1914,7 @@ static void
 show_grouping_set_keys(PlanState *planstate,
 					   Agg *aggnode, Sort *sortnode,
 					   List *context, bool useprefix,
-					   List *ancestors, ExplainState *es)
+					   List *ancestors, ExplainState *es,HistorySlowPlanStat* hsp)
 {
 	Plan	   *plan = planstate->plan;
 	char	   *exprstr;
@@ -1859,6 +1935,7 @@ show_grouping_set_keys(PlanState *planstate,
 		keysetname = "Group Keys";
 	}
 
+
 	FormatOpenGroup("Grouping Set", NULL, true, es);
 
 	if (sortnode)
@@ -1867,13 +1944,20 @@ show_grouping_set_keys(PlanState *planstate,
 							 sortnode->numCols, 0, sortnode->sortColIdx,
 							 sortnode->sortOperators, sortnode->collations,
 							 sortnode->nullsFirst,
-							 ancestors, es);
+							 ancestors, es,hsp);
 		if (es->format == EXPLAIN_FORMAT_TEXT)
 			es->indent++;
 	}
 
 	FormatOpenGroup(keysetname, keysetname, false, es);
 
+	/**
+	 * TODO: fix gsets here
+	 */
+	hsp->g_sets = (GroupKeys **)malloc(list_length(gsets)*sizeof(GroupKeys));
+	hsp->n_g_sets = list_length(gsets);
+	
+	size_t g_sets_idx = 0;
 	foreach(lc, gsets)
 	{
 		List	   *result = NIL;
@@ -1890,15 +1974,27 @@ show_grouping_set_keys(PlanState *planstate,
 				elog(ERROR, "no tlist entry for key %d", keyresno);
 			/* Deparse the expression, showing any top-level cast */
 			exprstr = deparse_expression_format((Node *) target->expr, context,
-										 useprefix, true);
-
+										 useprefix, true,hsp);
 			result = lappend(result, exprstr);
 		}
 
 		if (!result && es->format == EXPLAIN_FORMAT_TEXT)
 			FormatPropertyText(keyname, "()", es);
-		else
+		else{
 			FormatPropertyListNested(keyname, result, es);
+			hsp->key_name = keyname;
+			hsp->keysetname = keysetname;
+			
+			GroupKeys * gkey = (GroupKeys *)malloc(sizeof(GroupKeys));
+			gkey->key_name = keyname;
+			gkey->keys = (char**)malloc(list_length(result)*sizeof(char*));
+			gkey->n_keys = list_length(result);
+			for(int i=0;i<gkey->n_keys;i++){
+				gkey->keys = result[i].elements;	
+			}
+			hsp->g_sets[g_sets_idx] = gkey;
+		}
+		g_sets_idx++;
 	}
 
 	FormatCloseGroup(keysetname, keysetname, false, es);
@@ -1914,7 +2010,7 @@ show_grouping_set_keys(PlanState *planstate,
  */
 static void
 show_group_keys(GroupState *gstate, List *ancestors,
-				ExplainState *es)
+				ExplainState *es,HistorySlowPlanStat* hsp)
 {
 	Group	   *plan = (Group *) gstate->ss.ps.plan;
 
@@ -1923,7 +2019,7 @@ show_group_keys(GroupState *gstate, List *ancestors,
 	show_sort_group_keys(outerPlanState(gstate), "Group Key",
 						 plan->numCols, 0, plan->grpColIdx,
 						 NULL, NULL, NULL,
-						 ancestors, es);
+						 ancestors, es,hsp);
 	ancestors = list_delete_first(ancestors);
 }
 
@@ -1936,7 +2032,7 @@ static void
 show_sort_group_keys(PlanState *planstate, const char *qlabel,
 					 int nkeys, int nPresortedKeys, AttrNumber *keycols,
 					 Oid *sortOperators, Oid *collations, bool *nullsFirst,
-					 List *ancestors, ExplainState *es)
+					 List *ancestors, ExplainState *es,HistorySlowPlanStat* hsp)
 {
 	Plan	   *plan = planstate->plan;
 	List	   *context;
@@ -1954,8 +2050,12 @@ show_sort_group_keys(PlanState *planstate, const char *qlabel,
 	/* Set up deparsing context */
 	context = set_deparse_context_plan_format(es->deparse_cxt,
 									   plan,
-									   ancestors);
+									   ancestors,hsp);
 	useprefix = (list_length(es->rtable) > 1 || es->verbose);
+
+	hsp->qlabel = qlabel;
+	hsp->group_sort_keys = (GroupSortKey **)malloc(nkeys * sizeof(GroupSortKey *));
+	hsp->n_group_sort_keys = nkeys;
 
 	for (keyno = 0; keyno < nkeys; keyno++)
 	{
@@ -1969,25 +2069,34 @@ show_sort_group_keys(PlanState *planstate, const char *qlabel,
 			elog(ERROR, "no tlist entry for key %d", keyresno);
 		/* Deparse the expression, showing any top-level cast */
 		exprstr = deparse_expression_format((Node *) target->expr, context,
-									 useprefix, true);
+									 useprefix, true,hsp);
 		resetStringInfo(&sortkeybuf);
 		appendStringInfoString(&sortkeybuf, exprstr);
-		/* Append sort order information, if relevant */
+		/*
+         * Append sort order information, if relevant
+         */
+		
+		hsp->group_sort_keys[keyno]->key = malloc(sizeof(exprstr)+1);
+		strcpy(hsp->group_sort_keys[keyno]->key,exprstr);
+		hsp->group_sort_keys[keyno]->sort_operators = (sortOperators != NULL);
 		if (sortOperators != NULL)
 			show_sortorder_options(&sortkeybuf,
 								   (Node *) target->expr,
 								   sortOperators[keyno],
 								   collations[keyno],
-								   nullsFirst[keyno]);
+								   nullsFirst[keyno],hsp,keyno);
 		/* Emit one property-list item per sort key */
 		result = lappend(result, pstrdup(sortkeybuf.data));
-		if (keyno < nPresortedKeys)
+		if (keyno < nPresortedKeys){
 			resultPresorted = lappend(resultPresorted, exprstr);
+			hsp->group_sort_keys[keyno]->presorted_key = true;
+		}
 	}
 
 	FormatPropertyList(qlabel, result, es);
 	if (nPresortedKeys > 0)
 		FormatPropertyList("Presorted Key", resultPresorted, es);
+
 }
 
 /*
@@ -1996,7 +2105,8 @@ show_sort_group_keys(PlanState *planstate, const char *qlabel,
  */
 static void
 show_sortorder_options(StringInfo buf, Node *sortexpr,
-					   Oid sortOperator, Oid collation, bool nullsFirst)
+					   Oid sortOperator, Oid collation, bool nullsFirst,
+					   HistorySlowPlanStat *hsp,int keyno)
 {
 	Oid			sortcoltype = exprType(sortexpr);
 	bool		reverse = false;
@@ -2019,12 +2129,16 @@ show_sortorder_options(StringInfo buf, Node *sortexpr,
 		if (collname == NULL)
 			elog(ERROR, "cache lookup failed for collation %u", collation);
 		appendStringInfo(buf, " COLLATE %s", quote_identifier(collname));
+		
+		hsp->group_sort_keys[keyno]->sort_collation = malloc(sizeof(quote_identifier(collname))+1);
+		strcpy(hsp->group_sort_keys[keyno]->sort_collation,quote_identifier(collname));
 	}
 
 	/* Print direction if not ASC, or USING if non-default sort operator */
 	if (sortOperator == typentry->gt_opr)
 	{
 		appendStringInfoString(buf, " DESC");
+		hsp->group_sort_keys[keyno]->sort_direction = "DESC";
 		reverse = true;
 	}
 	else if (sortOperator != typentry->lt_opr)
@@ -2034,6 +2148,10 @@ show_sortorder_options(StringInfo buf, Node *sortexpr,
 		if (opname == NULL)
 			elog(ERROR, "cache lookup failed for operator %u", sortOperator);
 		appendStringInfo(buf, " USING %s", opname);
+
+		hsp->group_sort_keys[keyno]->sort_direction = malloc(sizeof(opname)+1);
+		strcpy(hsp->group_sort_keys[keyno]->sort_direction,opname);
+		
 		/* Determine whether operator would be considered ASC or DESC */
 		(void) get_equality_op_for_ordering_op(sortOperator, &reverse);
 	}
@@ -2042,10 +2160,12 @@ show_sortorder_options(StringInfo buf, Node *sortexpr,
 	if (nullsFirst && !reverse)
 	{
 		appendStringInfoString(buf, " NULLS FIRST");
+		hsp->group_sort_keys[keyno]->sorrt_null_pos = "NULLS FIRST";
 	}
 	else if (!nullsFirst && reverse)
 	{
 		appendStringInfoString(buf, " NULLS LAST");
+		hsp->group_sort_keys[keyno]->sorrt_null_pos = "NULLS LAST";
 	}
 }
 
@@ -2054,7 +2174,7 @@ show_sortorder_options(StringInfo buf, Node *sortexpr,
  */
 static void
 show_tablesample(TableSampleClause *tsc, PlanState *planstate,
-				 List *ancestors, ExplainState *es)
+				 List *ancestors, ExplainState *es,HistorySlowPlanStat* hsp)
 {
 	List	   *context;
 	bool		useprefix;
@@ -2066,7 +2186,7 @@ show_tablesample(TableSampleClause *tsc, PlanState *planstate,
 	/* Set up deparsing context */
 	context = set_deparse_context_plan_format(es->deparse_cxt,
 									   planstate->plan,
-									   ancestors);
+									   ancestors,hsp);
 	useprefix = list_length(es->rtable) > 1;
 
 	/* Get the tablesample method name */
@@ -2079,11 +2199,11 @@ show_tablesample(TableSampleClause *tsc, PlanState *planstate,
 
 		params = lappend(params,
 						 deparse_expression_format(arg, context,
-											useprefix, false));
+											useprefix, false,hsp));
 	}
 	if (tsc->repeatable)
 		repeatable = deparse_expression_format((Node *) tsc->repeatable, context,
-										useprefix, false);
+										useprefix, false,hsp);
 	else
 		repeatable = NULL;
 
@@ -2870,11 +2990,11 @@ show_wal_usage(ExplainState *es, const WalUsage *usage)
  */
 static void
 ExplainIndexScanDetails(Oid indexid, ScanDirection indexorderdir,
-						ExplainState *es)
+						ExplainState *es,HistorySlowPlanStat * hsp)
 {
 	const char *indexname = explain_get_index_name(indexid);
 	const char *scandir;
-
+       
 	switch (indexorderdir)
 	{
 		case BackwardScanDirection:
@@ -2891,16 +3011,18 @@ ExplainIndexScanDetails(Oid indexid, ScanDirection indexorderdir,
 			break;
 	}
 	FormatPropertyText("Scan Direction", scandir, es);
+	hsp->scan_dir = scandir;
 	FormatPropertyText("Index Name", indexname, es);
+	hsp->idx_name = indexname;
 }
 
 /*
  * Show the target of a Scan node
  */
 static void
-ExplainScanTarget(Scan *plan, ExplainState *es)
+ExplainScanTarget(Scan *plan, ExplainState *es, HistorySlowPlanStat* hsp)
 {
-	ExplainTargetRel((Plan *) plan, plan->scanrelid, es);
+	ExplainTargetRel((Plan *) plan, plan->scanrelid, es ,hsp);
 }
 
 /*
@@ -2911,16 +3033,16 @@ ExplainScanTarget(Scan *plan, ExplainState *es)
  * in show_modifytable_info().
  */
 static void
-ExplainModifyTarget(ModifyTable *plan, ExplainState *es)
+ExplainModifyTarget(ModifyTable *plan, ExplainState *es,HistorySlowPlanStat * hsp)
 {
-	ExplainTargetRel((Plan *) plan, plan->nominalRelation, es);
+	ExplainTargetRel((Plan *) plan, plan->nominalRelation, es, hsp);
 }
 
 /*
  * Show the target relation of a scan or modify node
  */
 static void
-ExplainTargetRel(Plan *plan, Index rti, ExplainState *es)
+ExplainTargetRel(Plan *plan, Index rti, ExplainState *es,HistorySlowPlanStat* hsp)
 {
 	char	   *objectname = NULL;
 	char	   *namespace = NULL;
@@ -2928,6 +3050,7 @@ ExplainTargetRel(Plan *plan, Index rti, ExplainState *es)
 	RangeTblEntry *rte;
 	char	   *refname;
 
+	/*if refname is null ,we will get real name of table*/
 	rte = rt_fetch(rti, es->rtable);
 	refname = (char *) list_nth(es->rtable_names, rti - 1);
 	if (refname == NULL)
@@ -2954,10 +3077,8 @@ ExplainTargetRel(Plan *plan, Index rti, ExplainState *es)
 		case T_FunctionScan:
 			{
 				FunctionScan *fscan = (FunctionScan *) plan;
-
 				/* Assert it's on a RangeFunction */
 				Assert(rte->rtekind == RTE_FUNCTION);
-
 				/*
 				 * If the expression is still a function call of a single
 				 * function, we can get the real name of the function.
@@ -3012,12 +3133,17 @@ ExplainTargetRel(Plan *plan, Index rti, ExplainState *es)
 		default:
 			break;
 	}
-
-	if (objecttag != NULL && objectname != NULL)
+	if (objecttag != NULL && objectname != NULL){
 		FormatPropertyText(objecttag, objectname, es);
-	if (namespace != NULL)
+		hsp->object_tag = objecttag;
+		hsp->object_name = objectname;
+	}
+	if (namespace != NULL){
 		FormatPropertyText("Schema", namespace, es);
+		hsp->schema = namespace;
+	}
 	FormatPropertyText("Alias", refname, es);
+	hsp->alia_name = refname;
 }
 
 /*
@@ -3030,7 +3156,7 @@ ExplainTargetRel(Plan *plan, Index rti, ExplainState *es)
  */
 static void
 show_modifytable_info(ModifyTableState *mtstate, List *ancestors,
-					  ExplainState *es)
+					  ExplainState *es, HistorySlowPlanStat * hsp)
 {
 	ModifyTable *node = (ModifyTable *) mtstate->ps.plan;
 	const char *operation;
@@ -3091,7 +3217,7 @@ show_modifytable_info(ModifyTableState *mtstate, List *ancestors,
 			/* Identify target */
 			ExplainTargetRel((Plan *) node,
 							 resultRelInfo->ri_RangeTableIndex,
-							 es);
+							 es,hsp);
 
 			if (es->format == EXPLAIN_FORMAT_TEXT)
 			{
@@ -3151,7 +3277,7 @@ show_modifytable_info(ModifyTableState *mtstate, List *ancestors,
 		if (node->onConflictWhere)
 		{
 			show_upper_qual((List *) node->onConflictWhere, "Conflict Filter",
-							&mtstate->ps, ancestors, es);
+							&mtstate->ps, ancestors, es, &hsp);
 			show_instrumentation_count("Rows Removed by Conflict Filter", 1, &mtstate->ps, es);
 		}
 
@@ -3189,13 +3315,13 @@ show_modifytable_info(ModifyTableState *mtstate, List *ancestors,
  */
 static void
 ExplainMemberNodes(PlanState **planstates, int nplans,
-				   List *ancestors, ExplainState *es)
+				   List *ancestors, ExplainState *es,ExplainState *ces)
 {
 	int			j;
 
 	for (j = 0; j < nplans; j++)
 		ExplainNode(planstates[j], ancestors,
-					"Member", NULL, es);
+					"Member", NULL, es,ces);
 }
 
 /*
@@ -3221,7 +3347,7 @@ ExplainMissingMembers(int nplans, int nchildren, ExplainState *es)
  */
 static RecureState
 ExplainSubPlans(List *plans, List *ancestors,
-				const char *relationship, ExplainState *total_es)
+				const char *relationship, ExplainState *total_es,ExplainState *total_ces)
 {
 	ListCell   *lst;
 	RecureState rs = NewRecureState();
@@ -3260,8 +3386,9 @@ ExplainSubPlans(List *plans, List *ancestors,
 		 * parameters.
 		 */
 		ancestors = lcons(sp, ancestors);
-		RecureState ret = ExplainNode(sps->planstate, ancestors,relationship, sp->plan_name, total_es);
+		RecureState ret = ExplainNode(sps->planstate, ancestors,relationship, sp->plan_name, total_es,total_ces);
 		rs.cost_ += ret.cost_;
+		appendStringInfoString(rs.detail_str_,ret.detail_str_->data);
 		appendStringInfoString(rs.canonical_str_,ret.canonical_str_->data);
 		push_node_type_set(rs.node_type_set_,ret.node_type_set_);
 		ancestors = list_delete_first(ancestors);
@@ -3270,7 +3397,8 @@ ExplainSubPlans(List *plans, List *ancestors,
 		*hsp.childs[idx] = ret.hps_;
 		idx++;
 	}
-	hsp.json_plan_ = rs.canonical_str_->data;
+	hsp.json_plan = rs.detail_str_->data;
+	hsp.canonical_json_plan = rs.canonical_str_->data;
 	return rs;
 }
 
@@ -3278,14 +3406,14 @@ ExplainSubPlans(List *plans, List *ancestors,
  * Explain a list of children of a CustomScan.
  */
 static void
-ExplainCustomChildren(CustomScanState *css, List *ancestors, ExplainState *es)
+ExplainCustomChildren(CustomScanState *css, List *ancestors, ExplainState *es,ExplainState *ces)
 {
 	ListCell   *cell;
 	const char *label =
 	(list_length(css->custom_ps) != 1 ? "children" : "child");
 
 	foreach(cell, css->custom_ps)
-		ExplainNode((PlanState *) lfirst(cell), ancestors, label, NULL, es);
+		ExplainNode((PlanState *) lfirst(cell), ancestors, label, NULL, es,ces);
 }
 
 /*

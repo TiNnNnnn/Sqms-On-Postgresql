@@ -12,12 +12,12 @@ bool CostBasedExcavateStrategy::excavate(std::vector<HistorySlowPlanStat*>& list
         q.pop();
         size_t child_num = node->n_childs;
         size_t cnt = 0;
-        if(node->sub_cost_ >= t){
+        if(node->sub_cost >= t){
             /**
              * TODO: 12-04 We need to handle the subquery operator specifically
              */
             for(size_t i = 0;i<child_num;i++){
-                if(node->childs[i] && node->childs[i]->sub_cost_ < t){
+                if(node->childs[i] && node->childs[i]->sub_cost < t){
                     cnt++;
                 }
             }

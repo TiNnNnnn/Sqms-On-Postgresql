@@ -4,7 +4,6 @@ OBJS = \
 $(WIN32RES) \
 src/common/config.o \
 src/include/collect/format.pb-c.o \
-src/include/collect/storage.pb.o \
 src/collect/format.o \
 src/collect/epxr_utils.o \
 src/collect/stat_collect.o \
@@ -12,6 +11,7 @@ src/collect/stat_format.o \
 src/discovery/discovery.o \
 src/excavate/ExcavateProvider.o \
 src/storage/RedisPlanStatProvider.o\
+#src/include/storage/storage.pb.o \
 #src/discovery/levels.o\ 
 
 

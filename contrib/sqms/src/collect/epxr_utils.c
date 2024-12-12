@@ -109,6 +109,8 @@
 typedef struct
 {
 	StringInfo	buf;			/* output buffer to append to */
+	/*in this buf,we will replace constants with placeholders*/
+	StringInfo  canonical_buf;
 	List	   *namespaces;		/* List of deparse_namespace nodes */
 	List	   *windowClause;	/* Current query level's WINDOW clause */
 	List	   *windowTList;	/* targetlist for resolving WINDOW clause */
@@ -120,6 +122,7 @@ typedef struct
 									 * handling */
 	Bitmapset  *appendparents;	/* if not null, map child Vars of these relids
 								 * back to the parent rel */
+	HistorySlowPlanStat	*hsp; 
 } deparse_context;
 
 /*
@@ -173,6 +176,8 @@ typedef struct
 	List	   *outer_tlist;	/* referent for OUTER_VAR Vars */
 	List	   *inner_tlist;	/* referent for INNER_VAR Vars */
 	List	   *index_tlist;	/* referent for INDEX_VAR Vars */
+	/*history slow paln stat for qual parsing*/
+	HistorySlowPlanStat	*hsp; 	 
 } deparse_namespace;
 
 /*
@@ -345,8 +350,8 @@ static char *pg_get_constraintdef_worker(Oid constraintId, bool fullCommand,
 static text *pg_get_expr_worker(text *expr, Oid relid, const char *relname,
 								int prettyFlags);
 static int	print_function_arguments(StringInfo buf, HeapTuple proctup,
-									 bool print_table_args, bool print_defaults);
-static void print_function_rettype(StringInfo buf, HeapTuple proctup);
+									 bool print_table_args, bool print_defaults,HistorySlowPlanStat* hsp);
+static void print_function_rettype(StringInfo buf, HeapTuple proctup,HistorySlowPlanStat* hsp);
 static void print_function_trftypes(StringInfo buf, HeapTuple proctup);
 static void set_rtable_names(deparse_namespace *dpns, List *parent_namespaces,
 							 Bitmapset *rels_used);
@@ -1871,7 +1876,7 @@ pg_get_partition_constraintdef(PG_FUNCTION_ARGS)
  * the given alias.  No pretty-printing.
  */
 char *
-pg_get_partconstrdef_string_format(Oid partitionId, char *aliasname)
+pg_get_partconstrdef_string_format(Oid partitionId, char *aliasname,HistorySlowPlanStat* hsp)
 {
 	Expr	   *constr_expr;
 	List	   *context;
@@ -1879,7 +1884,7 @@ pg_get_partconstrdef_string_format(Oid partitionId, char *aliasname)
 	constr_expr = get_partition_qual_relid(partitionId);
 	context = deparse_context_for_format(aliasname, partitionId);
 
-	return deparse_expression_format((Node *) constr_expr, context, true, false);
+	return deparse_expression_format((Node *) constr_expr, context, true, false,hsp);
 }
 
 /*
@@ -2604,244 +2609,244 @@ pg_get_serial_sequence(PG_FUNCTION_ARGS)
  * function body.  To wit: the function body starts on a line that begins
  * with "AS ", and no preceding line will look like that.
  */
-Datum
-pg_get_functiondef(PG_FUNCTION_ARGS)
-{
-	Oid			funcid = PG_GETARG_OID(0);
-	StringInfoData buf;
-	StringInfoData dq;
-	HeapTuple	proctup;
-	Form_pg_proc proc;
-	bool		isfunction;
-	Datum		tmp;
-	bool		isnull;
-	const char *prosrc;
-	const char *name;
-	const char *nsp;
-	float4		procost;
-	int			oldlen;
+// Datum
+// pg_get_functiondef(PG_FUNCTION_ARGS,HistorySlowPlanStat * hsp)
+// {
+// 	Oid			funcid = PG_GETARG_OID(0);
+// 	StringInfoData buf;
+// 	StringInfoData dq;
+// 	HeapTuple	proctup;
+// 	Form_pg_proc proc;
+// 	bool		isfunction;
+// 	Datum		tmp;
+// 	bool		isnull;
+// 	const char *prosrc;
+// 	const char *name;
+// 	const char *nsp;
+// 	float4		procost;
+// 	int			oldlen;
 
-	initStringInfo(&buf);
+// 	initStringInfo(&buf);
 
-	/* Look up the function */
-	proctup = SearchSysCache1(PROCOID, ObjectIdGetDatum(funcid));
-	if (!HeapTupleIsValid(proctup))
-		PG_RETURN_NULL();
+// 	/* Look up the function */
+// 	proctup = SearchSysCache1(PROCOID, ObjectIdGetDatum(funcid));
+// 	if (!HeapTupleIsValid(proctup))
+// 		PG_RETURN_NULL();
 
-	proc = (Form_pg_proc) GETSTRUCT(proctup);
-	name = NameStr(proc->proname);
+// 	proc = (Form_pg_proc) GETSTRUCT(proctup);
+// 	name = NameStr(proc->proname);
 
-	if (proc->prokind == PROKIND_AGGREGATE)
-		ereport(ERROR,
-				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-				 errmsg("\"%s\" is an aggregate function", name)));
+// 	if (proc->prokind == PROKIND_AGGREGATE)
+// 		ereport(ERROR,
+// 				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+// 				 errmsg("\"%s\" is an aggregate function", name)));
 
-	isfunction = (proc->prokind != PROKIND_PROCEDURE);
+// 	isfunction = (proc->prokind != PROKIND_PROCEDURE);
 
-	/*
-	 * We always qualify the function name, to ensure the right function gets
-	 * replaced.
-	 */
-	nsp = get_namespace_name(proc->pronamespace);
-	appendStringInfo(&buf, "CREATE OR REPLACE %s %s(",
-					 isfunction ? "FUNCTION" : "PROCEDURE",
-					 quote_qualified_identifier(nsp, name));
-	(void) print_function_arguments(&buf, proctup, false, true);
-	appendStringInfoString(&buf, ")\n");
-	if (isfunction)
-	{
-		appendStringInfoString(&buf, " RETURNS ");
-		print_function_rettype(&buf, proctup);
-		appendStringInfoChar(&buf, '\n');
-	}
+// 	/*
+// 	 * We always qualify the function name, to ensure the right function gets
+// 	 * replaced.
+// 	 */
+// 	nsp = get_namespace_name(proc->pronamespace);
+// 	appendStringInfo(&buf, "CREATE OR REPLACE %s %s(",
+// 					 isfunction ? "FUNCTION" : "PROCEDURE",
+// 					 quote_qualified_identifier(nsp, name));
+// 	(void) print_function_arguments(&buf, proctup, false, true,hsp);
+// 	appendStringInfoString(&buf, ")\n");
+// 	if (isfunction)
+// 	{
+// 		appendStringInfoString(&buf, " RETURNS ");
+// 		print_function_rettype(&buf, proctup,hsp);
+// 		appendStringInfoChar(&buf, '\n');
+// 	}
 
-	print_function_trftypes(&buf, proctup);
+// 	print_function_trftypes(&buf, proctup);
 
-	appendStringInfo(&buf, " LANGUAGE %s\n",
-					 quote_identifier(get_language_name(proc->prolang, false)));
+// 	appendStringInfo(&buf, " LANGUAGE %s\n",
+// 					 quote_identifier(get_language_name(proc->prolang, false)));
 
-	/* Emit some miscellaneous options on one line */
-	oldlen = buf.len;
+// 	/* Emit some miscellaneous options on one line */
+// 	oldlen = buf.len;
 
-	if (proc->prokind == PROKIND_WINDOW)
-		appendStringInfoString(&buf, " WINDOW");
-	switch (proc->provolatile)
-	{
-		case PROVOLATILE_IMMUTABLE:
-			appendStringInfoString(&buf, " IMMUTABLE");
-			break;
-		case PROVOLATILE_STABLE:
-			appendStringInfoString(&buf, " STABLE");
-			break;
-		case PROVOLATILE_VOLATILE:
-			break;
-	}
+// 	if (proc->prokind == PROKIND_WINDOW)
+// 		appendStringInfoString(&buf, " WINDOW");
+// 	switch (proc->provolatile)
+// 	{
+// 		case PROVOLATILE_IMMUTABLE:
+// 			appendStringInfoString(&buf, " IMMUTABLE");
+// 			break;
+// 		case PROVOLATILE_STABLE:
+// 			appendStringInfoString(&buf, " STABLE");
+// 			break;
+// 		case PROVOLATILE_VOLATILE:
+// 			break;
+// 	}
 
-	switch (proc->proparallel)
-	{
-		case PROPARALLEL_SAFE:
-			appendStringInfoString(&buf, " PARALLEL SAFE");
-			break;
-		case PROPARALLEL_RESTRICTED:
-			appendStringInfoString(&buf, " PARALLEL RESTRICTED");
-			break;
-		case PROPARALLEL_UNSAFE:
-			break;
-	}
+// 	switch (proc->proparallel)
+// 	{
+// 		case PROPARALLEL_SAFE:
+// 			appendStringInfoString(&buf, " PARALLEL SAFE");
+// 			break;
+// 		case PROPARALLEL_RESTRICTED:
+// 			appendStringInfoString(&buf, " PARALLEL RESTRICTED");
+// 			break;
+// 		case PROPARALLEL_UNSAFE:
+// 			break;
+// 	}
 
-	if (proc->proisstrict)
-		appendStringInfoString(&buf, " STRICT");
-	if (proc->prosecdef)
-		appendStringInfoString(&buf, " SECURITY DEFINER");
-	if (proc->proleakproof)
-		appendStringInfoString(&buf, " LEAKPROOF");
+// 	if (proc->proisstrict)
+// 		appendStringInfoString(&buf, " STRICT");
+// 	if (proc->prosecdef)
+// 		appendStringInfoString(&buf, " SECURITY DEFINER");
+// 	if (proc->proleakproof)
+// 		appendStringInfoString(&buf, " LEAKPROOF");
 
-	/* This code for the default cost and rows should match functioncmds.c */
-	if (proc->prolang == INTERNALlanguageId ||
-		proc->prolang == ClanguageId)
-		procost = 1;
-	else
-		procost = 100;
-	if (proc->procost != procost)
-		appendStringInfo(&buf, " COST %g", proc->procost);
+// 	/* This code for the default cost and rows should match functioncmds.c */
+// 	if (proc->prolang == INTERNALlanguageId ||
+// 		proc->prolang == ClanguageId)
+// 		procost = 1;
+// 	else
+// 		procost = 100;
+// 	if (proc->procost != procost)
+// 		appendStringInfo(&buf, " COST %g", proc->procost);
 
-	if (proc->prorows > 0 && proc->prorows != 1000)
-		appendStringInfo(&buf, " ROWS %g", proc->prorows);
+// 	if (proc->prorows > 0 && proc->prorows != 1000)
+// 		appendStringInfo(&buf, " ROWS %g", proc->prorows);
 
-	if (proc->prosupport)
-	{
-		Oid			argtypes[1];
+// 	if (proc->prosupport)
+// 	{
+// 		Oid			argtypes[1];
 
-		/*
-		 * We should qualify the support function's name if it wouldn't be
-		 * resolved by lookup in the current search path.
-		 */
-		argtypes[0] = INTERNALOID;
-		appendStringInfo(&buf, " SUPPORT %s",
-						 generate_function_name(proc->prosupport, 1,
-												NIL, argtypes,
-												false, NULL, EXPR_KIND_NONE));
-	}
+// 		/*
+// 		 * We should qualify the support function's name if it wouldn't be
+// 		 * resolved by lookup in the current search path.
+// 		 */
+// 		argtypes[0] = INTERNALOID;
+// 		appendStringInfo(&buf, " SUPPORT %s",
+// 						 generate_function_name(proc->prosupport, 1,
+// 												NIL, argtypes,
+// 												false, NULL, EXPR_KIND_NONE));
+// 	}
 
-	if (oldlen != buf.len)
-		appendStringInfoChar(&buf, '\n');
+// 	if (oldlen != buf.len)
+// 		appendStringInfoChar(&buf, '\n');
 
-	/* Emit any proconfig options, one per line */
-	tmp = SysCacheGetAttr(PROCOID, proctup, Anum_pg_proc_proconfig, &isnull);
-	if (!isnull)
-	{
-		ArrayType  *a = DatumGetArrayTypeP(tmp);
-		int			i;
+// 	/* Emit any proconfig options, one per line */
+// 	tmp = SysCacheGetAttr(PROCOID, proctup, Anum_pg_proc_proconfig, &isnull);
+// 	if (!isnull)
+// 	{
+// 		ArrayType  *a = DatumGetArrayTypeP(tmp);
+// 		int			i;
 
-		Assert(ARR_ELEMTYPE(a) == TEXTOID);
-		Assert(ARR_NDIM(a) == 1);
-		Assert(ARR_LBOUND(a)[0] == 1);
+// 		Assert(ARR_ELEMTYPE(a) == TEXTOID);
+// 		Assert(ARR_NDIM(a) == 1);
+// 		Assert(ARR_LBOUND(a)[0] == 1);
 
-		for (i = 1; i <= ARR_DIMS(a)[0]; i++)
-		{
-			Datum		d;
+// 		for (i = 1; i <= ARR_DIMS(a)[0]; i++)
+// 		{
+// 			Datum		d;
 
-			d = array_ref(a, 1, &i,
-						  -1 /* varlenarray */ ,
-						  -1 /* TEXT's typlen */ ,
-						  false /* TEXT's typbyval */ ,
-						  TYPALIGN_INT /* TEXT's typalign */ ,
-						  &isnull);
-			if (!isnull)
-			{
-				char	   *configitem = TextDatumGetCString(d);
-				char	   *pos;
+// 			d = array_ref(a, 1, &i,
+// 						  -1 /* varlenarray */ ,
+// 						  -1 /* TEXT's typlen */ ,
+// 						  false /* TEXT's typbyval */ ,
+// 						  TYPALIGN_INT /* TEXT's typalign */ ,
+// 						  &isnull);
+// 			if (!isnull)
+// 			{
+// 				char	   *configitem = TextDatumGetCString(d);
+// 				char	   *pos;
 
-				pos = strchr(configitem, '=');
-				if (pos == NULL)
-					continue;
-				*pos++ = '\0';
+// 				pos = strchr(configitem, '=');
+// 				if (pos == NULL)
+// 					continue;
+// 				*pos++ = '\0';
 
-				appendStringInfo(&buf, " SET %s TO ",
-								 quote_identifier(configitem));
+// 				appendStringInfo(&buf, " SET %s TO ",
+// 								 quote_identifier(configitem));
 
-				/*
-				 * Variables that are marked GUC_LIST_QUOTE were already fully
-				 * quoted by flatten_set_variable_args() before they were put
-				 * into the proconfig array.  However, because the quoting
-				 * rules used there aren't exactly like SQL's, we have to
-				 * break the list value apart and then quote the elements as
-				 * string literals.  (The elements may be double-quoted as-is,
-				 * but we can't just feed them to the SQL parser; it would do
-				 * the wrong thing with elements that are zero-length or
-				 * longer than NAMEDATALEN.)
-				 *
-				 * Variables that are not so marked should just be emitted as
-				 * simple string literals.  If the variable is not known to
-				 * guc.c, we'll do that; this makes it unsafe to use
-				 * GUC_LIST_QUOTE for extension variables.
-				 */
-				if (GetConfigOptionFlags(configitem, true) & GUC_LIST_QUOTE)
-				{
-					List	   *namelist;
-					ListCell   *lc;
+// 				/*
+// 				 * Variables that are marked GUC_LIST_QUOTE were already fully
+// 				 * quoted by flatten_set_variable_args() before they were put
+// 				 * into the proconfig array.  However, because the quoting
+// 				 * rules used there aren't exactly like SQL's, we have to
+// 				 * break the list value apart and then quote the elements as
+// 				 * string literals.  (The elements may be double-quoted as-is,
+// 				 * but we can't just feed them to the SQL parser; it would do
+// 				 * the wrong thing with elements that are zero-length or
+// 				 * longer than NAMEDATALEN.)
+// 				 *
+// 				 * Variables that are not so marked should just be emitted as
+// 				 * simple string literals.  If the variable is not known to
+// 				 * guc.c, we'll do that; this makes it unsafe to use
+// 				 * GUC_LIST_QUOTE for extension variables.
+// 				 */
+// 				if (GetConfigOptionFlags(configitem, true) & GUC_LIST_QUOTE)
+// 				{
+// 					List	   *namelist;
+// 					ListCell   *lc;
 
-					/* Parse string into list of identifiers */
-					if (!SplitGUCList(pos, ',', &namelist))
-					{
-						/* this shouldn't fail really */
-						elog(ERROR, "invalid list syntax in proconfig item");
-					}
-					foreach(lc, namelist)
-					{
-						char	   *curname = (char *) lfirst(lc);
+// 					/* Parse string into list of identifiers */
+// 					if (!SplitGUCList(pos, ',', &namelist))
+// 					{
+// 						/* this shouldn't fail really */
+// 						elog(ERROR, "invalid list syntax in proconfig item");
+// 					}
+// 					foreach(lc, namelist)
+// 					{
+// 						char	   *curname = (char *) lfirst(lc);
 
-						simple_quote_literal(&buf, curname);
-						if (lnext(namelist, lc))
-							appendStringInfoString(&buf, ", ");
-					}
-				}
-				else
-					simple_quote_literal(&buf, pos);
-				appendStringInfoChar(&buf, '\n');
-			}
-		}
-	}
+// 						simple_quote_literal(&buf, curname);
+// 						if (lnext(namelist, lc))
+// 							appendStringInfoString(&buf, ", ");
+// 					}
+// 				}
+// 				else
+// 					simple_quote_literal(&buf, pos);
+// 				appendStringInfoChar(&buf, '\n');
+// 			}
+// 		}
+// 	}
 
-	/* And finally the function definition ... */
-	appendStringInfoString(&buf, "AS ");
+// 	/* And finally the function definition ... */
+// 	appendStringInfoString(&buf, "AS ");
 
-	tmp = SysCacheGetAttr(PROCOID, proctup, Anum_pg_proc_probin, &isnull);
-	if (!isnull)
-	{
-		simple_quote_literal(&buf, TextDatumGetCString(tmp));
-		appendStringInfoString(&buf, ", "); /* assume prosrc isn't null */
-	}
+// 	tmp = SysCacheGetAttr(PROCOID, proctup, Anum_pg_proc_probin, &isnull);
+// 	if (!isnull)
+// 	{
+// 		simple_quote_literal(&buf, TextDatumGetCString(tmp));
+// 		appendStringInfoString(&buf, ", "); /* assume prosrc isn't null */
+// 	}
 
-	tmp = SysCacheGetAttr(PROCOID, proctup, Anum_pg_proc_prosrc, &isnull);
-	if (isnull)
-		elog(ERROR, "null prosrc");
-	prosrc = TextDatumGetCString(tmp);
+// 	tmp = SysCacheGetAttr(PROCOID, proctup, Anum_pg_proc_prosrc, &isnull);
+// 	if (isnull)
+// 		elog(ERROR, "null prosrc");
+// 	prosrc = TextDatumGetCString(tmp);
 
-	/*
-	 * We always use dollar quoting.  Figure out a suitable delimiter.
-	 *
-	 * Since the user is likely to be editing the function body string, we
-	 * shouldn't use a short delimiter that he might easily create a conflict
-	 * with.  Hence prefer "$function$"/"$procedure$", but extend if needed.
-	 */
-	initStringInfo(&dq);
-	appendStringInfoChar(&dq, '$');
-	appendStringInfoString(&dq, (isfunction ? "function" : "procedure"));
-	while (strstr(prosrc, dq.data) != NULL)
-		appendStringInfoChar(&dq, 'x');
-	appendStringInfoChar(&dq, '$');
+// 	/*
+// 	 * We always use dollar quoting.  Figure out a suitable delimiter.
+// 	 *
+// 	 * Since the user is likely to be editing the function body string, we
+// 	 * shouldn't use a short delimiter that he might easily create a conflict
+// 	 * with.  Hence prefer "$function$"/"$procedure$", but extend if needed.
+// 	 */
+// 	initStringInfo(&dq);
+// 	appendStringInfoChar(&dq, '$');
+// 	appendStringInfoString(&dq, (isfunction ? "function" : "procedure"));
+// 	while (strstr(prosrc, dq.data) != NULL)
+// 		appendStringInfoChar(&dq, 'x');
+// 	appendStringInfoChar(&dq, '$');
 
-	appendBinaryStringInfo(&buf, dq.data, dq.len);
-	appendStringInfoString(&buf, prosrc);
-	appendBinaryStringInfo(&buf, dq.data, dq.len);
+// 	appendBinaryStringInfo(&buf, dq.data, dq.len);
+// 	appendStringInfoString(&buf, prosrc);
+// 	appendBinaryStringInfo(&buf, dq.data, dq.len);
 
-	appendStringInfoChar(&buf, '\n');
+// 	appendStringInfoChar(&buf, '\n');
 
-	ReleaseSysCache(proctup);
+// 	ReleaseSysCache(proctup);
 
-	PG_RETURN_TEXT_P(string_to_text(buf.data));
-}
+// 	PG_RETURN_TEXT_P(string_to_text(buf.data));
+// }
 
 /*
  * pg_get_function_arguments
@@ -2849,25 +2854,25 @@ pg_get_functiondef(PG_FUNCTION_ARGS)
  *		This is everything that would go between the parentheses in
  *		CREATE FUNCTION.
  */
-Datum
-pg_get_function_arguments(PG_FUNCTION_ARGS)
-{
-	Oid			funcid = PG_GETARG_OID(0);
-	StringInfoData buf;
-	HeapTuple	proctup;
+// Datum
+// pg_get_function_arguments(PG_FUNCTION_ARGS,HistorySlowPlanStat* hsp)
+// {
+// 	Oid			funcid = PG_GETARG_OID(0);
+// 	StringInfoData buf;
+// 	HeapTuple	proctup;
 
-	proctup = SearchSysCache1(PROCOID, ObjectIdGetDatum(funcid));
-	if (!HeapTupleIsValid(proctup))
-		PG_RETURN_NULL();
+// 	proctup = SearchSysCache1(PROCOID, ObjectIdGetDatum(funcid));
+// 	if (!HeapTupleIsValid(proctup))
+// 		PG_RETURN_NULL();
 
-	initStringInfo(&buf);
+// 	initStringInfo(&buf);
 
-	(void) print_function_arguments(&buf, proctup, false, true);
+// 	(void) print_function_arguments(&buf, proctup, false, true,hsp);
 
-	ReleaseSysCache(proctup);
+// 	ReleaseSysCache(proctup);
 
-	PG_RETURN_TEXT_P(string_to_text(buf.data));
-}
+// 	PG_RETURN_TEXT_P(string_to_text(buf.data));
+// }
 
 /*
  * pg_get_function_identity_arguments
@@ -2875,63 +2880,63 @@ pg_get_function_arguments(PG_FUNCTION_ARGS)
  *		This is everything that would go between the parentheses in
  *		ALTER FUNCTION, etc.  In particular, don't print defaults.
  */
-Datum
-pg_get_function_identity_arguments(PG_FUNCTION_ARGS)
-{
-	Oid			funcid = PG_GETARG_OID(0);
-	StringInfoData buf;
-	HeapTuple	proctup;
+// Datum
+// pg_get_function_identity_arguments(PG_FUNCTION_ARGS,HistorySlowPlanStat* hsp)
+// {
+// 	Oid			funcid = PG_GETARG_OID(0);
+// 	StringInfoData buf;
+// 	HeapTuple	proctup;
 
-	proctup = SearchSysCache1(PROCOID, ObjectIdGetDatum(funcid));
-	if (!HeapTupleIsValid(proctup))
-		PG_RETURN_NULL();
+// 	proctup = SearchSysCache1(PROCOID, ObjectIdGetDatum(funcid));
+// 	if (!HeapTupleIsValid(proctup))
+// 		PG_RETURN_NULL();
 
-	initStringInfo(&buf);
+// 	initStringInfo(&buf);
 
-	(void) print_function_arguments(&buf, proctup, false, false);
+// 	(void) print_function_arguments(&buf, proctup, false, false,hsp);
 
-	ReleaseSysCache(proctup);
+// 	ReleaseSysCache(proctup);
 
-	PG_RETURN_TEXT_P(string_to_text(buf.data));
-}
+// 	PG_RETURN_TEXT_P(string_to_text(buf.data));
+// }
 
 /*
  * pg_get_function_result
  *		Get a nicely-formatted version of the result type of a function.
  *		This is what would appear after RETURNS in CREATE FUNCTION.
  */
-Datum
-pg_get_function_result(PG_FUNCTION_ARGS)
-{
-	Oid			funcid = PG_GETARG_OID(0);
-	StringInfoData buf;
-	HeapTuple	proctup;
+// Datum
+// pg_get_function_result(PG_FUNCTION_ARGS,HistorySlowPlanStat* hsp)
+// {
+// 	Oid			funcid = PG_GETARG_OID(0);
+// 	StringInfoData buf;
+// 	HeapTuple	proctup;
 
-	proctup = SearchSysCache1(PROCOID, ObjectIdGetDatum(funcid));
-	if (!HeapTupleIsValid(proctup))
-		PG_RETURN_NULL();
+// 	proctup = SearchSysCache1(PROCOID, ObjectIdGetDatum(funcid));
+// 	if (!HeapTupleIsValid(proctup))
+// 		PG_RETURN_NULL();
 
-	if (((Form_pg_proc) GETSTRUCT(proctup))->prokind == PROKIND_PROCEDURE)
-	{
-		ReleaseSysCache(proctup);
-		PG_RETURN_NULL();
-	}
+// 	if (((Form_pg_proc) GETSTRUCT(proctup))->prokind == PROKIND_PROCEDURE)
+// 	{
+// 		ReleaseSysCache(proctup);
+// 		PG_RETURN_NULL();
+// 	}
 
-	initStringInfo(&buf);
+// 	initStringInfo(&buf);
 
-	print_function_rettype(&buf, proctup);
+// 	print_function_rettype(&buf, proctup,hsp);
 
-	ReleaseSysCache(proctup);
+// 	ReleaseSysCache(proctup);
 
-	PG_RETURN_TEXT_P(string_to_text(buf.data));
-}
+// 	PG_RETURN_TEXT_P(string_to_text(buf.data));
+// }
 
 /*
  * Guts of pg_get_function_result: append the function's return type
  * to the specified buffer.
  */
 static void
-print_function_rettype(StringInfo buf, HeapTuple proctup)
+print_function_rettype(StringInfo buf, HeapTuple proctup,HistorySlowPlanStat* hsp)
 {
 	Form_pg_proc proc = (Form_pg_proc) GETSTRUCT(proctup);
 	int			ntabargs = 0;
@@ -2943,7 +2948,7 @@ print_function_rettype(StringInfo buf, HeapTuple proctup)
 	{
 		/* It might be a table function; try to print the arguments */
 		appendStringInfoString(&rbuf, "TABLE(");
-		ntabargs = print_function_arguments(&rbuf, proctup, true, false);
+		ntabargs = print_function_arguments(&rbuf, proctup, true, false,hsp);
 		if (ntabargs > 0)
 			appendStringInfoChar(&rbuf, ')');
 		else
@@ -2970,7 +2975,7 @@ print_function_rettype(StringInfo buf, HeapTuple proctup)
  */
 static int
 print_function_arguments(StringInfo buf, HeapTuple proctup,
-						 bool print_table_args, bool print_defaults)
+						 bool print_table_args, bool print_defaults,HistorySlowPlanStat* hsp)
 {
 	Form_pg_proc proc = (Form_pg_proc) GETSTRUCT(proctup);
 	int			numargs;
@@ -3092,7 +3097,7 @@ print_function_arguments(StringInfo buf, HeapTuple proctup,
 			nextargdefault = lnext(argdefaults, nextargdefault);
 
 			appendStringInfo(buf, " DEFAULT %s",
-							 deparse_expression_format(expr, NIL, false, false));
+							 deparse_expression_format(expr, NIL, false, false,hsp));
 		}
 		argsprinted++;
 
@@ -3148,76 +3153,75 @@ print_function_trftypes(StringInfo buf, HeapTuple proctup)
  * (i.e. proallargtypes, *not* proargtypes), starting with 1, because that's
  * how information_schema.sql uses it.
  */
-Datum
-pg_get_function_arg_default(PG_FUNCTION_ARGS)
-{
-	Oid			funcid = PG_GETARG_OID(0);
-	int32		nth_arg = PG_GETARG_INT32(1);
-	HeapTuple	proctup;
-	Form_pg_proc proc;
-	int			numargs;
-	Oid		   *argtypes;
-	char	  **argnames;
-	char	   *argmodes;
-	int			i;
-	List	   *argdefaults;
-	Node	   *node;
-	char	   *str;
-	int			nth_inputarg;
-	Datum		proargdefaults;
-	bool		isnull;
-	int			nth_default;
+// Datum
+// pg_get_function_arg_default(PG_FUNCTION_ARGS,HistorySlowPlanStat* hsp)
+// {
+// 	Oid			funcid = PG_GETARG_OID(0);
+// 	int32		nth_arg = PG_GETARG_INT32(1);
+// 	HeapTuple	proctup;
+// 	Form_pg_proc proc;
+// 	int			numargs;
+// 	Oid		   *argtypes;
+// 	char	  **argnames;
+// 	char	   *argmodes;
+// 	int			i;
+// 	List	   *argdefaults;
+// 	Node	   *node;
+// 	char	   *str;
+// 	int			nth_inputarg;
+// 	Datum		proargdefaults;
+// 	bool		isnull;
+// 	int			nth_default;
 
-	proctup = SearchSysCache1(PROCOID, ObjectIdGetDatum(funcid));
-	if (!HeapTupleIsValid(proctup))
-		PG_RETURN_NULL();
+// 	proctup = SearchSysCache1(PROCOID, ObjectIdGetDatum(funcid));
+// 	if (!HeapTupleIsValid(proctup))
+// 		PG_RETURN_NULL();
 
-	numargs = get_func_arg_info(proctup, &argtypes, &argnames, &argmodes);
-	if (nth_arg < 1 || nth_arg > numargs || !is_input_argument(nth_arg - 1, argmodes))
-	{
-		ReleaseSysCache(proctup);
-		PG_RETURN_NULL();
-	}
+// 	numargs = get_func_arg_info(proctup, &argtypes, &argnames, &argmodes);
+// 	if (nth_arg < 1 || nth_arg > numargs || !is_input_argument(nth_arg - 1, argmodes))
+// 	{
+// 		ReleaseSysCache(proctup);
+// 		PG_RETURN_NULL();
+// 	}
 
-	nth_inputarg = 0;
-	for (i = 0; i < nth_arg; i++)
-		if (is_input_argument(i, argmodes))
-			nth_inputarg++;
+// 	nth_inputarg = 0;
+// 	for (i = 0; i < nth_arg; i++)
+// 		if (is_input_argument(i, argmodes))
+// 			nth_inputarg++;
 
-	proargdefaults = SysCacheGetAttr(PROCOID, proctup,
-									 Anum_pg_proc_proargdefaults,
-									 &isnull);
-	if (isnull)
-	{
-		ReleaseSysCache(proctup);
-		PG_RETURN_NULL();
-	}
+// 	proargdefaults = SysCacheGetAttr(PROCOID, proctup,
+// 									 Anum_pg_proc_proargdefaults,
+// 									 &isnull);
+// 	if (isnull)
+// 	{
+// 		ReleaseSysCache(proctup);
+// 		PG_RETURN_NULL();
+// 	}
 
-	str = TextDatumGetCString(proargdefaults);
-	argdefaults = castNode(List, stringToNode(str));
-	pfree(str);
+// 	str = TextDatumGetCString(proargdefaults);
+// 	argdefaults = castNode(List, stringToNode(str));
+// 	pfree(str);
 
-	proc = (Form_pg_proc) GETSTRUCT(proctup);
+// 	proc = (Form_pg_proc) GETSTRUCT(proctup);
 
-	/*
-	 * Calculate index into proargdefaults: proargdefaults corresponds to the
-	 * last N input arguments, where N = pronargdefaults.
-	 */
-	nth_default = nth_inputarg - 1 - (proc->pronargs - proc->pronargdefaults);
+// 	/*
+// 	 * Calculate index into proargdefaults: proargdefaults corresponds to the
+// 	 * last N input arguments, where N = pronargdefaults.
+// 	 */
+// 	nth_default = nth_inputarg - 1 - (proc->pronargs - proc->pronargdefaults);
 
-	if (nth_default < 0 || nth_default >= list_length(argdefaults))
-	{
-		ReleaseSysCache(proctup);
-		PG_RETURN_NULL();
-	}
-	node = list_nth(argdefaults, nth_default);
-	str = deparse_expression_format(node, NIL, false, false);
+// 	if (nth_default < 0 || nth_default >= list_length(argdefaults))
+// 	{
+// 		ReleaseSysCache(proctup);
+// 		PG_RETURN_NULL();
+// 	}
+// 	node = list_nth(argdefaults, nth_default);
+// 	str = deparse_expression_format(node, NIL, false, false,hsp);
 
-	ReleaseSysCache(proctup);
+// 	ReleaseSysCache(proctup);
 
-	PG_RETURN_TEXT_P(string_to_text(str));
-}
-
+// 	PG_RETURN_TEXT_P(string_to_text(str));
+// }
 
 /*
  * deparse_expression_format			- General utility for deparsing expressions
@@ -3226,7 +3230,7 @@ pg_get_function_arg_default(PG_FUNCTION_ARGS)
  */
 char *
 deparse_expression_format(Node *expr, List *dpcontext,
-				   bool forceprefix, bool showimplicit)
+				   bool forceprefix, bool showimplicit,HistorySlowPlanStat* hsp)
 {
 	return deparse_expression_pretty(expr, dpcontext, forceprefix,
 									 showimplicit, 0, 0);
@@ -3259,8 +3263,12 @@ deparse_expression_pretty(Node *expr, List *dpcontext,
 	StringInfoData buf;
 	deparse_context context;
 
+
+	deparse_namespace * dpns = (deparse_namespace *) linitial(dpcontext);
+
+
 	initStringInfo(&buf);
-	context.buf = &buf;
+	context.buf = &buf; 
 	context.namespaces = dpcontext;
 	context.windowClause = NIL;
 	context.windowTList = NIL;
@@ -3270,6 +3278,8 @@ deparse_expression_pretty(Node *expr, List *dpcontext,
 	context.indentLevel = startIndent;
 	context.special_exprkind = EXPR_KIND_NONE;
 	context.appendparents = NULL;
+	context.hsp = dpns->hsp;
+	
 
 	get_rule_expr(expr, &context, showimplicit);
 
@@ -3399,7 +3409,7 @@ deparse_context_for_plan_tree_format(PlannedStmt *pstmt, List *rtable_names)
  * The result is the same List passed in; this is a notational convenience.
  */
 List *
-set_deparse_context_plan_format(List *dpcontext, Plan *plan, List *ancestors)
+set_deparse_context_plan_format(List *dpcontext, Plan *plan, List *ancestors,HistorySlowPlanStat* hps)
 {
 	deparse_namespace *dpns;
 
@@ -3409,6 +3419,7 @@ set_deparse_context_plan_format(List *dpcontext, Plan *plan, List *ancestors)
 
 	/* Set our attention on the specific plan node passed in */
 	set_deparse_plan(dpns, plan);
+	dpns->hsp = hps;
 	dpns->ancestors = ancestors;
 
 	return dpcontext;
@@ -4623,6 +4634,8 @@ set_deparse_plan(deparse_namespace *dpns, Plan *plan)
 		dpns->outer_plan = linitial(((ModifyTable *) plan)->plans);
 	else
 		dpns->outer_plan = outerPlan(plan);
+
+	
 
 	if (dpns->outer_plan)
 		dpns->outer_tlist = dpns->outer_plan->targetlist;
@@ -9435,7 +9448,7 @@ get_agg_expr(Aggref *aggref, deparse_context *context,
 	 */
 	if (DO_AGGSPLIT_SKIPFINAL(original_aggref->aggsplit))
 		appendStringInfoString(buf, "PARTIAL ");
-
+ 
 	/* Extract the argument types as seen by the parser */
 	nargs = get_aggregate_argtypes(aggref, argtypes);
 
@@ -9487,14 +9500,14 @@ get_agg_expr(Aggref *aggref, deparse_context *context,
 				get_rule_expr(arg, context, true);
 			}
 		}
-
+		//SELECT array_agg(value ORDER BY category DESC, timestamp ASC) AS ordered_values FROM events;
 		if (aggref->aggorder != NIL)
 		{
 			appendStringInfoString(buf, " ORDER BY ");
 			get_rule_orderby(aggref->aggorder, aggref->args, false, context);
 		}
 	}
-
+	//COUNT(*) FILTER (WHERE status = 'active') AS active_rows
 	if (aggref->aggfilter != NULL)
 	{
 		appendStringInfoString(buf, ") FILTER (WHERE ");
@@ -9670,11 +9683,14 @@ static void
 get_const_expr(Const *constval, deparse_context *context, int showtype)
 {
 	StringInfo	buf = context->buf;
+	//StringInfo cannoical_buf = context->canonical_buf;
+
 	Oid			typoutput;
 	bool		typIsVarlena;
 	char	   *extval;
 	bool		needlabel = false;
-
+	
+	/*the constval is null*/
 	if (constval->constisnull)
 	{
 		/*
@@ -9682,6 +9698,8 @@ get_const_expr(Const *constval, deparse_context *context, int showtype)
 		 * about type when reparsing.
 		 */
 		appendStringInfoString(buf, "NULL");
+		//appendStringInfoString(cannoical_buf, "NULL");
+
 		if (showtype >= 0)
 		{
 			appendStringInfo(buf, "::%s",
@@ -9712,6 +9730,7 @@ get_const_expr(Const *constval, deparse_context *context, int showtype)
 			 */
 			if (extval[0] != '-')
 				appendStringInfoString(buf, extval);
+				//appendStringInfoString(cannoical_buf,)
 			else
 			{
 				appendStringInfo(buf, "'%s'", extval);

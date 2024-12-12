@@ -30,7 +30,8 @@ public:
 private:
     std::string HashCanonicalPlan(char *json_plan);
 
-    void ComputeEquivlenceClass();
+    void ComputeEquivlenceClass(HistorySlowPlanStat* hsps,SlowPlanStat *sps);
+    void ComputLevlEquivlenceClass(const std::vector<HistorySlowPlanStat*>& list,SlowPlanStat *sps);
 
     PlanStatFormat();
     ~PlanStatFormat();
@@ -41,6 +42,10 @@ private:
     HistorySlowPlanStat hsps_;
     CanonicalStrategy cs_ = C_SAFE;
     RedisSlowPlanStatProvider * storage_;
+    /** 
+     * TODO: the name of HistorySlowPanStat and SlowPlanStat is simlar, we need rename 
+     * one of them to keep readilty of codes
+    */
 };
 
 
