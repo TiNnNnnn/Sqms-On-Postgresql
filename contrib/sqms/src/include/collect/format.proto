@@ -64,7 +64,8 @@ message HistorySlowPlanStat{
 	repeated GroupSortKey group_sort_keys = 41;
 
 	/*all prdicates of current subquery*/
-	//repeated Expression preds = 34;
+	repeated Equals and_quals = 42;
+	repeated Equals or_quals = 43;
 }
 
 message GroupSortKey{
@@ -85,6 +86,12 @@ message GroupSortKey{
 message GroupKeys{
 	string key_name = 1;
 	repeated string keys = 2;
+}
+
+message Equals{
+	string left = 1;
+	string right = 2;
+	string op = 3;
 }
 
 message EquivlenceClass{

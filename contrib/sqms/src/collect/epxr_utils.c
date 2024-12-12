@@ -3266,7 +3266,6 @@ deparse_expression_pretty(Node *expr, List *dpcontext,
 
 	deparse_namespace * dpns = (deparse_namespace *) linitial(dpcontext);
 
-
 	initStringInfo(&buf);
 	context.buf = &buf; 
 	context.namespaces = dpcontext;
@@ -8002,7 +8001,7 @@ get_rule_expr(Node *node, deparse_context *context,
 
 	if (node == NULL)
 		return;
-
+	
 	/* Guard against excessively long or deeply-nested queries */
 	CHECK_FOR_INTERRUPTS();
 	check_stack_depth();
@@ -9290,6 +9289,11 @@ get_oper_expr(OpExpr *expr, deparse_context *context)
 												exprType(arg1),
 												exprType(arg2)));
 		get_rule_expr_paren(arg2, context, true, (Node *) expr);
+
+		bool op = generate_operator_name(opno,exprType(arg1),exprType(arg2));
+		if(op == "<" || op == ">=" || op == ">=" || op == "<=" || op == "=" ){
+				
+		}
 	}
 	else
 	{
