@@ -103,7 +103,7 @@ static void show_sort_group_keys(PlanState *planstate, const char *qlabel,
 								 List *ancestors, ExplainState *es,HistorySlowPlanStat* hsp);
 static void show_sortorder_options(StringInfo buf, Node *sortexpr,
 								   Oid sortOperator, Oid collation, bool nullsFirst,
-								   HistorySlowPlanStat *hsp,int keyno);
+								   HistorySlowPlanStat *hsp,GroupSortKey *gs_key);
 static void show_tablesample(TableSampleClause *tsc, PlanState *planstate,
 							 List *ancestors, ExplainState *es,HistorySlowPlanStat* hsp);
 static void show_sort_info(SortState *sortstate, ExplainState *es);
@@ -285,7 +285,6 @@ HistorySlowPlanStat FormatPrintPlan(ExplainState *es, ExplainState *ces,QueryDes
 													es->rtable_names);
 	es->printed_subplans = NULL;
 	/*we alaways wish the type of explain is JSON currently*/
-
 	/*
 	 * Sometimes we mark a Gather node as "invisible", which means that it's
 	 * not to be displayed in EXPLAIN output.  The purpose of this is to allow
@@ -883,16 +882,17 @@ ExplainNode(PlanState *planstate, List *ancestors,
 			pname = sname = "???";
 			break;
 	}
-
+	
 	ExplainState* es = NewFormatState();
 	*es = *total_es;
 	es->str = makeStringInfo();
-
+	
 	ExplainState* ces = NewFormatState();
 	*ces = *total_ces;
-	es->str = makeStringInfo();
+	ces->str = makeStringInfo();
 
 	FormatOpenGroup("Plan","Plan",true, es);
+	FormatOpenGroup("Plan","Plan",true, ces);
 
 	/*just note physical node type for ces*/
 	FormatPropertyText("Node Type",sname,ces);
@@ -1138,8 +1138,10 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	}
 
 	/* target list */
-	if (es->verbose)
+	if (es->verbose){
 		show_plan_tlist(planstate, ancestors, es, &hsp);
+	}
+	 	
 
 
 	/* unique join */
@@ -1159,7 +1161,6 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		default:
 			break;
 	}
-
 	/* quals, sort keys, etc */
 	switch (nodeTag(plan))
 	{
@@ -1528,6 +1529,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	if (haschildren)
 	{
 		FormatOpenGroup("Plans", "Plans", false, es);
+		FormatOpenGroup("Plans", "Plans", false, ces);
 		/* Pass current Plan as head of ancestors list for children */
 		ancestors = lcons(plan, ancestors);
 		if(outerPlanState(planstate) && innerPlanState(planstate)){
@@ -1633,6 +1635,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	if (haschildren){
 		ancestors = list_delete_first(ancestors);
 		FormatCloseGroup("Plans", "Plans", false, es);
+		FormatOpenGroup("Plans", "Plans", false, ces);
 	}
 
 	/**
@@ -1644,6 +1647,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	hsp.sub_cost = cumulate_cost;
 	/*mark the recurestat for parent to use,we need a deep copy for infostring*/
 	FormatCloseGroup("Plan",relationship ? NULL : "Plan",true, es);
+	FormatCloseGroup("Plan",relationship ? NULL : "Plan",true, ces);
 	//ExplainEndOutput(es);
 	
 	rs.cost_ = cumulate_cost;
@@ -1653,7 +1657,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 
 	if(debug){
 		elog(stat_log_level,es->str->data);
-		elog(stat_log_level,ces->str->data);
+		//elog(stat_log_level,ces->str->data);
 	}
 	elog(stat_log_level,"finish a node format");
 	/*here we can't free es, hsp still use its data*/
@@ -1702,30 +1706,31 @@ show_plan_tlist(PlanState *planstate, List *ancestors, ExplainState *es, History
 	/* Set up deparsing context */
 	context = set_deparse_context_plan_format(es->deparse_cxt,
 									   plan,
-									   ancestors,hsp);
+									   ancestors);
 	useprefix = list_length(es->rtable) > 1;
 
-	/* Deparse each result column (we now include resjunk ones) */
-	foreach(lc, plan->targetlist)
-	{
-		TargetEntry *tle = (TargetEntry *) lfirst(lc);
-
-		result = lappend(result,
-						 deparse_expression_format((Node *) tle->expr, context,
-											useprefix, false,hsp));
-	}
-
-	FormatPropertyList("Output", result, es);
 
 	hsp->output = (char**)malloc(list_length(result) * sizeof(char*));
+	hsp->n_output = list_length(result);
+
 	if (!hsp->output) {
         fprintf(stderr, "Memory allocation failed\n");
         return 1;
     }
-	hsp->n_output = list_length(result);
-	for(int i = 0;i <hsp->n_output;i++){
-		hsp->output[i] = result[i].elements;
+
+	/* Deparse each result column (we now include resjunk ones) */
+	int i = 0;
+	foreach(lc, plan->targetlist)
+	{
+		TargetEntry *tle = (TargetEntry *) lfirst(lc);
+
+		char *expr =  deparse_expression_format((Node *) tle->expr, context,
+											useprefix, false);
+		result = lappend(result,expr);
+		hsp->output[i] = expr;
+		++i;
 	}
+	FormatPropertyList("Output", result, es);
 }
 
 /*
@@ -1742,18 +1747,16 @@ show_expression(Node *node, const char *qlabel,
 	/* Set up deparsing context */
 	context = set_deparse_context_plan_format(es->deparse_cxt,
 									   planstate->plan,
-									   ancestors,hsp);
+									   ancestors);
 
 	/* Deparse the expression */
-	exprstr = deparse_expression_format(node, context, useprefix, false, hsp);
+	exprstr = deparse_expression_format(node, context, useprefix, false);
 
 	/* And add to es->str */
 	FormatPropertyText(qlabel, exprstr, es);
-
 	hsp->qlabel = qlabel;
 	/**we need a more fine-grained exprstr */
-	//hsp->exprstr = exprstr;
-	
+	hsp->exprstr = exprstr;
 }
 
 /*
@@ -1890,7 +1893,7 @@ show_grouping_sets(PlanState *planstate, Agg *agg,
 	/* Set up deparsing context */
 	context = set_deparse_context_plan_format(es->deparse_cxt,
 									   planstate->plan,
-									   ancestors,hsp);
+									   ancestors);
 	useprefix = (list_length(es->rtable) > 1 || es->verbose);
 
 	FormatOpenGroup("Grouping Sets", "Grouping Sets", false, es);
@@ -1963,6 +1966,8 @@ show_grouping_set_keys(PlanState *planstate,
 		List	   *result = NIL;
 		ListCell   *lc2;
 
+		
+
 		foreach(lc2, (List *) lfirst(lc))
 		{
 			Index		i = lfirst_int(lc2);
@@ -1974,7 +1979,7 @@ show_grouping_set_keys(PlanState *planstate,
 				elog(ERROR, "no tlist entry for key %d", keyresno);
 			/* Deparse the expression, showing any top-level cast */
 			exprstr = deparse_expression_format((Node *) target->expr, context,
-										 useprefix, true,hsp);
+										 useprefix, true);
 			result = lappend(result, exprstr);
 		}
 
@@ -1986,11 +1991,13 @@ show_grouping_set_keys(PlanState *planstate,
 			hsp->keysetname = keysetname;
 			
 			GroupKeys * gkey = (GroupKeys *)malloc(sizeof(GroupKeys));
+			group_keys__init(gkey);
+			
 			gkey->key_name = keyname;
 			gkey->keys = (char**)malloc(list_length(result)*sizeof(char*));
 			gkey->n_keys = list_length(result);
 			for(int i=0;i<gkey->n_keys;i++){
-				gkey->keys = result[i].elements;	
+				gkey->keys = (char*)result[i].elements->ptr_value;	
 			}
 			hsp->g_sets[g_sets_idx] = gkey;
 		}
@@ -2050,7 +2057,7 @@ show_sort_group_keys(PlanState *planstate, const char *qlabel,
 	/* Set up deparsing context */
 	context = set_deparse_context_plan_format(es->deparse_cxt,
 									   plan,
-									   ancestors,hsp);
+									   ancestors);
 	useprefix = (list_length(es->rtable) > 1 || es->verbose);
 
 	hsp->qlabel = qlabel;
@@ -2069,34 +2076,35 @@ show_sort_group_keys(PlanState *planstate, const char *qlabel,
 			elog(ERROR, "no tlist entry for key %d", keyresno);
 		/* Deparse the expression, showing any top-level cast */
 		exprstr = deparse_expression_format((Node *) target->expr, context,
-									 useprefix, true,hsp);
+									 useprefix, true);
 		resetStringInfo(&sortkeybuf);
 		appendStringInfoString(&sortkeybuf, exprstr);
 		/*
          * Append sort order information, if relevant
          */
-		
-		hsp->group_sort_keys[keyno]->key = malloc(sizeof(exprstr)+1);
+		GroupSortKey *gs_key = (GroupSortKey *)malloc(sizeof(GroupSortKey));
+		group_sort_key__init(gs_key);
+
+		gs_key->key = malloc(sizeof(exprstr)+1);
 		strcpy(hsp->group_sort_keys[keyno]->key,exprstr);
-		hsp->group_sort_keys[keyno]->sort_operators = (sortOperators != NULL);
+		gs_key->sort_operators = (sortOperators != NULL);
 		if (sortOperators != NULL)
 			show_sortorder_options(&sortkeybuf,
 								   (Node *) target->expr,
 								   sortOperators[keyno],
 								   collations[keyno],
-								   nullsFirst[keyno],hsp,keyno);
+								   nullsFirst[keyno],hsp,gs_key);
 		/* Emit one property-list item per sort key */
 		result = lappend(result, pstrdup(sortkeybuf.data));
 		if (keyno < nPresortedKeys){
 			resultPresorted = lappend(resultPresorted, exprstr);
-			hsp->group_sort_keys[keyno]->presorted_key = true;
+			gs_key->presorted_key = true;
 		}
+		hsp->group_sort_keys[keyno] = gs_key;
 	}
-
 	FormatPropertyList(qlabel, result, es);
 	if (nPresortedKeys > 0)
 		FormatPropertyList("Presorted Key", resultPresorted, es);
-
 }
 
 /*
@@ -2106,7 +2114,7 @@ show_sort_group_keys(PlanState *planstate, const char *qlabel,
 static void
 show_sortorder_options(StringInfo buf, Node *sortexpr,
 					   Oid sortOperator, Oid collation, bool nullsFirst,
-					   HistorySlowPlanStat *hsp,int keyno)
+					   HistorySlowPlanStat *hsp,GroupSortKey* gs_key)
 {
 	Oid			sortcoltype = exprType(sortexpr);
 	bool		reverse = false;
@@ -2130,15 +2138,15 @@ show_sortorder_options(StringInfo buf, Node *sortexpr,
 			elog(ERROR, "cache lookup failed for collation %u", collation);
 		appendStringInfo(buf, " COLLATE %s", quote_identifier(collname));
 		
-		hsp->group_sort_keys[keyno]->sort_collation = malloc(sizeof(quote_identifier(collname))+1);
-		strcpy(hsp->group_sort_keys[keyno]->sort_collation,quote_identifier(collname));
+		gs_key->sort_collation = malloc(sizeof(quote_identifier(collname))+1);
+		strcpy(gs_key->sort_collation,quote_identifier(collname));
 	}
 
 	/* Print direction if not ASC, or USING if non-default sort operator */
 	if (sortOperator == typentry->gt_opr)
 	{
 		appendStringInfoString(buf, " DESC");
-		hsp->group_sort_keys[keyno]->sort_direction = "DESC";
+		gs_key->sort_direction = "DESC";
 		reverse = true;
 	}
 	else if (sortOperator != typentry->lt_opr)
@@ -2149,8 +2157,8 @@ show_sortorder_options(StringInfo buf, Node *sortexpr,
 			elog(ERROR, "cache lookup failed for operator %u", sortOperator);
 		appendStringInfo(buf, " USING %s", opname);
 
-		hsp->group_sort_keys[keyno]->sort_direction = malloc(sizeof(opname)+1);
-		strcpy(hsp->group_sort_keys[keyno]->sort_direction,opname);
+		gs_key->sort_direction = malloc(sizeof(opname)+1);
+		strcpy(gs_key->sort_direction,opname);
 		
 		/* Determine whether operator would be considered ASC or DESC */
 		(void) get_equality_op_for_ordering_op(sortOperator, &reverse);
@@ -2160,12 +2168,12 @@ show_sortorder_options(StringInfo buf, Node *sortexpr,
 	if (nullsFirst && !reverse)
 	{
 		appendStringInfoString(buf, " NULLS FIRST");
-		hsp->group_sort_keys[keyno]->sort_null_pos = "NULLS FIRST";
+		gs_key->sort_null_pos = "NULLS FIRST";
 	}
 	else if (!nullsFirst && reverse)
 	{
 		appendStringInfoString(buf, " NULLS LAST");
-		hsp->group_sort_keys[keyno]->sort_null_pos = "NULLS LAST";
+		gs_key->sort_null_pos = "NULLS LAST";
 	}
 }
 
@@ -2186,7 +2194,7 @@ show_tablesample(TableSampleClause *tsc, PlanState *planstate,
 	/* Set up deparsing context */
 	context = set_deparse_context_plan_format(es->deparse_cxt,
 									   planstate->plan,
-									   ancestors,hsp);
+									   ancestors);
 	useprefix = list_length(es->rtable) > 1;
 
 	/* Get the tablesample method name */
@@ -2199,11 +2207,11 @@ show_tablesample(TableSampleClause *tsc, PlanState *planstate,
 
 		params = lappend(params,
 						 deparse_expression_format(arg, context,
-											useprefix, false,hsp));
+											useprefix, false));
 	}
 	if (tsc->repeatable)
 		repeatable = deparse_expression_format((Node *) tsc->repeatable, context,
-										useprefix, false,hsp);
+										useprefix, false);
 	else
 		repeatable = NULL;
 

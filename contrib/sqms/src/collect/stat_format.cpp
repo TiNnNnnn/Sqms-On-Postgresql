@@ -54,7 +54,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd){
 
         /*build fast filter tree, here need ensure thread safe,moreover,we
         need rebuild it after db restarting*/
-
+ 
         /**
          * TODO: 11-23 storage the slow sub query
          */
@@ -104,7 +104,7 @@ void PlanStatFormat::ComputLevlEquivlenceClass(const std::vector<HistorySlowPlan
 bool PlanStatFormat::Preprocessing(QueryDesc* qd){
     ExplainState *total_es = NewFormatState();
     ExplainState *total_ces = NewFormatState();
-    if(total_es == NULL)return false;
+    if(total_es == NULL || total_ces == NULL)return false;
 
     FormatBeginOutput(total_es);
     FormatBeginOutput(total_ces);
@@ -112,7 +112,6 @@ bool PlanStatFormat::Preprocessing(QueryDesc* qd){
     FormatEndOutput(total_ces);
     FormatEndOutput(total_es);
     
-
     pfree(total_es);
     pfree(total_ces);
     return true;

@@ -375,7 +375,7 @@ printtup_prepare_info(DR_printtup *myState, TupleDesc typeinfo, int numAttrs)
  * ----------------
  */
 static bool
-printtup(TupleTableSlot *slot, DestReceiver *self)
+printtup(TupleTableSlot *slot, DestRece iver *self)
 {
 	TupleDesc	typeinfo = slot->tts_tupleDescriptor;
 	DR_printtup *myState = (DR_printtup *) self;
@@ -414,7 +414,7 @@ printtup(TupleTableSlot *slot, DestReceiver *self)
 			pq_sendint32(buf, -1);
 			continue;
 		}
-
+		
 		/*
 		 * Here we catch undefined bytes in datums that are returned to the
 		 * client without hitting disk; see comments at the related check in

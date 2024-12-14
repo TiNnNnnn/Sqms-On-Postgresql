@@ -110,7 +110,7 @@ typedef struct
 {
 	StringInfo	buf;			/* output buffer to append to */
 	/*in this buf,we will replace constants with placeholders*/
-	StringInfo  canonical_buf;
+	//StringInfo  canonical_buf;
 	List	   *namespaces;		/* List of deparse_namespace nodes */
 	List	   *windowClause;	/* Current query level's WINDOW clause */
 	List	   *windowTList;	/* targetlist for resolving WINDOW clause */
@@ -122,7 +122,7 @@ typedef struct
 									 * handling */
 	Bitmapset  *appendparents;	/* if not null, map child Vars of these relids
 								 * back to the parent rel */
-	HistorySlowPlanStat	*hsp; 
+	//HistorySlowPlanStat	*hsp; 
 } deparse_context;
 
 /*
@@ -177,7 +177,7 @@ typedef struct
 	List	   *inner_tlist;	/* referent for INNER_VAR Vars */
 	List	   *index_tlist;	/* referent for INDEX_VAR Vars */
 	/*history slow paln stat for qual parsing*/
-	HistorySlowPlanStat	*hsp; 	 
+	//HistorySlowPlanStat	*hsp; 	 
 } deparse_namespace;
 
 /*
@@ -412,7 +412,7 @@ static bool isSimpleNode(Node *node, Node *parentNode, int prettyFlags);
 static void appendContextKeyword(deparse_context *context, const char *str,
 								 int indentBefore, int indentAfter, int indentPlus);
 static void removeStringInfoSpaces(StringInfo str);
-static ExprRecureState get_rule_expr(Node *node, deparse_context *context,
+static void get_rule_expr(Node *node, deparse_context *context,
 						  bool showimplicit);
 static void get_rule_expr_toplevel(Node *node, deparse_context *context,
 								   bool showimplicit);
@@ -472,7 +472,7 @@ static char *generate_operator_name(Oid operid, Oid arg1, Oid arg2);
  */
 char *
 deparse_expression_format(Node *expr, List *dpcontext,
-				   bool forceprefix, bool showimplicit,HistorySlowPlanStat* hsp)
+				   bool forceprefix, bool showimplicit)
 {
 	return deparse_expression_pretty(expr, dpcontext, forceprefix,
 									 showimplicit, 0, 0);
@@ -505,11 +505,9 @@ deparse_expression_pretty(Node *expr, List *dpcontext,
 	StringInfoData buf;
 	deparse_context context;
 
-
-	deparse_namespace * dpns = (deparse_namespace *) linitial(dpcontext);
-
 	initStringInfo(&buf);
-	context.buf = &buf; 
+
+	context.buf = &buf;
 	context.namespaces = dpcontext;
 	context.windowClause = NIL;
 	context.windowTList = NIL;
@@ -519,12 +517,10 @@ deparse_expression_pretty(Node *expr, List *dpcontext,
 	context.indentLevel = startIndent;
 	context.special_exprkind = EXPR_KIND_NONE;
 	context.appendparents = NULL;
-	context.hsp = dpns->hsp;
-	
 
 	get_rule_expr(expr, &context, showimplicit);
 
-	return buf.data;
+	return buf.data ;
 }
 
 /* ----------
@@ -650,7 +646,7 @@ deparse_context_for_plan_tree_format(PlannedStmt *pstmt, List *rtable_names)
  * The result is the same List passed in; this is a notational convenience.
  */
 List *
-set_deparse_context_plan_format(List *dpcontext, Plan *plan, List *ancestors,HistorySlowPlanStat* hps)
+set_deparse_context_plan_format(List *dpcontext, Plan *plan, List *ancestors)
 {
 	deparse_namespace *dpns;
 
@@ -660,7 +656,7 @@ set_deparse_context_plan_format(List *dpcontext, Plan *plan, List *ancestors,His
 
 	/* Set our attention on the specific plan node passed in */
 	set_deparse_plan(dpns, plan);
-	dpns->hsp = hps;
+	//dpns->hsp = hps;
 	dpns->ancestors = ancestors;
 
 	return dpcontext;
@@ -3664,7 +3660,15 @@ get_utility_query_def(Query *query, deparse_context *context)
 static char *
 get_variable(Var *var, int levelsup, bool istoplevel, deparse_context *context)
 {
-	StringInfo	buf = context->buf;
+	StringInfo buf = context->buf;
+
+	// deparse_context * context = malloc(sizeof(deparse_context));
+	// *context = *total_context;
+	// context->buf = makeStringInfo();
+	// StringInfo buf = context->buf;
+	
+	//ExprRecureState ers = NewExprRecureStat();
+	
 	RangeTblEntry *rte;
 	AttrNumber	attnum;
 	int			netlevelsup;
@@ -3680,6 +3684,7 @@ get_variable(Var *var, int levelsup, bool istoplevel, deparse_context *context)
 	if (netlevelsup >= list_length(context->namespaces))
 		elog(ERROR, "bogus varlevelsup: %d offset %d",
 			 var->varlevelsup, levelsup);
+	
 	dpns = (deparse_namespace *) list_nth(context->namespaces,
 										  netlevelsup);
 
@@ -4956,6 +4961,13 @@ get_rule_expr_paren(Node *node, deparse_context *context,
 }
 
 
+ExprRecureState NewExprRecureStat(){
+	ExprRecureState rs;
+	rs.detail_str_ = makeStringInfo();
+	rs.cnt_ = 0;
+	return rs;
+}
+
 /* ----------
  * get_rule_expr			- Parse back an expression
  *
@@ -4969,7 +4981,7 @@ get_rule_expr_paren(Node *node, deparse_context *context,
  * or operator will be chosen when the expression is re-parsed.
  * ----------
  */
-static ExprRecureState
+static void 
 get_rule_expr(Node *node, deparse_context *context,
 			  bool showimplicit)
 {
@@ -5229,7 +5241,7 @@ get_rule_expr(Node *node, deparse_context *context,
 		case T_SubLink:
 			get_sublink_expr((SubLink *) node, context);
 			break;
-
+			
 		case T_SubPlan:
 			{
 				SubPlan    *subplan = (SubPlan *) node;
@@ -6660,11 +6672,17 @@ get_coercion_expr(Node *arg, deparse_context *context,
  * caller's responsibility that collation isn't missed in such cases.
  * ----------
  */
-static void
+static void 
 get_const_expr(Const *constval, deparse_context *context, int showtype)
 {
 	StringInfo	buf = context->buf;
-	//StringInfo cannoical_buf = context->canonical_buf;
+
+	// deparse_context * context = malloc(sizeof(deparse_context));
+	// *context = *total_context;
+	// context->buf = makeStringInfo();
+	// StringInfo buf = context->buf;
+	
+	//ExprRecureState ers = NewExprRecureStat();
 
 	Oid			typoutput;
 	bool		typIsVarlena;
@@ -6679,15 +6697,16 @@ get_const_expr(Const *constval, deparse_context *context, int showtype)
 		 * about type when reparsing.
 		 */
 		appendStringInfoString(buf, "NULL");
-		//appendStringInfoString(cannoical_buf, "NULL");
 
 		if (showtype >= 0)
 		{
+			/*eg: SELECT NULL::text AS col1;*/
 			appendStringInfo(buf, "::%s",
 							 format_type_with_typemod(constval->consttype,
-													  constval->consttypmod));
+													  constval->consttypmod));		
 			get_const_collation(constval, context);
 		}
+		//appendStringInfo(ers.detail_str_,buf->data);
 		return;
 	}
 
@@ -6711,7 +6730,7 @@ get_const_expr(Const *constval, deparse_context *context, int showtype)
 			 */
 			if (extval[0] != '-')
 				appendStringInfoString(buf, extval);
-				//appendStringInfoString(cannoical_buf,)
+
 			else
 			{
 				appendStringInfo(buf, "'%s'", extval);
@@ -6752,8 +6771,11 @@ get_const_expr(Const *constval, deparse_context *context, int showtype)
 
 	pfree(extval);
 
-	if (showtype < 0)
+	if (showtype < 0){
+		//appendStringInfo(ers.detail_str_,buf->data);
 		return;
+	}
+		
 
 	/*
 	 * For showtype == 0, append ::typename unless the constant will be
@@ -6791,6 +6813,9 @@ get_const_expr(Const *constval, deparse_context *context, int showtype)
 												  constval->consttypmod));
 
 	get_const_collation(constval, context);
+
+	//appendStringInfo(ers.detail_str_,buf->data);
+	//return ers;
 }
 
 /*

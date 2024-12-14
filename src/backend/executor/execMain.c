@@ -1637,7 +1637,7 @@ ExecutePlan(EState *estate,
 		 */
 		if (TupIsNull(slot))
 			break;
-
+		
 		/*
 		 * If we have a junk filter, then project a new tuple with the junk
 		 * removed.
