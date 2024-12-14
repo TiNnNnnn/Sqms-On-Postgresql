@@ -294,6 +294,8 @@ HistorySlowPlanStat FormatPrintPlan(ExplainState *es, ExplainState *ces,QueryDes
 	 * plan.  We skip that node, and we must also hide per-worker detail data
 	 * further down in the plan tree.
 	 */
+
+
 	ps = queryDesc->planstate;
 	if (IsA(ps, GatherState) && ((Gather *) ps->plan)->invisible)
 	{
@@ -888,7 +890,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	es->str = makeStringInfo();
 	
 	ExplainState* ces = NewFormatState();
-	*ces = *total_ces;
+	*ces = *total_es;
 	ces->str = makeStringInfo();
 
 	FormatOpenGroup("Plan","Plan",true, es);
@@ -1635,7 +1637,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	if (haschildren){
 		ancestors = list_delete_first(ancestors);
 		FormatCloseGroup("Plans", "Plans", false, es);
-		FormatOpenGroup("Plans", "Plans", false, ces);
+		FormatCloseGroup("Plans", "Plans", false, ces);
 	}
 
 	/**
@@ -1656,10 +1658,10 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	rs.hps_ = hsp;
 
 	if(debug){
-		elog(stat_log_level,es->str->data);
-		//elog(stat_log_level,ces->str->data);
+		//elog(stat_log_level,es->str->data);
+		elog(stat_log_level,ces->str->data);
 	}
-	elog(stat_log_level,"finish a node format");
+	//elog(stat_log_level,"finish a node format");
 	/*here we can't free es, hsp still use its data*/
 	/*FreeFormatState(es);*/
 	return rs;
@@ -1938,7 +1940,6 @@ show_grouping_set_keys(PlanState *planstate,
 		keysetname = "Group Keys";
 	}
 
-
 	FormatOpenGroup("Grouping Set", NULL, true, es);
 
 	if (sortnode)
@@ -1955,7 +1956,7 @@ show_grouping_set_keys(PlanState *planstate,
 	FormatOpenGroup(keysetname, keysetname, false, es);
 
 	/**
-	 * TODO: fix gsets here
+	 * TODO: fix gsets here 
 	 */
 	hsp->g_sets = (GroupKeys **)malloc(list_length(gsets)*sizeof(GroupKeys));
 	hsp->n_g_sets = list_length(gsets);
@@ -1965,8 +1966,6 @@ show_grouping_set_keys(PlanState *planstate,
 	{
 		List	   *result = NIL;
 		ListCell   *lc2;
-
-		
 
 		foreach(lc2, (List *) lfirst(lc))
 		{
@@ -1992,7 +1991,7 @@ show_grouping_set_keys(PlanState *planstate,
 			
 			GroupKeys * gkey = (GroupKeys *)malloc(sizeof(GroupKeys));
 			group_keys__init(gkey);
-			
+
 			gkey->key_name = keyname;
 			gkey->keys = (char**)malloc(list_length(result)*sizeof(char*));
 			gkey->n_keys = list_length(result);

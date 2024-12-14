@@ -75,6 +75,7 @@ void PlanStatFormat::ComputeEquivlenceClass(HistorySlowPlanStat* hsps,SlowPlanSt
     
     std::vector<HistorySlowPlanStat*>levels;
     std::vector<HistorySlowPlanStat*>tmp_levels;
+    std::vector<std::vector<HistorySlowPlanStat*>> level_collector;
 
     levels.push_back(hsps);
     while(levels.size()){
@@ -86,17 +87,25 @@ void PlanStatFormat::ComputeEquivlenceClass(HistorySlowPlanStat* hsps,SlowPlanSt
                 }
             }
         }
-        ComputLevlEquivlenceClass(levels,sps);
+        level_collector.push_back(levels);
         levels.clear();
         std::swap(levels,tmp_levels);
+    }
+    std::reverse(level_collector.begin(),level_collector.end());
+
+    for(auto &lc : level_collector){
+        ComputLevlEquivlenceClass(lc,sps);
     }
 }
 
 void PlanStatFormat::ComputLevlEquivlenceClass(const std::vector<HistorySlowPlanStat*>& list,SlowPlanStat *sps){
     for(const auto& s : list){
+        /*parse exprstr first,then caluate equivlence class*/
         
     }
 }
+
+
 
 /**
  *Preprocessing: parse all sub query (include itself) into json format 
