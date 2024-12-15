@@ -11,7 +11,7 @@ src/collect/stat_format.o \
 src/discovery/discovery.o \
 src/excavate/ExcavateProvider.o \
 src/storage/RedisPlanStatProvider.o\
-#src/include/storage/storage.pb.o \
+
 #src/discovery/levels.o\ 
 
 

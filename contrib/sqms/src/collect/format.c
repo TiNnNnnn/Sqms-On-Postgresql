@@ -899,7 +899,9 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	/*just note physical node type for ces*/
 	FormatPropertyText("Node Type",sname,ces);
 	FormatPropertyText("Node Type",sname,es);
+
 	hsp.node_type = sname;
+	hsp.node_tag = (int)(nodeTag(plan));
 
 	if (strategy){
 		FormatPropertyText("Strategy", strategy, es);
@@ -1658,8 +1660,8 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	rs.hps_ = hsp;
 
 	if(debug){
-		//elog(stat_log_level,es->str->data);
-		elog(stat_log_level,ces->str->data);
+		elog(stat_log_level,es->str->data);
+		//elog(stat_log_level,ces->str->data);
 	}
 	//elog(stat_log_level,"finish a node format");
 	/*here we can't free es, hsp still use its data*/

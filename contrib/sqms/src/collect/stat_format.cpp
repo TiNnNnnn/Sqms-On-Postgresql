@@ -101,11 +101,101 @@ void PlanStatFormat::ComputeEquivlenceClass(HistorySlowPlanStat* hsps,SlowPlanSt
 void PlanStatFormat::ComputLevlEquivlenceClass(const std::vector<HistorySlowPlanStat*>& list,SlowPlanStat *sps){
     for(const auto& s : list){
         /*parse exprstr first,then caluate equivlence class*/
-        
+        ParseExprs(s);    
     }
 }
 
+void PlanStatFormat::ParseExprs(HistorySlowPlanStat* hsps){
+    switch(hsps->node_tag){
+        case T_Result:
+			break;
+		case T_ProjectSet:
+			break;
+		case T_ModifyTable:
+			break;
+		case T_Append:
+			break;
+		case T_MergeAppend:
+			break;
+		case T_RecursiveUnion:
+			break;
+		case T_BitmapAnd:
+			break;
+		case T_BitmapOr:
+			break;
+		case T_NestLoop:
+		case T_MergeJoin:
+		case T_HashJoin:
+            /*jion*/
 
+			break;
+		case T_SeqScan:
+
+			break;
+		case T_SampleScan:
+			break;
+		case T_Gather:
+			break;
+		case T_GatherMerge:
+			break;
+		case T_IndexScan:
+			break;
+		case T_IndexOnlyScan:
+			break;
+		case T_BitmapIndexScan:
+			break;
+		case T_BitmapHeapScan:
+			break;
+		case T_TidScan:
+			break;
+		case T_SubqueryScan:
+			break;
+		case T_FunctionScan:
+			break;
+		case T_TableFuncScan:
+			break;
+		case T_ValuesScan:
+			break;
+		case T_CteScan:
+			break;
+		case T_NamedTuplestoreScan:
+			break;
+		case T_WorkTableScan:
+			break;
+		case T_ForeignScan:
+			break;
+		case T_CustomScan:
+			break;
+		case T_Material:
+			break;
+		case T_Sort:
+			break;
+		case T_IncrementalSort:
+			break;
+		case T_Group:
+			break;
+		case T_Agg:
+			break;
+		case T_WindowAgg:
+			break;
+		case T_Unique:
+			break;
+		case T_SetOp:
+			break;
+		case T_LockRows:
+			break;
+		case T_Limit:
+			break;
+		case T_Hash:
+			break;
+		default:
+			break;  
+    }
+}
+
+void PlanStatFormat::PredDecompose(char* pred_expr){
+   
+}
 
 /**
  *Preprocessing: parse all sub query (include itself) into json format 

@@ -12,7 +12,11 @@ extern "C"{
 #include "format.pb-c.h"
 #include <postgres_ext.h>
 #include "canonical_strategy.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 };
+
 
 class PlanStatFormat{
     typedef const char *(*explain_get_index_name_hook_type) (Oid indexId);
@@ -33,6 +37,10 @@ private:
     void ComputeEquivlenceClass(HistorySlowPlanStat* hsps,SlowPlanStat *sps);
     void ComputLevlEquivlenceClass(const std::vector<HistorySlowPlanStat*>& list,SlowPlanStat *sps);
 
+    void ParseExprs(HistorySlowPlanStat* hsps);
+
+    void PredDecompose(char* pred_expr);
+
     PlanStatFormat();
     ~PlanStatFormat();
 private:
@@ -47,6 +55,3 @@ private:
      * one of them to keep readilty of codes
     */
 };
-
-
-

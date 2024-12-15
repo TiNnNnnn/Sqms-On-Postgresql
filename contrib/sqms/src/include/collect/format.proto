@@ -66,6 +66,7 @@ message HistorySlowPlanStat{
 	/*all prdicates of current subquery*/
 	repeated Equals and_quals = 42;
 	repeated Equals or_quals = 43;
+	int32 node_tag = 44;
 }
 
 message GroupSortKey{
