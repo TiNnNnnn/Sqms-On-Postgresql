@@ -210,6 +210,16 @@ bool PlanStatFormat::Preprocessing(QueryDesc* qd){
     hsps_ = FormatPrintPlan(total_es,total_ces,qd);
     FormatEndOutput(total_ces);
     FormatEndOutput(total_es);
+
+    if(debug){
+        std::cout<<"n_quals: "<<hsps_.n_quals<<std::endl;
+
+        for(int i=0;i<hsps_.n_quals;i++){
+            std::string str = std::string(hsps_.quals[i]->left) + " " + 
+                std::string(hsps_.quals[i]->op) +  " " +std::string(hsps_.quals[i]->right);
+            std::cout<<str.c_str()<<std::endl;
+        }
+    }
     
     pfree(total_es);
     pfree(total_ces);

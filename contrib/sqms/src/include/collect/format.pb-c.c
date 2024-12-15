@@ -142,49 +142,49 @@ void   group_keys__free_unpacked
   assert(message->base.descriptor == &group_keys__descriptor);
   protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
 }
-void   equals__init
-                     (Equals         *message)
+void   quals__init
+                     (Quals         *message)
 {
-  static const Equals init_value = EQUALS__INIT;
+  static const Quals init_value = QUALS__INIT;
   *message = init_value;
 }
-size_t equals__get_packed_size
-                     (const Equals *message)
+size_t quals__get_packed_size
+                     (const Quals *message)
 {
-  assert(message->base.descriptor == &equals__descriptor);
+  assert(message->base.descriptor == &quals__descriptor);
   return protobuf_c_message_get_packed_size ((const ProtobufCMessage*)(message));
 }
-size_t equals__pack
-                     (const Equals *message,
+size_t quals__pack
+                     (const Quals *message,
                       uint8_t       *out)
 {
-  assert(message->base.descriptor == &equals__descriptor);
+  assert(message->base.descriptor == &quals__descriptor);
   return protobuf_c_message_pack ((const ProtobufCMessage*)message, out);
 }
-size_t equals__pack_to_buffer
-                     (const Equals *message,
+size_t quals__pack_to_buffer
+                     (const Quals *message,
                       ProtobufCBuffer *buffer)
 {
-  assert(message->base.descriptor == &equals__descriptor);
+  assert(message->base.descriptor == &quals__descriptor);
   return protobuf_c_message_pack_to_buffer ((const ProtobufCMessage*)message, buffer);
 }
-Equals *
-       equals__unpack
+Quals *
+       quals__unpack
                      (ProtobufCAllocator  *allocator,
                       size_t               len,
                       const uint8_t       *data)
 {
-  return (Equals *)
-     protobuf_c_message_unpack (&equals__descriptor,
+  return (Quals *)
+     protobuf_c_message_unpack (&quals__descriptor,
                                 allocator, len, data);
 }
-void   equals__free_unpacked
-                     (Equals *message,
+void   quals__free_unpacked
+                     (Quals *message,
                       ProtobufCAllocator *allocator)
 {
   if(!message)
     return;
-  assert(message->base.descriptor == &equals__descriptor);
+  assert(message->base.descriptor == &quals__descriptor);
   protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
 }
 void   equivlence_class__sets_entry__init
@@ -328,7 +328,7 @@ void   slow_plan_stat__free_unpacked
   assert(message->base.descriptor == &slow_plan_stat__descriptor);
   protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
 }
-static const ProtobufCFieldDescriptor history_slow_plan_stat__field_descriptors[42] =
+static const ProtobufCFieldDescriptor history_slow_plan_stat__field_descriptors[43] =
 {
   {
     "custom_plan_provider",
@@ -805,7 +805,7 @@ static const ProtobufCFieldDescriptor history_slow_plan_stat__field_descriptors[
     PROTOBUF_C_TYPE_MESSAGE,
     offsetof(HistorySlowPlanStat, n_and_quals),
     offsetof(HistorySlowPlanStat, and_quals),
-    &equals__descriptor,
+    &quals__descriptor,
     NULL,
     0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
@@ -817,7 +817,7 @@ static const ProtobufCFieldDescriptor history_slow_plan_stat__field_descriptors[
     PROTOBUF_C_TYPE_MESSAGE,
     offsetof(HistorySlowPlanStat, n_or_quals),
     offsetof(HistorySlowPlanStat, or_quals),
-    &equals__descriptor,
+    &quals__descriptor,
     NULL,
     0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
@@ -830,6 +830,18 @@ static const ProtobufCFieldDescriptor history_slow_plan_stat__field_descriptors[
     0,   /* quantifier_offset */
     offsetof(HistorySlowPlanStat, node_tag),
     NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "quals",
+    45,
+    PROTOBUF_C_LABEL_REPEATED,
+    PROTOBUF_C_TYPE_MESSAGE,
+    offsetof(HistorySlowPlanStat, n_quals),
+    offsetof(HistorySlowPlanStat, quals),
+    &quals__descriptor,
     NULL,
     0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
@@ -867,6 +879,7 @@ static const unsigned history_slow_plan_stat__field_indices_by_name[] = {
   21,   /* field[21] = output */
   9,   /* field[9] = partial_mode */
   31,   /* field[31] = qlabel */
+  42,   /* field[42] = quals */
   22,   /* field[22] = relationship */
   26,   /* field[26] = repeatable_seed */
   24,   /* field[24] = sample_method */
@@ -883,7 +896,7 @@ static const ProtobufCIntRange history_slow_plan_stat__number_ranges[2 + 1] =
 {
   { 1, 0 },
   { 4, 1 },
-  { 0, 42 }
+  { 0, 43 }
 };
 const ProtobufCMessageDescriptor history_slow_plan_stat__descriptor =
 {
@@ -893,7 +906,7 @@ const ProtobufCMessageDescriptor history_slow_plan_stat__descriptor =
   "HistorySlowPlanStat",
   "",
   sizeof(HistorySlowPlanStat),
-  42,
+  43,
   history_slow_plan_stat__field_descriptors,
   history_slow_plan_stat__field_indices_by_name,
   2,  history_slow_plan_stat__number_ranges,
@@ -1054,7 +1067,7 @@ const ProtobufCMessageDescriptor group_keys__descriptor =
   (ProtobufCMessageInit) group_keys__init,
   NULL,NULL,NULL    /* reserved[123] */
 };
-static const ProtobufCFieldDescriptor equals__field_descriptors[3] =
+static const ProtobufCFieldDescriptor quals__field_descriptors[3] =
 {
   {
     "left",
@@ -1062,7 +1075,7 @@ static const ProtobufCFieldDescriptor equals__field_descriptors[3] =
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_STRING,
     0,   /* quantifier_offset */
-    offsetof(Equals, left),
+    offsetof(Quals, left),
     NULL,
     &protobuf_c_empty_string,
     0,             /* flags */
@@ -1074,7 +1087,7 @@ static const ProtobufCFieldDescriptor equals__field_descriptors[3] =
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_STRING,
     0,   /* quantifier_offset */
-    offsetof(Equals, right),
+    offsetof(Quals, right),
     NULL,
     &protobuf_c_empty_string,
     0,             /* flags */
@@ -1086,36 +1099,36 @@ static const ProtobufCFieldDescriptor equals__field_descriptors[3] =
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_STRING,
     0,   /* quantifier_offset */
-    offsetof(Equals, op),
+    offsetof(Quals, op),
     NULL,
     &protobuf_c_empty_string,
     0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
 };
-static const unsigned equals__field_indices_by_name[] = {
+static const unsigned quals__field_indices_by_name[] = {
   0,   /* field[0] = left */
   2,   /* field[2] = op */
   1,   /* field[1] = right */
 };
-static const ProtobufCIntRange equals__number_ranges[1 + 1] =
+static const ProtobufCIntRange quals__number_ranges[1 + 1] =
 {
   { 1, 0 },
   { 0, 3 }
 };
-const ProtobufCMessageDescriptor equals__descriptor =
+const ProtobufCMessageDescriptor quals__descriptor =
 {
   PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
-  "Equals",
-  "Equals",
-  "Equals",
+  "Quals",
+  "Quals",
+  "Quals",
   "",
-  sizeof(Equals),
+  sizeof(Quals),
   3,
-  equals__field_descriptors,
-  equals__field_indices_by_name,
-  1,  equals__number_ranges,
-  (ProtobufCMessageInit) equals__init,
+  quals__field_descriptors,
+  quals__field_indices_by_name,
+  1,  quals__number_ranges,
+  (ProtobufCMessageInit) quals__init,
   NULL,NULL,NULL    /* reserved[123] */
 };
 static const ProtobufCFieldDescriptor equivlence_class__sets_entry__field_descriptors[2] =

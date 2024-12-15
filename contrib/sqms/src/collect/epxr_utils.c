@@ -122,7 +122,7 @@ typedef struct
 									 * handling */
 	Bitmapset  *appendparents;	/* if not null, map child Vars of these relids
 								 * back to the parent rel */
-	//HistorySlowPlanStat	*hsp; 
+	HistorySlowPlanStat	*hsp; 
 } deparse_context;
 
 /*
@@ -177,7 +177,7 @@ typedef struct
 	List	   *inner_tlist;	/* referent for INNER_VAR Vars */
 	List	   *index_tlist;	/* referent for INDEX_VAR Vars */
 	/*history slow paln stat for qual parsing*/
-	//HistorySlowPlanStat	*hsp; 	 
+	HistorySlowPlanStat	*hsp; 	 
 } deparse_namespace;
 
 /*
@@ -507,6 +507,9 @@ deparse_expression_pretty(Node *expr, List *dpcontext,
 
 	initStringInfo(&buf);
 
+	Assert(list_length(dpcontext) == 1);
+	deparse_namespace * dpns = (deparse_namespace *) linitial(dpcontext);
+
 	context.buf = &buf;
 	context.namespaces = dpcontext;
 	context.windowClause = NIL;
@@ -517,6 +520,7 @@ deparse_expression_pretty(Node *expr, List *dpcontext,
 	context.indentLevel = startIndent;
 	context.special_exprkind = EXPR_KIND_NONE;
 	context.appendparents = NULL;
+	context.hsp = dpns->hsp;
 
 	get_rule_expr(expr, &context, showimplicit);
 
@@ -646,7 +650,7 @@ deparse_context_for_plan_tree_format(PlannedStmt *pstmt, List *rtable_names)
  * The result is the same List passed in; this is a notational convenience.
  */
 List *
-set_deparse_context_plan_format(List *dpcontext, Plan *plan, List *ancestors)
+set_deparse_context_plan_format(List *dpcontext, Plan *plan, List *ancestors,HistorySlowPlanStat* hsp)
 {
 	deparse_namespace *dpns;
 
@@ -656,7 +660,7 @@ set_deparse_context_plan_format(List *dpcontext, Plan *plan, List *ancestors)
 
 	/* Set our attention on the specific plan node passed in */
 	set_deparse_plan(dpns, plan);
-	//dpns->hsp = hps;
+	dpns->hsp = hsp;
 	dpns->ancestors = ancestors;
 
 	return dpcontext;
@@ -5202,6 +5206,7 @@ get_rule_expr(Node *node, deparse_context *context,
 							get_rule_expr_paren((Node *) lfirst(arg), context,
 												false, node);
 						}
+
 						if (!PRETTY_PAREN(context))
 							appendStringInfoChar(buf, ')');
 						break;
@@ -6253,6 +6258,12 @@ looks_like_function(Node *node)
 }
 
 
+static bool is_compare_expr(char* op){
+	if(!strcmp(op,">") || strcmp(op,"!=") || strcmp(op,">=") || strcmp(op,"<=") || strcmp(op,"=")|| strcmp(op,"<"))
+		return true;
+	return false;
+}
+
 /*
  * get_oper_expr			- Parse back an OpExpr node
  */
@@ -6272,16 +6283,37 @@ get_oper_expr(OpExpr *expr, deparse_context *context)
 		Node	   *arg1 = (Node *) linitial(args);
 		Node	   *arg2 = (Node *) lsecond(args);
 
-		get_rule_expr_paren(arg1, context, true, (Node *) expr);
-		appendStringInfo(buf, " %s ",
-						 generate_operator_name(opno,
-												exprType(arg1),
-												exprType(arg2)));
-		get_rule_expr_paren(arg2, context, true, (Node *) expr);
+		int	pre_offset = context->buf->len;
+		char *op =  generate_operator_name(opno,exprType(arg1),exprType(arg2));
+		
+		if(is_compare_expr(op)){
+			context->hsp->quals = realloc(context->hsp->quals, 
+                                  (context->hsp->n_quals + 1) * sizeof(Quals *));
+			context->hsp->n_quals++;
+		}
+		Quals* trace_qual = (Quals*) malloc(sizeof(Quals));
+		quals__init(trace_qual);
 
-		bool op = generate_operator_name(opno,exprType(arg1),exprType(arg2));
-		if(op == "<" || op == ">=" || op == ">=" || op == "<=" || op == "=" ){
-				
+		get_rule_expr_paren(arg1, context, true, (Node *) expr);
+		if(is_compare_expr(op)){
+			int current_offset = context->buf->len;
+			trace_qual->left = malloc(current_offset-pre_offset+1);
+			strncpy(trace_qual->left,context->buf->data+pre_offset,current_offset-pre_offset);
+			trace_qual->left[current_offset - pre_offset] = '\0';
+			trace_qual->op = malloc(sizeof(op)+1);
+			strcpy(trace_qual->op,op);
+		}
+		appendStringInfo(buf, " %s ", op);
+		pre_offset = context->buf->len;
+		get_rule_expr_paren(arg2, context, true, (Node *) expr);
+		
+		if(is_compare_expr(op)){
+			int current_offset = context->buf->len;
+			trace_qual->right = malloc(current_offset-pre_offset+1);
+			strncpy(trace_qual->right,context->buf->data+pre_offset,current_offset-pre_offset);
+			trace_qual->right[current_offset - pre_offset] = '\0';
+
+			context->hsp->quals[context->hsp->n_quals-1] = trace_qual;
 		}
 	}
 	else

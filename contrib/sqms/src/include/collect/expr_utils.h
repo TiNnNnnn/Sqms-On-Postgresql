@@ -41,7 +41,7 @@ extern List *deparse_context_for_format(const char *aliasname, Oid relid);
 extern List *deparse_context_for_plan_tree_format(struct PlannedStmt *pstmt,
 										   List *rtable_names);
 extern List *set_deparse_context_plan_format(List *dpcontext,
-									  struct Plan *plan, List *ancestors);
+									  struct Plan *plan, List *ancestors,HistorySlowPlanStat*hsp);
 extern List *select_rtable_names_for_explain_format(List *rtable,
 											 Bitmapset *rels_used);
 extern char *generate_collation_name_format(Oid collid);

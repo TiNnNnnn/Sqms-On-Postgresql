@@ -1145,7 +1145,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	if (es->verbose){
 		show_plan_tlist(planstate, ancestors, es, &hsp);
 	}
-	 	
+	
 
 
 	/* unique join */
@@ -1165,6 +1165,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		default:
 			break;
 	}
+
 	/* quals, sort keys, etc */
 	switch (nodeTag(plan))
 	{
@@ -1710,7 +1711,7 @@ show_plan_tlist(PlanState *planstate, List *ancestors, ExplainState *es, History
 	/* Set up deparsing context */
 	context = set_deparse_context_plan_format(es->deparse_cxt,
 									   plan,
-									   ancestors);
+									   ancestors,hsp);
 	useprefix = list_length(es->rtable) > 1;
 
 
@@ -1751,7 +1752,7 @@ show_expression(Node *node, const char *qlabel,
 	/* Set up deparsing context */
 	context = set_deparse_context_plan_format(es->deparse_cxt,
 									   planstate->plan,
-									   ancestors);
+									   ancestors,hsp);
 
 	/* Deparse the expression */
 	exprstr = deparse_expression_format(node, context, useprefix, false);
@@ -1897,7 +1898,7 @@ show_grouping_sets(PlanState *planstate, Agg *agg,
 	/* Set up deparsing context */
 	context = set_deparse_context_plan_format(es->deparse_cxt,
 									   planstate->plan,
-									   ancestors);
+									   ancestors,hsp);
 	useprefix = (list_length(es->rtable) > 1 || es->verbose);
 
 	FormatOpenGroup("Grouping Sets", "Grouping Sets", false, es);
@@ -2058,7 +2059,7 @@ show_sort_group_keys(PlanState *planstate, const char *qlabel,
 	/* Set up deparsing context */
 	context = set_deparse_context_plan_format(es->deparse_cxt,
 									   plan,
-									   ancestors);
+									   ancestors,hsp);
 	useprefix = (list_length(es->rtable) > 1 || es->verbose);
 
 	hsp->qlabel = qlabel;
@@ -2195,7 +2196,7 @@ show_tablesample(TableSampleClause *tsc, PlanState *planstate,
 	/* Set up deparsing context */
 	context = set_deparse_context_plan_format(es->deparse_cxt,
 									   planstate->plan,
-									   ancestors);
+									   ancestors,hsp);
 	useprefix = list_length(es->rtable) > 1;
 
 	/* Get the tablesample method name */

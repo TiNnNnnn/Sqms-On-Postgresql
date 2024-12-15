@@ -64,9 +64,10 @@ message HistorySlowPlanStat{
 	repeated GroupSortKey group_sort_keys = 41;
 
 	/*all prdicates of current subquery*/
-	repeated Equals and_quals = 42;
-	repeated Equals or_quals = 43;
+	repeated Quals and_quals = 42;
+	repeated Quals or_quals = 43;
 	int32 node_tag = 44;
+	repeated Quals quals = 45;
 }
 
 message GroupSortKey{
@@ -89,7 +90,7 @@ message GroupKeys{
 	repeated string keys = 2;
 }
 
-message Equals{
+message Quals{
 	string left = 1;
 	string right = 2;
 	string op = 3;
