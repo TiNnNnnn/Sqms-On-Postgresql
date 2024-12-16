@@ -328,7 +328,7 @@ void   slow_plan_stat__free_unpacked
   assert(message->base.descriptor == &slow_plan_stat__descriptor);
   protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
 }
-static const ProtobufCFieldDescriptor history_slow_plan_stat__field_descriptors[43] =
+static const ProtobufCFieldDescriptor history_slow_plan_stat__field_descriptors[47] =
 {
   {
     "custom_plan_provider",
@@ -846,6 +846,54 @@ static const ProtobufCFieldDescriptor history_slow_plan_stat__field_descriptors[
     0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
+  {
+    "and_locations",
+    46,
+    PROTOBUF_C_LABEL_REPEATED,
+    PROTOBUF_C_TYPE_INT32,
+    offsetof(HistorySlowPlanStat, n_and_locations),
+    offsetof(HistorySlowPlanStat, and_locations),
+    NULL,
+    NULL,
+    0 | PROTOBUF_C_FIELD_FLAG_PACKED,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "or_locations",
+    47,
+    PROTOBUF_C_LABEL_REPEATED,
+    PROTOBUF_C_TYPE_INT32,
+    offsetof(HistorySlowPlanStat, n_or_locations),
+    offsetof(HistorySlowPlanStat, or_locations),
+    NULL,
+    NULL,
+    0 | PROTOBUF_C_FIELD_FLAG_PACKED,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "not_locations",
+    48,
+    PROTOBUF_C_LABEL_REPEATED,
+    PROTOBUF_C_TYPE_INT32,
+    offsetof(HistorySlowPlanStat, n_not_locations),
+    offsetof(HistorySlowPlanStat, not_locations),
+    NULL,
+    NULL,
+    0 | PROTOBUF_C_FIELD_FLAG_PACKED,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "location_cnt",
+    49,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_INT32,
+    0,   /* quantifier_offset */
+    offsetof(HistorySlowPlanStat, location_cnt),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
 };
 static const unsigned history_slow_plan_stat__field_indices_by_name[] = {
   2,   /* field[2] = actual_nloops */
@@ -853,6 +901,7 @@ static const unsigned history_slow_plan_stat__field_indices_by_name[] = {
   3,   /* field[3] = actual_start_up */
   4,   /* field[4] = actual_total */
   15,   /* field[15] = alia_name */
+  43,   /* field[43] = and_locations */
   39,   /* field[39] = and_quals */
   29,   /* field[29] = canonical_json_plan */
   6,   /* field[6] = childs */
@@ -870,11 +919,14 @@ static const unsigned history_slow_plan_stat__field_indices_by_name[] = {
   28,   /* field[28] = json_plan */
   33,   /* field[33] = key_name */
   34,   /* field[34] = keysetname */
+  46,   /* field[46] = location_cnt */
   41,   /* field[41] = node_tag */
   7,   /* field[7] = node_type */
+  45,   /* field[45] = not_locations */
   12,   /* field[12] = object_name */
   14,   /* field[14] = object_tag */
   11,   /* field[11] = operation */
+  44,   /* field[44] = or_locations */
   40,   /* field[40] = or_quals */
   21,   /* field[21] = output */
   9,   /* field[9] = partial_mode */
@@ -896,7 +948,7 @@ static const ProtobufCIntRange history_slow_plan_stat__number_ranges[2 + 1] =
 {
   { 1, 0 },
   { 4, 1 },
-  { 0, 43 }
+  { 0, 47 }
 };
 const ProtobufCMessageDescriptor history_slow_plan_stat__descriptor =
 {
@@ -906,7 +958,7 @@ const ProtobufCMessageDescriptor history_slow_plan_stat__descriptor =
   "HistorySlowPlanStat",
   "",
   sizeof(HistorySlowPlanStat),
-  43,
+  47,
   history_slow_plan_stat__field_descriptors,
   history_slow_plan_stat__field_indices_by_name,
   2,  history_slow_plan_stat__number_ranges,
@@ -1067,7 +1119,7 @@ const ProtobufCMessageDescriptor group_keys__descriptor =
   (ProtobufCMessageInit) group_keys__init,
   NULL,NULL,NULL    /* reserved[123] */
 };
-static const ProtobufCFieldDescriptor quals__field_descriptors[3] =
+static const ProtobufCFieldDescriptor quals__field_descriptors[4] =
 {
   {
     "left",
@@ -1105,16 +1157,29 @@ static const ProtobufCFieldDescriptor quals__field_descriptors[3] =
     0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
+  {
+    "parent_location",
+    4,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_INT32,
+    0,   /* quantifier_offset */
+    offsetof(Quals, parent_location),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
 };
 static const unsigned quals__field_indices_by_name[] = {
   0,   /* field[0] = left */
   2,   /* field[2] = op */
+  3,   /* field[3] = parent_location */
   1,   /* field[1] = right */
 };
 static const ProtobufCIntRange quals__number_ranges[1 + 1] =
 {
   { 1, 0 },
-  { 0, 3 }
+  { 0, 4 }
 };
 const ProtobufCMessageDescriptor quals__descriptor =
 {
@@ -1124,7 +1189,7 @@ const ProtobufCMessageDescriptor quals__descriptor =
   "Quals",
   "",
   sizeof(Quals),
-  3,
+  4,
   quals__field_descriptors,
   quals__field_indices_by_name,
   1,  quals__number_ranges,

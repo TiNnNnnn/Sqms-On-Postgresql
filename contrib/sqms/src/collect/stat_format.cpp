@@ -212,12 +212,44 @@ bool PlanStatFormat::Preprocessing(QueryDesc* qd){
     FormatEndOutput(total_es);
 
     if(debug){
+       
         std::cout<<"n_quals: "<<hsps_.n_quals<<std::endl;
-
-        for(int i=0;i<hsps_.n_quals;i++){
+        for(int i=0;i<hsps_.n_quals;i++){ 
+            
             std::string str = std::string(hsps_.quals[i]->left) + " " + 
                 std::string(hsps_.quals[i]->op) +  " " +std::string(hsps_.quals[i]->right);
-            std::cout<<str.c_str()<<std::endl;
+            std::cout<<"pred: "<<str.c_str()<<" | parent: "<<hsps_.quals[i]->parent_location<<std::endl;
+        }
+        std::cout<<"and locations:"<<std::endl;
+        for(int i=0;i<hsps_.n_and_locations;i++){
+            std::cout<<hsps_.and_locations[i]<<" ";
+        }
+        std::cout<<std::endl;
+        std::cout<<"or locations:"<<std::endl;
+        for(int i=0;i<hsps_.n_or_locations;i++){
+            std::cout<<hsps_.or_locations[i]<<" ";
+        }
+        std::cout<<std::endl;
+
+
+        for(int i=0;i<hsps_.n_childs;i++){
+            auto hsp = hsps_.childs[i]; 
+            std::cout<<"n_quals: "<<hsp->n_quals<<std::endl;
+            for(int i=0;i<hsp->n_quals;i++){
+                std::string str = std::string(hsp->quals[i]->left) + " " + 
+                    std::string(hsp->quals[i]->op) +  " " +std::string(hsp->quals[i]->right);
+                std::cout<<"pred: "<<str.c_str()<<" | parent: "<<hsp->quals[i]->parent_location<<std::endl;
+            }
+            std::cout<<"and locations:"<<std::endl;
+            for(int i=0;i<hsp->n_and_locations;i++){
+                std::cout<<hsp->and_locations[i]<<" ";
+            }
+            std::cout<<std::endl;
+            std::cout<<"or locations:"<<std::endl;
+            for(int i=0;i<hsp->n_or_locations;i++){
+                std::cout<<hsp->or_locations[i]<<" ";
+            }            
+            std::cout<<std::endl;
         }
     }
     

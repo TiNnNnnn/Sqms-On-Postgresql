@@ -1539,8 +1539,10 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		ancestors = lcons(plan, ancestors);
 		if(outerPlanState(planstate) && innerPlanState(planstate)){
 			hsp.childs = (HistorySlowPlanStat**)malloc(sizeof(HistorySlowPlanStat*)*2);
+			hsp.n_childs = 2;
 		}else{
 			hsp.childs = (HistorySlowPlanStat**)malloc(sizeof(HistorySlowPlanStat*));
+			hsp.n_childs = 1;
 		}
 	}
 
@@ -3371,6 +3373,7 @@ ExplainSubPlans(List *plans, List *ancestors,
 
 	size_t p_size = list_length(plans);
 	hsp.childs = (HistorySlowPlanStat**)malloc(sizeof(HistorySlowPlanStat*)*p_size);
+	hsp.n_childs = p_size;
 	foreach(lst, plans)
 	{
 		
@@ -3403,8 +3406,11 @@ ExplainSubPlans(List *plans, List *ancestors,
 		push_node_type_set(rs.node_type_set_,ret.node_type_set_);
 		ancestors = list_delete_first(ancestors);
 
-		hsp.childs[idx] = malloc(sizeof(HistorySlowPlanStat));
-		*hsp.childs[idx] = ret.hps_;
+		//hsp.childs[idx] = (HistorySlowPlanStat*)malloc(sizeof(HistorySlowPlanStat));
+		HistorySlowPlanStat* child = (HistorySlowPlanStat*)malloc(sizeof(HistorySlowPlanStat));
+		history_slow_plan_stat__init(child);
+		*child = ret.hps_;
+		hsp.childs[idx] = child;
 		idx++;
 	}
 	hsp.json_plan = rs.detail_str_->data;

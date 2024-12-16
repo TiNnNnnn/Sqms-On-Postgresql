@@ -123,6 +123,7 @@ typedef struct
 	Bitmapset  *appendparents;	/* if not null, map child Vars of these relids
 								 * back to the parent rel */
 	HistorySlowPlanStat	*hsp; 
+	int p_location;
 } deparse_context;
 
 /*
@@ -4948,7 +4949,7 @@ removeStringInfoSpaces(StringInfo str)
  */
 static void
 get_rule_expr_paren(Node *node, deparse_context *context,
-					bool showimplicit, Node *parentNode)
+					bool showimplicit, Node *parentNode,int p_location)
 {
 	bool		need_paren;
 
@@ -4958,7 +4959,9 @@ get_rule_expr_paren(Node *node, deparse_context *context,
 	if (need_paren)
 		appendStringInfoChar(context->buf, '(');
 
+	//context->p_location = p_location;
 	get_rule_expr(node, context, showimplicit);
+	//context->p_location = -1;
 
 	if (need_paren)
 		appendStringInfoChar(context->buf, ')');
@@ -5129,9 +5132,9 @@ get_rule_expr(Node *node, deparse_context *context,
 
 				if (!PRETTY_PAREN(context))
 					appendStringInfoChar(buf, '(');
-				get_rule_expr_paren(arg1, context, true, node);
+				get_rule_expr_paren(arg1, context, true, node,expr->location);
 				appendStringInfoString(buf, " IS DISTINCT FROM ");
-				get_rule_expr_paren(arg2, context, true, node);
+				get_rule_expr_paren(arg2, context, true, node,expr->location);
 				if (!PRETTY_PAREN(context))
 					appendStringInfoChar(buf, ')');
 			}
@@ -5156,13 +5159,13 @@ get_rule_expr(Node *node, deparse_context *context,
 
 				if (!PRETTY_PAREN(context))
 					appendStringInfoChar(buf, '(');
-				get_rule_expr_paren(arg1, context, true, node);
+				get_rule_expr_paren(arg1, context, true, node,expr->location);
 				appendStringInfo(buf, " %s %s (",
 								 generate_operator_name(expr->opno,
 														exprType(arg1),
 														get_base_element_type(exprType(arg2))),
 								 expr->useOr ? "ANY" : "ALL");
-				get_rule_expr_paren(arg2, context, true, node);
+				get_rule_expr_paren(arg2, context, true, node,expr->location);
 
 				/*
 				 * There's inherent ambiguity in "x op ANY/ALL (y)" when y is
@@ -5192,48 +5195,77 @@ get_rule_expr(Node *node, deparse_context *context,
 				BoolExpr   *expr = (BoolExpr *) node;
 				Node	   *first_arg = linitial(expr->args);
 				ListCell   *arg;
-
 				switch (expr->boolop)
 				{
 					case AND_EXPR:
+						context->hsp->and_locations = realloc(context->hsp->and_locations, 
+                                  (context->hsp->n_and_locations + 1) * sizeof(int32_t));
+						context->hsp->n_and_locations++;
+						context->hsp->location_cnt++;
+						context->hsp->and_locations[context->hsp->n_and_locations - 1] = context->hsp->location_cnt;
+						//context->p_location = context->hsp->location_cnt;
+						
+
 						if (!PRETTY_PAREN(context))
 							appendStringInfoChar(buf, '(');
 						get_rule_expr_paren(first_arg, context,
-											false, node);
+											false, node,expr->location);
 						for_each_from(arg, expr->args, 1)
 						{
 							appendStringInfoString(buf, " AND ");
 							get_rule_expr_paren((Node *) lfirst(arg), context,
-												false, node);
+												false, node,expr->location);
 						}
 
 						if (!PRETTY_PAREN(context))
 							appendStringInfoChar(buf, ')');
+						context->hsp->location_cnt--;
+						//context->p_location = -1;
 						break;
 
 					case OR_EXPR:
+						context->hsp->or_locations = realloc(context->hsp->or_locations, 
+                                  (context->hsp->n_or_locations + 1) * sizeof(int32_t));
+						context->hsp->n_or_locations++;
+						context->hsp->location_cnt++;
+						context->hsp->or_locations[context->hsp->n_or_locations - 1] = context->hsp->location_cnt;
+						//context->p_location = context->hsp->location_cnt;
+						
+
 						if (!PRETTY_PAREN(context))
 							appendStringInfoChar(buf, '(');
 						get_rule_expr_paren(first_arg, context,
-											false, node);
+											false, node,expr->location);
 						for_each_from(arg, expr->args, 1)
 						{
 							appendStringInfoString(buf, " OR ");
 							get_rule_expr_paren((Node *) lfirst(arg), context,
-												false, node);
+												false, node,expr->location);
 						}
 						if (!PRETTY_PAREN(context))
 							appendStringInfoChar(buf, ')');
+						context->hsp->location_cnt--;
+						//context->p_location = -1;
 						break;
 
 					case NOT_EXPR:
+						context->hsp->not_locations = realloc(context->hsp->not_locations, 
+                                  (context->hsp->n_not_locations + 1) * sizeof(int32_t));
+						context->hsp->n_not_locations++;
+						context->hsp->location_cnt++;
+						context->hsp->not_locations[context->hsp->n_not_locations - 1] = context->hsp->location_cnt;
+						//context->p_location = context->hsp->location_cnt;
+						
+
 						if (!PRETTY_PAREN(context))
 							appendStringInfoChar(buf, '(');
 						appendStringInfoString(buf, "NOT ");
 						get_rule_expr_paren(first_arg, context,
-											false, node);
+											false, node,expr->location);
 						if (!PRETTY_PAREN(context))
 							appendStringInfoChar(buf, ')');
+						context->hsp->location_cnt--;
+						//context->p_location = -1;
 						break;
 
 					default:
@@ -5359,7 +5391,7 @@ get_rule_expr(Node *node, deparse_context *context,
 					!showimplicit)
 				{
 					/* don't show the implicit cast */
-					get_rule_expr_paren(arg, context, false, node);
+					get_rule_expr_paren(arg, context, false, node,relabel->location);
 				}
 				else
 				{
@@ -5380,7 +5412,7 @@ get_rule_expr(Node *node, deparse_context *context,
 					!showimplicit)
 				{
 					/* don't show the implicit cast */
-					get_rule_expr_paren(arg, context, false, node);
+					get_rule_expr_paren(arg, context, false, node,iocoerce->location);
 				}
 				else
 				{
@@ -5401,7 +5433,7 @@ get_rule_expr(Node *node, deparse_context *context,
 					!showimplicit)
 				{
 					/* don't show the implicit cast */
-					get_rule_expr_paren(arg, context, false, node);
+					get_rule_expr_paren(arg, context, false, node,acoerce->location);
 				}
 				else
 				{
@@ -5422,7 +5454,7 @@ get_rule_expr(Node *node, deparse_context *context,
 					!showimplicit)
 				{
 					/* don't show the implicit cast */
-					get_rule_expr_paren(arg, context, false, node);
+					get_rule_expr_paren(arg, context, false, node,convert->location);
 				}
 				else
 				{
@@ -5440,7 +5472,7 @@ get_rule_expr(Node *node, deparse_context *context,
 
 				if (!PRETTY_PAREN(context))
 					appendStringInfoChar(buf, '(');
-				get_rule_expr_paren(arg, context, showimplicit, node);
+				get_rule_expr_paren(arg, context, showimplicit, node,collate->location);
 				appendStringInfo(buf, " COLLATE %s",
 								 generate_collation_name_format(collate->collOid));
 				if (!PRETTY_PAREN(context))
@@ -5861,7 +5893,7 @@ get_rule_expr(Node *node, deparse_context *context,
 							}
 							break;
 						case IS_DOCUMENT:
-							get_rule_expr_paren((Node *) xexpr->args, context, false, node);
+							get_rule_expr_paren((Node *) xexpr->args, context, false, node,xexpr->location);
 							break;
 					}
 
@@ -5883,7 +5915,7 @@ get_rule_expr(Node *node, deparse_context *context,
 
 				if (!PRETTY_PAREN(context))
 					appendStringInfoChar(buf, '(');
-				get_rule_expr_paren((Node *) ntest->arg, context, true, node);
+				get_rule_expr_paren((Node *) ntest->arg, context, true, node,ntest->location);
 
 				/*
 				 * For scalar inputs, we prefer to print as IS [NOT] NULL,
@@ -5933,7 +5965,7 @@ get_rule_expr(Node *node, deparse_context *context,
 
 				if (!PRETTY_PAREN(context))
 					appendStringInfoChar(buf, '(');
-				get_rule_expr_paren((Node *) btest->arg, context, false, node);
+				get_rule_expr_paren((Node *) btest->arg, context, false, node,btest->location);
 				switch (btest->booltesttype)
 				{
 					case IS_TRUE:
@@ -6294,7 +6326,7 @@ get_oper_expr(OpExpr *expr, deparse_context *context)
 		Quals* trace_qual = (Quals*) malloc(sizeof(Quals));
 		quals__init(trace_qual);
 
-		get_rule_expr_paren(arg1, context, true, (Node *) expr);
+		get_rule_expr_paren(arg1, context, true, (Node *) expr,expr->location);
 		if(is_compare_expr(op)){
 			int current_offset = context->buf->len;
 			trace_qual->left = malloc(current_offset-pre_offset+1);
@@ -6305,7 +6337,7 @@ get_oper_expr(OpExpr *expr, deparse_context *context)
 		}
 		appendStringInfo(buf, " %s ", op);
 		pre_offset = context->buf->len;
-		get_rule_expr_paren(arg2, context, true, (Node *) expr);
+		get_rule_expr_paren(arg2, context, true, (Node *) expr,expr->location);
 		
 		if(is_compare_expr(op)){
 			int current_offset = context->buf->len;
@@ -6313,6 +6345,9 @@ get_oper_expr(OpExpr *expr, deparse_context *context)
 			strncpy(trace_qual->right,context->buf->data+pre_offset,current_offset-pre_offset);
 			trace_qual->right[current_offset - pre_offset] = '\0';
 
+			//assert(context->p_location != -1);
+			trace_qual->parent_location = context->hsp->location_cnt;
+			//memcpy(&trace_qual->parent_location,&context->,sizeof(context->p_location));
 			context->hsp->quals[context->hsp->n_quals-1] = trace_qual;
 		}
 	}
@@ -6334,10 +6369,10 @@ get_oper_expr(OpExpr *expr, deparse_context *context)
 								 generate_operator_name(opno,
 														InvalidOid,
 														exprType(arg)));
-				get_rule_expr_paren(arg, context, true, (Node *) expr);
+				get_rule_expr_paren(arg, context, true, (Node *) expr,expr->location);
 				break;
 			case 'r':
-				get_rule_expr_paren(arg, context, true, (Node *) expr);
+				get_rule_expr_paren(arg, context, true, (Node *) expr,expr->location);
 				appendStringInfo(buf, " %s",
 								 generate_operator_name(opno,
 														exprType(arg),
@@ -6374,7 +6409,7 @@ get_func_expr(FuncExpr *expr, deparse_context *context,
 	if (expr->funcformat == COERCE_IMPLICIT_CAST && !showimplicit)
 	{
 		get_rule_expr_paren((Node *) linitial(expr->args), context,
-							false, (Node *) expr);
+							false, (Node *) expr, expr->location);
 		return;
 	}
 
@@ -6673,7 +6708,7 @@ get_coercion_expr(Node *arg, deparse_context *context,
 	{
 		if (!PRETTY_PAREN(context))
 			appendStringInfoChar(buf, '(');
-		get_rule_expr_paren(arg, context, false, parentNode);
+		get_rule_expr_paren(arg, context, false, parentNode,-1);
 		if (!PRETTY_PAREN(context))
 			appendStringInfoChar(buf, ')');
 	}
