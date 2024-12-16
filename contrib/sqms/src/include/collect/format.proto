@@ -101,15 +101,20 @@ message Quals{
 	string right = 2;
 	string op = 3;
 	int32 parent_location = 4;
+	string parent_op = 5;
 }
 
-message EquivlenceClass{
-    map<string,string> sets = 1;
-    double num_lower_limit = 2;
-    double num_upper_limit = 3;
-    string str_lower_limit = 4;
-    string str_upper_limit = 5;
+message EquivlenceClass{	
+	string qual = 1;
+	repeated Range ranges = 2;
 };
+
+message Range{
+	double num_lower_limit = 1;
+    double num_upper_limit = 2;
+    string str_lower_limit = 3;
+    string str_upper_limit = 4;
+}
 
 /*plan stat in single level*/
 message SlowPlanLevelStat{

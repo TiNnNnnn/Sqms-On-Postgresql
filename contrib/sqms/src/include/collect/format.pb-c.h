@@ -20,7 +20,7 @@ typedef struct _GroupSortKey GroupSortKey;
 typedef struct _GroupKeys GroupKeys;
 typedef struct _Quals Quals;
 typedef struct _EquivlenceClass EquivlenceClass;
-typedef struct _EquivlenceClass__SetsEntry EquivlenceClass__SetsEntry;
+typedef struct _Range Range;
 typedef struct _SlowPlanLevelStat SlowPlanLevelStat;
 typedef struct _SlowPlanStat SlowPlanStat;
 
@@ -196,36 +196,36 @@ struct  _Quals
   char *right;
   char *op;
   int32_t parent_location;
+  char *parent_op;
 };
 #define QUALS__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&quals__descriptor) \
-    , (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0 }
-
-
-struct  _EquivlenceClass__SetsEntry
-{
-  ProtobufCMessage base;
-  char *key;
-  char *value;
-};
-#define EQUIVLENCE_CLASS__SETS_ENTRY__INIT \
- { PROTOBUF_C_MESSAGE_INIT (&equivlence_class__sets_entry__descriptor) \
-    , (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string }
+    , (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string }
 
 
 struct  _EquivlenceClass
 {
   ProtobufCMessage base;
-  size_t n_sets;
-  EquivlenceClass__SetsEntry **sets;
+  char *qual;
+  size_t n_ranges;
+  Range **ranges;
+};
+#define EQUIVLENCE_CLASS__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&equivlence_class__descriptor) \
+    , (char *)protobuf_c_empty_string, 0,NULL }
+
+
+struct  _Range
+{
+  ProtobufCMessage base;
   double num_lower_limit;
   double num_upper_limit;
   char *str_lower_limit;
   char *str_upper_limit;
 };
-#define EQUIVLENCE_CLASS__INIT \
- { PROTOBUF_C_MESSAGE_INIT (&equivlence_class__descriptor) \
-    , 0,NULL, 0, 0, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string }
+#define RANGE__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&range__descriptor) \
+    , 0, 0, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string }
 
 
 /*
@@ -345,9 +345,6 @@ Quals *
 void   quals__free_unpacked
                      (Quals *message,
                       ProtobufCAllocator *allocator);
-/* EquivlenceClass__SetsEntry methods */
-void   equivlence_class__sets_entry__init
-                     (EquivlenceClass__SetsEntry         *message);
 /* EquivlenceClass methods */
 void   equivlence_class__init
                      (EquivlenceClass         *message);
@@ -366,6 +363,25 @@ EquivlenceClass *
                       const uint8_t       *data);
 void   equivlence_class__free_unpacked
                      (EquivlenceClass *message,
+                      ProtobufCAllocator *allocator);
+/* Range methods */
+void   range__init
+                     (Range         *message);
+size_t range__get_packed_size
+                     (const Range   *message);
+size_t range__pack
+                     (const Range   *message,
+                      uint8_t             *out);
+size_t range__pack_to_buffer
+                     (const Range   *message,
+                      ProtobufCBuffer     *buffer);
+Range *
+       range__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data);
+void   range__free_unpacked
+                     (Range *message,
                       ProtobufCAllocator *allocator);
 /* SlowPlanLevelStat methods */
 void   slow_plan_level_stat__init
@@ -419,11 +435,11 @@ typedef void (*GroupKeys_Closure)
 typedef void (*Quals_Closure)
                  (const Quals *message,
                   void *closure_data);
-typedef void (*EquivlenceClass__SetsEntry_Closure)
-                 (const EquivlenceClass__SetsEntry *message,
-                  void *closure_data);
 typedef void (*EquivlenceClass_Closure)
                  (const EquivlenceClass *message,
+                  void *closure_data);
+typedef void (*Range_Closure)
+                 (const Range *message,
                   void *closure_data);
 typedef void (*SlowPlanLevelStat_Closure)
                  (const SlowPlanLevelStat *message,
@@ -442,7 +458,7 @@ extern const ProtobufCMessageDescriptor group_sort_key__descriptor;
 extern const ProtobufCMessageDescriptor group_keys__descriptor;
 extern const ProtobufCMessageDescriptor quals__descriptor;
 extern const ProtobufCMessageDescriptor equivlence_class__descriptor;
-extern const ProtobufCMessageDescriptor equivlence_class__sets_entry__descriptor;
+extern const ProtobufCMessageDescriptor range__descriptor;
 extern const ProtobufCMessageDescriptor slow_plan_level_stat__descriptor;
 extern const ProtobufCMessageDescriptor slow_plan_stat__descriptor;
 

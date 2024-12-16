@@ -39,7 +39,7 @@ private:
 
     void ParseExprs(HistorySlowPlanStat* hsps);
 
-    void PredDecompose(char* pred_expr);
+    void PredDecompose(HistorySlowPlanStat* pred_expr);
 
     PlanStatFormat();
     ~PlanStatFormat();

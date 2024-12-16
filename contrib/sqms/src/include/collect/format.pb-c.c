@@ -187,12 +187,6 @@ void   quals__free_unpacked
   assert(message->base.descriptor == &quals__descriptor);
   protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
 }
-void   equivlence_class__sets_entry__init
-                     (EquivlenceClass__SetsEntry         *message)
-{
-  static const EquivlenceClass__SetsEntry init_value = EQUIVLENCE_CLASS__SETS_ENTRY__INIT;
-  *message = init_value;
-}
 void   equivlence_class__init
                      (EquivlenceClass         *message)
 {
@@ -236,6 +230,51 @@ void   equivlence_class__free_unpacked
   if(!message)
     return;
   assert(message->base.descriptor == &equivlence_class__descriptor);
+  protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
+}
+void   range__init
+                     (Range         *message)
+{
+  static const Range init_value = RANGE__INIT;
+  *message = init_value;
+}
+size_t range__get_packed_size
+                     (const Range *message)
+{
+  assert(message->base.descriptor == &range__descriptor);
+  return protobuf_c_message_get_packed_size ((const ProtobufCMessage*)(message));
+}
+size_t range__pack
+                     (const Range *message,
+                      uint8_t       *out)
+{
+  assert(message->base.descriptor == &range__descriptor);
+  return protobuf_c_message_pack ((const ProtobufCMessage*)message, out);
+}
+size_t range__pack_to_buffer
+                     (const Range *message,
+                      ProtobufCBuffer *buffer)
+{
+  assert(message->base.descriptor == &range__descriptor);
+  return protobuf_c_message_pack_to_buffer ((const ProtobufCMessage*)message, buffer);
+}
+Range *
+       range__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data)
+{
+  return (Range *)
+     protobuf_c_message_unpack (&range__descriptor,
+                                allocator, len, data);
+}
+void   range__free_unpacked
+                     (Range *message,
+                      ProtobufCAllocator *allocator)
+{
+  if(!message)
+    return;
+  assert(message->base.descriptor == &range__descriptor);
   protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
 }
 void   slow_plan_level_stat__init
@@ -1119,7 +1158,7 @@ const ProtobufCMessageDescriptor group_keys__descriptor =
   (ProtobufCMessageInit) group_keys__init,
   NULL,NULL,NULL    /* reserved[123] */
 };
-static const ProtobufCFieldDescriptor quals__field_descriptors[4] =
+static const ProtobufCFieldDescriptor quals__field_descriptors[5] =
 {
   {
     "left",
@@ -1169,17 +1208,30 @@ static const ProtobufCFieldDescriptor quals__field_descriptors[4] =
     0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
+  {
+    "parent_op",
+    5,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_STRING,
+    0,   /* quantifier_offset */
+    offsetof(Quals, parent_op),
+    NULL,
+    &protobuf_c_empty_string,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
 };
 static const unsigned quals__field_indices_by_name[] = {
   0,   /* field[0] = left */
   2,   /* field[2] = op */
   3,   /* field[3] = parent_location */
+  4,   /* field[4] = parent_op */
   1,   /* field[1] = right */
 };
 static const ProtobufCIntRange quals__number_ranges[1 + 1] =
 {
   { 1, 0 },
-  { 0, 4 }
+  { 0, 5 }
 };
 const ProtobufCMessageDescriptor quals__descriptor =
 {
@@ -1189,138 +1241,48 @@ const ProtobufCMessageDescriptor quals__descriptor =
   "Quals",
   "",
   sizeof(Quals),
-  4,
+  5,
   quals__field_descriptors,
   quals__field_indices_by_name,
   1,  quals__number_ranges,
   (ProtobufCMessageInit) quals__init,
   NULL,NULL,NULL    /* reserved[123] */
 };
-static const ProtobufCFieldDescriptor equivlence_class__sets_entry__field_descriptors[2] =
+static const ProtobufCFieldDescriptor equivlence_class__field_descriptors[2] =
 {
   {
-    "key",
+    "qual",
     1,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_STRING,
     0,   /* quantifier_offset */
-    offsetof(EquivlenceClass__SetsEntry, key),
+    offsetof(EquivlenceClass, qual),
     NULL,
     &protobuf_c_empty_string,
     0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
   {
-    "value",
+    "ranges",
     2,
-    PROTOBUF_C_LABEL_NONE,
-    PROTOBUF_C_TYPE_STRING,
-    0,   /* quantifier_offset */
-    offsetof(EquivlenceClass__SetsEntry, value),
-    NULL,
-    &protobuf_c_empty_string,
-    0,             /* flags */
-    0,NULL,NULL    /* reserved1,reserved2, etc */
-  },
-};
-static const unsigned equivlence_class__sets_entry__field_indices_by_name[] = {
-  0,   /* field[0] = key */
-  1,   /* field[1] = value */
-};
-static const ProtobufCIntRange equivlence_class__sets_entry__number_ranges[1 + 1] =
-{
-  { 1, 0 },
-  { 0, 2 }
-};
-const ProtobufCMessageDescriptor equivlence_class__sets_entry__descriptor =
-{
-  PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
-  "EquivlenceClass.SetsEntry",
-  "SetsEntry",
-  "EquivlenceClass__SetsEntry",
-  "",
-  sizeof(EquivlenceClass__SetsEntry),
-  2,
-  equivlence_class__sets_entry__field_descriptors,
-  equivlence_class__sets_entry__field_indices_by_name,
-  1,  equivlence_class__sets_entry__number_ranges,
-  (ProtobufCMessageInit) equivlence_class__sets_entry__init,
-  NULL,NULL,NULL    /* reserved[123] */
-};
-static const ProtobufCFieldDescriptor equivlence_class__field_descriptors[5] =
-{
-  {
-    "sets",
-    1,
     PROTOBUF_C_LABEL_REPEATED,
     PROTOBUF_C_TYPE_MESSAGE,
-    offsetof(EquivlenceClass, n_sets),
-    offsetof(EquivlenceClass, sets),
-    &equivlence_class__sets_entry__descriptor,
+    offsetof(EquivlenceClass, n_ranges),
+    offsetof(EquivlenceClass, ranges),
+    &range__descriptor,
     NULL,
-    0,             /* flags */
-    0,NULL,NULL    /* reserved1,reserved2, etc */
-  },
-  {
-    "num_lower_limit",
-    2,
-    PROTOBUF_C_LABEL_NONE,
-    PROTOBUF_C_TYPE_DOUBLE,
-    0,   /* quantifier_offset */
-    offsetof(EquivlenceClass, num_lower_limit),
-    NULL,
-    NULL,
-    0,             /* flags */
-    0,NULL,NULL    /* reserved1,reserved2, etc */
-  },
-  {
-    "num_upper_limit",
-    3,
-    PROTOBUF_C_LABEL_NONE,
-    PROTOBUF_C_TYPE_DOUBLE,
-    0,   /* quantifier_offset */
-    offsetof(EquivlenceClass, num_upper_limit),
-    NULL,
-    NULL,
-    0,             /* flags */
-    0,NULL,NULL    /* reserved1,reserved2, etc */
-  },
-  {
-    "str_lower_limit",
-    4,
-    PROTOBUF_C_LABEL_NONE,
-    PROTOBUF_C_TYPE_STRING,
-    0,   /* quantifier_offset */
-    offsetof(EquivlenceClass, str_lower_limit),
-    NULL,
-    &protobuf_c_empty_string,
-    0,             /* flags */
-    0,NULL,NULL    /* reserved1,reserved2, etc */
-  },
-  {
-    "str_upper_limit",
-    5,
-    PROTOBUF_C_LABEL_NONE,
-    PROTOBUF_C_TYPE_STRING,
-    0,   /* quantifier_offset */
-    offsetof(EquivlenceClass, str_upper_limit),
-    NULL,
-    &protobuf_c_empty_string,
     0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
 };
 static const unsigned equivlence_class__field_indices_by_name[] = {
-  1,   /* field[1] = num_lower_limit */
-  2,   /* field[2] = num_upper_limit */
-  0,   /* field[0] = sets */
-  3,   /* field[3] = str_lower_limit */
-  4,   /* field[4] = str_upper_limit */
+  0,   /* field[0] = qual */
+  1,   /* field[1] = ranges */
 };
 static const ProtobufCIntRange equivlence_class__number_ranges[1 + 1] =
 {
   { 1, 0 },
-  { 0, 5 }
+  { 0, 2 }
 };
 const ProtobufCMessageDescriptor equivlence_class__descriptor =
 {
@@ -1330,11 +1292,88 @@ const ProtobufCMessageDescriptor equivlence_class__descriptor =
   "EquivlenceClass",
   "",
   sizeof(EquivlenceClass),
-  5,
+  2,
   equivlence_class__field_descriptors,
   equivlence_class__field_indices_by_name,
   1,  equivlence_class__number_ranges,
   (ProtobufCMessageInit) equivlence_class__init,
+  NULL,NULL,NULL    /* reserved[123] */
+};
+static const ProtobufCFieldDescriptor range__field_descriptors[4] =
+{
+  {
+    "num_lower_limit",
+    1,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_DOUBLE,
+    0,   /* quantifier_offset */
+    offsetof(Range, num_lower_limit),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "num_upper_limit",
+    2,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_DOUBLE,
+    0,   /* quantifier_offset */
+    offsetof(Range, num_upper_limit),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "str_lower_limit",
+    3,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_STRING,
+    0,   /* quantifier_offset */
+    offsetof(Range, str_lower_limit),
+    NULL,
+    &protobuf_c_empty_string,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "str_upper_limit",
+    4,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_STRING,
+    0,   /* quantifier_offset */
+    offsetof(Range, str_upper_limit),
+    NULL,
+    &protobuf_c_empty_string,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+};
+static const unsigned range__field_indices_by_name[] = {
+  0,   /* field[0] = num_lower_limit */
+  1,   /* field[1] = num_upper_limit */
+  2,   /* field[2] = str_lower_limit */
+  3,   /* field[3] = str_upper_limit */
+};
+static const ProtobufCIntRange range__number_ranges[1 + 1] =
+{
+  { 1, 0 },
+  { 0, 4 }
+};
+const ProtobufCMessageDescriptor range__descriptor =
+{
+  PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
+  "Range",
+  "Range",
+  "Range",
+  "",
+  sizeof(Range),
+  4,
+  range__field_descriptors,
+  range__field_indices_by_name,
+  1,  range__number_ranges,
+  (ProtobufCMessageInit) range__init,
   NULL,NULL,NULL    /* reserved[123] */
 };
 static const ProtobufCFieldDescriptor slow_plan_level_stat__field_descriptors[3] =

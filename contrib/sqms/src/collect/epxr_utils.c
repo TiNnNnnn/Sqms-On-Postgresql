@@ -74,6 +74,7 @@
 #include "utils/typcache.h"
 #include "utils/varlena.h"
 #include "utils/xml.h"
+#include "common/stack.h"
 /* ----------
  * Pretty formatting constants
  * ----------
@@ -124,6 +125,7 @@ typedef struct
 								 * back to the parent rel */
 	HistorySlowPlanStat	*hsp; 
 	int p_location;
+	Stack* op_stack;
 } deparse_context;
 
 /*
@@ -522,6 +524,8 @@ deparse_expression_pretty(Node *expr, List *dpcontext,
 	context.special_exprkind = EXPR_KIND_NONE;
 	context.appendparents = NULL;
 	context.hsp = dpns->hsp;
+
+	context.op_stack = stack_init();
 
 	get_rule_expr(expr, &context, showimplicit);
 
@@ -4975,6 +4979,7 @@ ExprRecureState NewExprRecureStat(){
 	return rs;
 }
 
+
 /* ----------
  * get_rule_expr			- Parse back an expression
  *
@@ -5201,10 +5206,11 @@ get_rule_expr(Node *node, deparse_context *context,
 						context->hsp->and_locations = realloc(context->hsp->and_locations, 
                                   (context->hsp->n_and_locations + 1) * sizeof(int32_t));
 						context->hsp->n_and_locations++;
+
 						context->hsp->location_cnt++;
+						stack_push(context->op_stack,"and");
+
 						context->hsp->and_locations[context->hsp->n_and_locations - 1] = context->hsp->location_cnt;
-						//context->p_location = context->hsp->location_cnt;
-						
 
 						if (!PRETTY_PAREN(context))
 							appendStringInfoChar(buf, '(');
@@ -5219,15 +5225,19 @@ get_rule_expr(Node *node, deparse_context *context,
 
 						if (!PRETTY_PAREN(context))
 							appendStringInfoChar(buf, ')');
+
 						context->hsp->location_cnt--;
-						//context->p_location = -1;
+						stack_pop(context->op_stack);
 						break;
 
 					case OR_EXPR:
 						context->hsp->or_locations = realloc(context->hsp->or_locations, 
                                   (context->hsp->n_or_locations + 1) * sizeof(int32_t));
 						context->hsp->n_or_locations++;
+						
 						context->hsp->location_cnt++;
+						stack_push(context->op_stack,"or");
+
 						context->hsp->or_locations[context->hsp->n_or_locations - 1] = context->hsp->location_cnt;
 						//context->p_location = context->hsp->location_cnt;
 						
@@ -5244,7 +5254,9 @@ get_rule_expr(Node *node, deparse_context *context,
 						}
 						if (!PRETTY_PAREN(context))
 							appendStringInfoChar(buf, ')');
+						
 						context->hsp->location_cnt--;
+						stack_pop(context->op_stack);
 						//context->p_location = -1;
 						break;
 
@@ -5252,11 +5264,13 @@ get_rule_expr(Node *node, deparse_context *context,
 						context->hsp->not_locations = realloc(context->hsp->not_locations, 
                                   (context->hsp->n_not_locations + 1) * sizeof(int32_t));
 						context->hsp->n_not_locations++;
+
 						context->hsp->location_cnt++;
+						stack_push(context->op_stack,"not");
+
 						context->hsp->not_locations[context->hsp->n_not_locations - 1] = context->hsp->location_cnt;
 						//context->p_location = context->hsp->location_cnt;
 						
-
 						if (!PRETTY_PAREN(context))
 							appendStringInfoChar(buf, '(');
 						appendStringInfoString(buf, "NOT ");
@@ -5264,7 +5278,9 @@ get_rule_expr(Node *node, deparse_context *context,
 											false, node,expr->location);
 						if (!PRETTY_PAREN(context))
 							appendStringInfoChar(buf, ')');
+						
 						context->hsp->location_cnt--;
+						stack_pop(context->op_stack);
 						//context->p_location = -1;
 						break;
 
@@ -6347,6 +6363,7 @@ get_oper_expr(OpExpr *expr, deparse_context *context)
 
 			//assert(context->p_location != -1);
 			trace_qual->parent_location = context->hsp->location_cnt;
+			trace_qual->parent_op =  (char *) stack_peek(context->op_stack);
 			//memcpy(&trace_qual->parent_location,&context->,sizeof(context->p_location));
 			context->hsp->quals[context->hsp->n_quals-1] = trace_qual;
 		}
