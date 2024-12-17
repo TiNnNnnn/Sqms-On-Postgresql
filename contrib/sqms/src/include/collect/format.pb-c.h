@@ -18,13 +18,13 @@ PROTOBUF_C__BEGIN_DECLS
 typedef struct _HistorySlowPlanStat HistorySlowPlanStat;
 typedef struct _GroupSortKey GroupSortKey;
 typedef struct _GroupKeys GroupKeys;
-typedef struct _Quals Quals;
 typedef struct _EquivlenceClass EquivlenceClass;
 typedef struct _Range Range;
 typedef struct _SlowPlanLevelStat SlowPlanLevelStat;
 typedef struct _SlowPlanStat SlowPlanStat;
 typedef struct _PredExpression PredExpression;
 typedef struct _PredOperator PredOperator;
+typedef struct _Quals Quals;
 
 
 /* --- enums --- */
@@ -198,21 +198,6 @@ struct  _GroupKeys
     , (char *)protobuf_c_empty_string, 0,NULL }
 
 
-struct  _Quals
-{
-  ProtobufCMessage base;
-  char *left;
-  char *right;
-  char *op;
-  int32_t parent_location;
-  char *parent_op;
-  int32_t parent_op_id;
-};
-#define QUALS__INIT \
- { PROTOBUF_C_MESSAGE_INIT (&quals__descriptor) \
-    , (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, 0 }
-
-
 struct  _EquivlenceClass
 {
   ProtobufCMessage base;
@@ -312,6 +297,18 @@ struct  _PredOperator
     , PRED_OPERATOR__PRED_OPERATOR_TYPE__AND, 0,NULL }
 
 
+struct  _Quals
+{
+  ProtobufCMessage base;
+  char *left;
+  char *right;
+  char *op;
+};
+#define QUALS__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&quals__descriptor) \
+    , (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string }
+
+
 /* HistorySlowPlanStat methods */
 void   history_slow_plan_stat__init
                      (HistorySlowPlanStat         *message);
@@ -368,25 +365,6 @@ GroupKeys *
                       const uint8_t       *data);
 void   group_keys__free_unpacked
                      (GroupKeys *message,
-                      ProtobufCAllocator *allocator);
-/* Quals methods */
-void   quals__init
-                     (Quals         *message);
-size_t quals__get_packed_size
-                     (const Quals   *message);
-size_t quals__pack
-                     (const Quals   *message,
-                      uint8_t             *out);
-size_t quals__pack_to_buffer
-                     (const Quals   *message,
-                      ProtobufCBuffer     *buffer);
-Quals *
-       quals__unpack
-                     (ProtobufCAllocator  *allocator,
-                      size_t               len,
-                      const uint8_t       *data);
-void   quals__free_unpacked
-                     (Quals *message,
                       ProtobufCAllocator *allocator);
 /* EquivlenceClass methods */
 void   equivlence_class__init
@@ -502,6 +480,25 @@ PredOperator *
 void   pred_operator__free_unpacked
                      (PredOperator *message,
                       ProtobufCAllocator *allocator);
+/* Quals methods */
+void   quals__init
+                     (Quals         *message);
+size_t quals__get_packed_size
+                     (const Quals   *message);
+size_t quals__pack
+                     (const Quals   *message,
+                      uint8_t             *out);
+size_t quals__pack_to_buffer
+                     (const Quals   *message,
+                      ProtobufCBuffer     *buffer);
+Quals *
+       quals__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data);
+void   quals__free_unpacked
+                     (Quals *message,
+                      ProtobufCAllocator *allocator);
 /* --- per-message closures --- */
 
 typedef void (*HistorySlowPlanStat_Closure)
@@ -512,9 +509,6 @@ typedef void (*GroupSortKey_Closure)
                   void *closure_data);
 typedef void (*GroupKeys_Closure)
                  (const GroupKeys *message,
-                  void *closure_data);
-typedef void (*Quals_Closure)
-                 (const Quals *message,
                   void *closure_data);
 typedef void (*EquivlenceClass_Closure)
                  (const EquivlenceClass *message,
@@ -534,6 +528,9 @@ typedef void (*PredExpression_Closure)
 typedef void (*PredOperator_Closure)
                  (const PredOperator *message,
                   void *closure_data);
+typedef void (*Quals_Closure)
+                 (const Quals *message,
+                  void *closure_data);
 
 /* --- services --- */
 
@@ -543,7 +540,6 @@ typedef void (*PredOperator_Closure)
 extern const ProtobufCMessageDescriptor history_slow_plan_stat__descriptor;
 extern const ProtobufCMessageDescriptor group_sort_key__descriptor;
 extern const ProtobufCMessageDescriptor group_keys__descriptor;
-extern const ProtobufCMessageDescriptor quals__descriptor;
 extern const ProtobufCMessageDescriptor equivlence_class__descriptor;
 extern const ProtobufCMessageDescriptor range__descriptor;
 extern const ProtobufCMessageDescriptor slow_plan_level_stat__descriptor;
@@ -551,6 +547,7 @@ extern const ProtobufCMessageDescriptor slow_plan_stat__descriptor;
 extern const ProtobufCMessageDescriptor pred_expression__descriptor;
 extern const ProtobufCMessageDescriptor pred_operator__descriptor;
 extern const ProtobufCEnumDescriptor    pred_operator__pred_operator_type__descriptor;
+extern const ProtobufCMessageDescriptor quals__descriptor;
 
 PROTOBUF_C__END_DECLS
 

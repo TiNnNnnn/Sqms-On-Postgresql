@@ -62,6 +62,9 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd){
             std::string hash_val = HashCanonicalPlan(q->json_plan);
             storage_->PutStat(hash_val,hsps);
         }
+
+        history_slow_plan_stat__free_unpacked(hsps,NULL);
+
         return true;
     });
     return true;
@@ -96,6 +99,8 @@ void PlanStatFormat::ComputeEquivlenceClass(HistorySlowPlanStat* hsps,SlowPlanSt
     for(auto &lc : level_collector){
         ComputLevlEquivlenceClass(lc,sps);
     }
+
+    free(hsps->expr_root);
 }
 
 void PlanStatFormat::ComputLevlEquivlenceClass(const std::vector<HistorySlowPlanStat*>& list,SlowPlanStat *sps){
@@ -193,46 +198,46 @@ void PlanStatFormat::ParseExprs(HistorySlowPlanStat* hsps){
     }
 }
 
-
-typedef struct PredLevelList{
-    std::vector<Quals*> and_list;
-    std::vector<Quals*> or_list;
-    std::vector<Quals*> not_list;
-}PredLevelList;
-
-/**PredDecompose: merge expr form bottom to top
- * example:
- *  n_quals: 4
- *  pred: tt.a > 10 | parent: 2,and
- *  pred: max(tt.c) > 10 | parent: 2,and
- *  pred: tt.a < 20 | parent: 1,or
- *  pred: tt.a > 0 | parent: 1,or
- *  
+/**
+ *  PredDecompose: merge expr form bottom to top
  *  we first get preds value on parent = 2, use a stack to merge, stop until
  *  the stack onlu has one/two element,then we get preds value on parent =1,repeated
  *  action above
- * 
  */
-void PlanStatFormat::PredDecompose(HistorySlowPlanStat* hsp){
-    std::unordered_map<int,PredLevelList> location2qual;
-    int max_parent = 0;
-    for(size_t i=0;i<hsp->n_quals;i++){
-        auto qual = hsp->quals[i];
-        max_parent = std::max(max_parent,qual->parent_location);
-        if(strcmp(qual->op,"and")){
-            location2qual[qual->parent_location].and_list.push_back(qual);
-        }else if(strcmp(qual->op,"or")){
-            location2qual[qual->parent_location].or_list.push_back(qual);
-        }else if(strcmp(qual->op,"not")){
-            location2qual[qual->parent_location].not_list.push_back(qual);
-        }else{
-            std::cerr<<"unknow compare predicate opeartor type: "<<qual->op<<std::endl;
-            return;
+void PlanStatFormat::PredDecompose(PredExpression * root){
+    std::vector<PredExpression*>levels;
+    std::vector<PredExpression*>tmp_levels;
+    std::vector<std::vector<PredExpression*>> level_collector;
+
+    levels.push_back(root);
+    while(levels.size()){
+        size_t sz = levels.size();
+        for(size_t i=0;i<sz;i++){
+            if(levels[i]->expr_case == PRED_EXPRESSION__EXPR_OP){
+                for(size_t j=0;j<levels[i]->op->n_childs;j++){
+                    tmp_levels.push_back(levels[i]->op->childs[j]);
+                }
+            }else if(levels[i]->expr_case == PRED_EXPRESSION__EXPR_QUAL){
+                //no childs , nothing to do
+            }else{
+                std::cerr<<"unknow type of pred expression type"<<std::endl;
+                return;
+            }
         }
+        level_collector.push_back(levels);
+        levels.clear();
+        std::swap(levels,tmp_levels);
+    }
+    std::reverse(level_collector.begin(),level_collector.end());
+    
+    if(level_collector.size()==1){
+        /*if filter only has one predicate,then the expr root is qual*/
+        assert(level_collector[0].size()==1);
+
     }
 
-    for(int i = max_parent; i>=0; i--){
-        auto pred_level_list = location2qual[i];
+    for(const auto& level : level_collector){
+
     }
 }
 
@@ -251,45 +256,6 @@ bool PlanStatFormat::Preprocessing(QueryDesc* qd){
     FormatEndOutput(total_es);
 
     if(debug){
-       
-        // std::cout<<"n_quals: "<<hsps_.n_quals<<std::endl;
-        // for(int i=0;i<hsps_.n_quals;i++){ 
-            
-        //     std::string str = std::string(hsps_.quals[i]->left) + " " + 
-        //         std::string(hsps_.quals[i]->op) +  " " +std::string(hsps_.quals[i]->right);
-        //     std::cout<<"pred: "<<str.c_str()<<" | parent: "<<hsps_.quals[i]->parent_location<<","<<hsps_.quals[i]->parent_op<<hsps_.quals[i]->parent_op_id<<std::endl;
-        // }
-        // std::cout<<"and locations:"<<std::endl;
-        // for(int i=0;i<hsps_.n_and_locations;i++){
-        //     std::cout<<hsps_.and_locations[i]<<" ";
-        // }
-        // std::cout<<std::endl;
-        // std::cout<<"or locations:"<<std::endl;
-        // for(int i=0;i<hsps_.n_or_locations;i++){
-        //     std::cout<<hsps_.or_locations[i]<<" ";
-        // }
-        // std::cout<<std::endl;
-
-
-        // for(int i=0;i<hsps_.n_childs;i++){
-        //     auto hsp = hsps_.childs[i]; 
-        //     std::cout<<"n_quals: "<<hsp->n_quals<<std::endl;
-        //     for(int i=0;i<hsp->n_quals;i++){
-        //         std::string str = std::string(hsp->quals[i]->left) + " " + 
-        //             std::string(hsp->quals[i]->op) +  " " +std::string(hsp->quals[i]->right);
-        //         std::cout<<"pred: "<<str.c_str()<<" | parent: "<<hsp->quals[i]->parent_location<<","<<hsp->quals[i]->parent_op<<hsp->quals[i]->parent_op_id<<std::endl;
-        //     }
-        //     std::cout<<"and locations:"<<std::endl;
-        //     for(int i=0;i<hsp->n_and_locations;i++){
-        //         std::cout<<hsp->and_locations[i]<<" ";
-        //     }
-        //     std::cout<<std::endl;
-        //     std::cout<<"or locations:"<<std::endl;
-        //     for(int i=0;i<hsp->n_or_locations;i++){
-        //         std::cout<<hsp->or_locations[i]<<" ";
-        //     }            
-        //     std::cout<<std::endl;
-        // }
         ShowPredTree(hsps_.expr_root);
     }
     
@@ -304,19 +270,18 @@ std::string PlanStatFormat::HashCanonicalPlan(char *json_plan){
 
 void PlanStatFormat::PrintIndent(int depth) {
     for (int i = 0; i < depth; ++i) {
-        std::cout << "  ";  // 每层深度输出两个空格
+        std::cout << "  ";
     }
 }
 
 void PlanStatFormat::ShowPredTree(PredExpression* p_expr, int depth) {
     if (p_expr == nullptr) {
         PrintIndent(depth);
-        std::cout << "pred expression is nullptr" << std::endl;
+        std::cout << "pred expression is nullptr, no preducate exsist in node" << std::endl;
         return;
     }
 
     if (p_expr->expr_case == PRED_EXPRESSION__EXPR_OP) {
-        // 打印 PredOperator 节点
         PrintIndent(depth);
         std::cout << "Operator: ";
 
@@ -336,12 +301,11 @@ void PlanStatFormat::ShowPredTree(PredExpression* p_expr, int depth) {
         }
         std::cout << std::endl;
 
-        // 遍历子节点
         for (size_t i = 0; i < p_expr->op->n_childs; ++i) {
             ShowPredTree(p_expr->op->childs[i], depth + 1);
         }
     } else if (p_expr->expr_case == PRED_EXPRESSION__EXPR_QUAL) {
-        // 打印 Quals 节点
+       
         PrintIndent(depth);
         std::cout << "Quals: " << std::endl;
 
@@ -353,15 +317,6 @@ void PlanStatFormat::ShowPredTree(PredExpression* p_expr, int depth) {
 
         PrintIndent(depth + 1);
         std::cout << "Operator: " << p_expr->qual->op << std::endl;
-
-        PrintIndent(depth + 1);
-        std::cout << "Parent Location: " << p_expr->qual->parent_location << std::endl;
-
-        PrintIndent(depth + 1);
-        std::cout << "Parent Operator: " << p_expr->qual->parent_op << std::endl;
-
-        PrintIndent(depth + 1);
-        std::cout << "Parent Operator ID: " << p_expr->qual->parent_op_id << std::endl;
     } else {
         PrintIndent(depth);
         std::cerr << "Unknown expression type." << std::endl;

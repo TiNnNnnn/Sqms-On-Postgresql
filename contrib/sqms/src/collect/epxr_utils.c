@@ -124,12 +124,7 @@ typedef struct
 	Bitmapset  *appendparents;	/* if not null, map child Vars of these relids
 								 * back to the parent rel */
 	HistorySlowPlanStat	*hsp; 
-	int p_location;
-	Stack* op_stack;
 	Stack* expr_stack;
-	int and_count;
-	int or_count;
-	int not_count;
 } deparse_context;
 
 /*
@@ -529,12 +524,8 @@ deparse_expression_pretty(Node *expr, List *dpcontext,
 	context.appendparents = NULL;
 	context.hsp = dpns->hsp;
 
-	context.op_stack = stack_init();
-	context.expr_stack = stack_init();
 
-	context.and_count = 0;
-	context.or_count = 0;
-	context.not_count = 0;
+	context.expr_stack = stack_init();
 
 	get_rule_expr(expr, &context, showimplicit);
 
@@ -5212,10 +5203,6 @@ get_rule_expr(Node *node, deparse_context *context,
 				switch (expr->boolop)
 				{
 					case AND_EXPR:{
-						// context->hsp->and_locations = realloc(context->hsp->and_locations, 
-                        //           (context->hsp->n_and_locations + 1) * sizeof(int32_t));
-						// context->hsp->n_and_locations++;
-
 						PredOperator * expr_op = (PredOperator*)malloc(sizeof(PredOperator));
 						pred_operator__init(expr_op);
 						expr_op->childs = (PredExpression**)malloc(sizeof(PredExpression*)*list_length(expr->args));
@@ -5231,13 +5218,6 @@ get_rule_expr(Node *node, deparse_context *context,
 							context->hsp->expr_root = expr_node;
 						}
 						stack_push(context->expr_stack,expr_node);
-
-
-						context->and_count++;
-						context->hsp->location_cnt++;
-						stack_push(context->op_stack,"and");
-						
-						//context->hsp->and_locations[context->hsp->n_and_locations - 1] = context->hsp->location_cnt;
 
 						if (!PRETTY_PAREN(context))
 							appendStringInfoChar(buf, '(');
@@ -5267,15 +5247,9 @@ get_rule_expr(Node *node, deparse_context *context,
 						if (!PRETTY_PAREN(context))
 							appendStringInfoChar(buf, ')');
 
-						context->hsp->location_cnt--;
-						stack_pop(context->op_stack);
 					}break;
 
 					case OR_EXPR:{
-						// context->hsp->or_locations = realloc(context->hsp->or_locations, 
-                        //           (context->hsp->n_or_locations + 1) * sizeof(int32_t));
-						// context->hsp->n_or_locations++;
-
 						PredOperator * expr_op = (PredOperator*)malloc(sizeof(PredOperator));
 						pred_operator__init(expr_op);
 						expr_op->childs = (PredExpression**)malloc(sizeof(PredExpression*)*list_length(expr->args));
@@ -5292,12 +5266,6 @@ get_rule_expr(Node *node, deparse_context *context,
 						}
 						stack_push(context->expr_stack,expr_node);
 						
-						context->or_count++;
-						context->hsp->location_cnt++;
-						stack_push(context->op_stack,"or");
-
-						//context->hsp->or_locations[context->hsp->n_or_locations - 1] = context->hsp->location_cnt;
-						//context->p_location = context->hsp->location_cnt;
 						
 						int idx = 0;
 						if (!PRETTY_PAREN(context))
@@ -5323,35 +5291,34 @@ get_rule_expr(Node *node, deparse_context *context,
 						}
 						if (!PRETTY_PAREN(context))
 							appendStringInfoChar(buf, ')');
-						
-						context->hsp->location_cnt--;
-						stack_pop(context->op_stack);
-						//context->p_location = -1;
 					}break;
 
 					case NOT_EXPR: {
-						// context->hsp->not_locations = realloc(context->hsp->not_locations, 
-                        //           (context->hsp->n_not_locations + 1) * sizeof(int32_t));
-						// context->hsp->n_not_locations++;
+						PredOperator * expr_op = (PredOperator*)malloc(sizeof(PredOperator));
+						pred_operator__init(expr_op);
+						expr_op->childs = (PredExpression**)malloc(sizeof(PredExpression*)*list_length(expr->args));
+						expr_op->n_childs = list_length(expr->args);
+						expr_op->type = PRED_OPERATOR__PRED_OPERATOR_TYPE__NOT;
 
-						context->not_count++;
-						context->hsp->location_cnt++;
-						stack_push(context->op_stack,"not");
+						PredExpression* expr_node = (PredExpression*)malloc(sizeof(PredExpression));
+						pred_expression__init(expr_node);
+						expr_node->op = expr_op;
+						expr_node->expr_case = PRED_EXPRESSION__EXPR_OP;
 
-						//context->hsp->not_locations[context->hsp->n_not_locations - 1] = context->hsp->location_cnt;
-						//context->p_location = context->hsp->location_cnt;
-						
+						int idx = 0;
 						if (!PRETTY_PAREN(context))
 							appendStringInfoChar(buf, '(');
 						appendStringInfoString(buf, "NOT ");
 						get_rule_expr_paren(first_arg, context,
 											false, node,expr->location);
+
+						PredExpression* child_node =  (PredExpression*) stack_peek(context->expr_stack);
+						assert(child_node);
+						stack_pop(context->expr_stack);
+						expr_op->childs[idx] = child_node;
+
 						if (!PRETTY_PAREN(context))
 							appendStringInfoChar(buf, ')');
-						
-						context->hsp->location_cnt--;
-						stack_pop(context->op_stack);
-						//context->p_location = -1;
 					}break;
 
 					default:
@@ -6404,21 +6371,26 @@ get_oper_expr(OpExpr *expr, deparse_context *context)
 		int	pre_offset = context->buf->len;
 		char *op =  generate_operator_name(opno,exprType(arg1),exprType(arg2));
 		
-		if(is_compare_expr(op)){
-			context->hsp->quals = realloc(context->hsp->quals, 
-                                  (context->hsp->n_quals + 1) * sizeof(Quals *));
-			context->hsp->n_quals++;
-		}
 
-		Quals* trace_qual = (Quals*) malloc(sizeof(Quals));
-		quals__init(trace_qual);
+		Quals* trace_qual = NULL;
+		if(is_compare_expr(op)){
+			
+			trace_qual = (Quals*) malloc(sizeof(Quals));
+			if (trace_qual == NULL) {
+				fprintf(stderr, "Memory allocation failed\n");
+				exit(1);
+			}
+			quals__init(trace_qual);
+		}
 
 		get_rule_expr_paren(arg1, context, true, (Node *) expr,expr->location);
 		if(is_compare_expr(op)){
 			int current_offset = context->buf->len;
+			
 			trace_qual->left = malloc(current_offset-pre_offset+1);
 			strncpy(trace_qual->left,context->buf->data+pre_offset,current_offset-pre_offset);
 			trace_qual->left[current_offset - pre_offset] = '\0';
+
 			trace_qual->op = malloc(sizeof(op)+1);
 			strcpy(trace_qual->op,op);
 		}
@@ -6428,22 +6400,10 @@ get_oper_expr(OpExpr *expr, deparse_context *context)
 		
 		if(is_compare_expr(op)){
 			int current_offset = context->buf->len;
+
 			trace_qual->right = malloc(current_offset-pre_offset+1);
 			strncpy(trace_qual->right,context->buf->data+pre_offset,current_offset-pre_offset);
 			trace_qual->right[current_offset - pre_offset] = '\0';
-
-			//assert(context->p_location != -1);
-			trace_qual->parent_location = context->hsp->location_cnt;
-			trace_qual->parent_op =  (char *) stack_peek(context->op_stack);
-			if(!strcmp(trace_qual->parent_op,"and")){
-				trace_qual->parent_op_id  = context->and_count;
-			}else if(!strcmp(trace_qual->parent_op,"or")){
-				trace_qual->parent_op_id  = context->or_count;
-			}else{
-				trace_qual->parent_op_id  = context->not_count;
-			}
-			//memcpy(&trace_qual->parent_location,&context->,sizeof(context->p_location));
-			context->hsp->quals[context->hsp->n_quals-1] = trace_qual;
 
 			PredExpression* expr_node = (PredExpression*)malloc(sizeof(PredExpression));
 			pred_expression__init(expr_node);
