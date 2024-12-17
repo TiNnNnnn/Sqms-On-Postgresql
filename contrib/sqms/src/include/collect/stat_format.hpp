@@ -41,6 +41,9 @@ private:
 
     void PredDecompose(HistorySlowPlanStat* pred_expr);
 
+    void ShowPredTree(PredExpression* p_expr, int depth = 0);
+    void PrintIndent(int depth);
+
     PlanStatFormat();
     ~PlanStatFormat();
 private:
@@ -55,3 +58,4 @@ private:
      * one of them to keep readilty of codes
     */
 };
+

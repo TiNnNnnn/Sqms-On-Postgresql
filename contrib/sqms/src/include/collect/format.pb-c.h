@@ -23,10 +23,18 @@ typedef struct _EquivlenceClass EquivlenceClass;
 typedef struct _Range Range;
 typedef struct _SlowPlanLevelStat SlowPlanLevelStat;
 typedef struct _SlowPlanStat SlowPlanStat;
+typedef struct _PredExpression PredExpression;
+typedef struct _PredOperator PredOperator;
 
 
 /* --- enums --- */
 
+typedef enum _PredOperator__PredOperatorType {
+  PRED_OPERATOR__PRED_OPERATOR_TYPE__AND = 0,
+  PRED_OPERATOR__PRED_OPERATOR_TYPE__OR = 1,
+  PRED_OPERATOR__PRED_OPERATOR_TYPE__NOT = 2
+    PROTOBUF_C__FORCE_ENUM_TO_BE_INT_SIZE(PRED_OPERATOR__PRED_OPERATOR_TYPE)
+} PredOperator__PredOperatorType;
 
 /* --- messages --- */
 
@@ -142,10 +150,11 @@ struct  _HistorySlowPlanStat
   size_t n_not_locations;
   int32_t *not_locations;
   int32_t location_cnt;
+  PredExpression *expr_root;
 };
 #define HISTORY_SLOW_PLAN_STAT__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&history_slow_plan_stat__descriptor) \
-    , 0, 0, 0, 0, 0, 0, 0,NULL, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, 0,NULL, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0,NULL, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, 0,NULL, (char *)protobuf_c_empty_string, 0,NULL, 0,NULL, 0,NULL, 0, 0,NULL, 0,NULL, 0,NULL, 0,NULL, 0 }
+    , 0, 0, 0, 0, 0, 0, 0,NULL, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, 0,NULL, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0,NULL, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, 0,NULL, (char *)protobuf_c_empty_string, 0,NULL, 0,NULL, 0,NULL, 0, 0,NULL, 0,NULL, 0,NULL, 0,NULL, 0, NULL }
 
 
 struct  _GroupSortKey
@@ -268,6 +277,39 @@ struct  _SlowPlanStat
 #define SLOW_PLAN_STAT__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&slow_plan_stat__descriptor) \
     , 0,NULL }
+
+
+typedef enum {
+  PRED_EXPRESSION__EXPR__NOT_SET = 0,
+  PRED_EXPRESSION__EXPR_OP = 1,
+  PRED_EXPRESSION__EXPR_QUAL = 2
+    PROTOBUF_C__FORCE_ENUM_TO_BE_INT_SIZE(PRED_EXPRESSION__EXPR)
+} PredExpression__ExprCase;
+
+struct  _PredExpression
+{
+  ProtobufCMessage base;
+  PredExpression__ExprCase expr_case;
+  union {
+    PredOperator *op;
+    Quals *qual;
+  };
+};
+#define PRED_EXPRESSION__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&pred_expression__descriptor) \
+    , PRED_EXPRESSION__EXPR__NOT_SET, {0} }
+
+
+struct  _PredOperator
+{
+  ProtobufCMessage base;
+  PredOperator__PredOperatorType type;
+  size_t n_childs;
+  PredExpression **childs;
+};
+#define PRED_OPERATOR__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&pred_operator__descriptor) \
+    , PRED_OPERATOR__PRED_OPERATOR_TYPE__AND, 0,NULL }
 
 
 /* HistorySlowPlanStat methods */
@@ -422,6 +464,44 @@ SlowPlanStat *
 void   slow_plan_stat__free_unpacked
                      (SlowPlanStat *message,
                       ProtobufCAllocator *allocator);
+/* PredExpression methods */
+void   pred_expression__init
+                     (PredExpression         *message);
+size_t pred_expression__get_packed_size
+                     (const PredExpression   *message);
+size_t pred_expression__pack
+                     (const PredExpression   *message,
+                      uint8_t             *out);
+size_t pred_expression__pack_to_buffer
+                     (const PredExpression   *message,
+                      ProtobufCBuffer     *buffer);
+PredExpression *
+       pred_expression__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data);
+void   pred_expression__free_unpacked
+                     (PredExpression *message,
+                      ProtobufCAllocator *allocator);
+/* PredOperator methods */
+void   pred_operator__init
+                     (PredOperator         *message);
+size_t pred_operator__get_packed_size
+                     (const PredOperator   *message);
+size_t pred_operator__pack
+                     (const PredOperator   *message,
+                      uint8_t             *out);
+size_t pred_operator__pack_to_buffer
+                     (const PredOperator   *message,
+                      ProtobufCBuffer     *buffer);
+PredOperator *
+       pred_operator__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data);
+void   pred_operator__free_unpacked
+                     (PredOperator *message,
+                      ProtobufCAllocator *allocator);
 /* --- per-message closures --- */
 
 typedef void (*HistorySlowPlanStat_Closure)
@@ -448,6 +528,12 @@ typedef void (*SlowPlanLevelStat_Closure)
 typedef void (*SlowPlanStat_Closure)
                  (const SlowPlanStat *message,
                   void *closure_data);
+typedef void (*PredExpression_Closure)
+                 (const PredExpression *message,
+                  void *closure_data);
+typedef void (*PredOperator_Closure)
+                 (const PredOperator *message,
+                  void *closure_data);
 
 /* --- services --- */
 
@@ -462,6 +548,9 @@ extern const ProtobufCMessageDescriptor equivlence_class__descriptor;
 extern const ProtobufCMessageDescriptor range__descriptor;
 extern const ProtobufCMessageDescriptor slow_plan_level_stat__descriptor;
 extern const ProtobufCMessageDescriptor slow_plan_stat__descriptor;
+extern const ProtobufCMessageDescriptor pred_expression__descriptor;
+extern const ProtobufCMessageDescriptor pred_operator__descriptor;
+extern const ProtobufCEnumDescriptor    pred_operator__pred_operator_type__descriptor;
 
 PROTOBUF_C__END_DECLS
 

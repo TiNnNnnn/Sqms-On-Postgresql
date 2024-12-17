@@ -216,7 +216,7 @@ typedef struct PredLevelList{
 void PlanStatFormat::PredDecompose(HistorySlowPlanStat* hsp){
     std::unordered_map<int,PredLevelList> location2qual;
     int max_parent = 0;
-    for(int i=0;i<hsp->n_quals;i++){
+    for(size_t i=0;i<hsp->n_quals;i++){
         auto qual = hsp->quals[i];
         max_parent = std::max(max_parent,qual->parent_location);
         if(strcmp(qual->op,"and")){
@@ -252,44 +252,45 @@ bool PlanStatFormat::Preprocessing(QueryDesc* qd){
 
     if(debug){
        
-        std::cout<<"n_quals: "<<hsps_.n_quals<<std::endl;
-        for(int i=0;i<hsps_.n_quals;i++){ 
+        // std::cout<<"n_quals: "<<hsps_.n_quals<<std::endl;
+        // for(int i=0;i<hsps_.n_quals;i++){ 
             
-            std::string str = std::string(hsps_.quals[i]->left) + " " + 
-                std::string(hsps_.quals[i]->op) +  " " +std::string(hsps_.quals[i]->right);
-            std::cout<<"pred: "<<str.c_str()<<" | parent: "<<hsps_.quals[i]->parent_location<<","<<hsps_.quals[i]->parent_op<<hsps_.quals[i]->parent_op_id<<std::endl;
-        }
-        std::cout<<"and locations:"<<std::endl;
-        for(int i=0;i<hsps_.n_and_locations;i++){
-            std::cout<<hsps_.and_locations[i]<<" ";
-        }
-        std::cout<<std::endl;
-        std::cout<<"or locations:"<<std::endl;
-        for(int i=0;i<hsps_.n_or_locations;i++){
-            std::cout<<hsps_.or_locations[i]<<" ";
-        }
-        std::cout<<std::endl;
+        //     std::string str = std::string(hsps_.quals[i]->left) + " " + 
+        //         std::string(hsps_.quals[i]->op) +  " " +std::string(hsps_.quals[i]->right);
+        //     std::cout<<"pred: "<<str.c_str()<<" | parent: "<<hsps_.quals[i]->parent_location<<","<<hsps_.quals[i]->parent_op<<hsps_.quals[i]->parent_op_id<<std::endl;
+        // }
+        // std::cout<<"and locations:"<<std::endl;
+        // for(int i=0;i<hsps_.n_and_locations;i++){
+        //     std::cout<<hsps_.and_locations[i]<<" ";
+        // }
+        // std::cout<<std::endl;
+        // std::cout<<"or locations:"<<std::endl;
+        // for(int i=0;i<hsps_.n_or_locations;i++){
+        //     std::cout<<hsps_.or_locations[i]<<" ";
+        // }
+        // std::cout<<std::endl;
 
 
-        for(int i=0;i<hsps_.n_childs;i++){
-            auto hsp = hsps_.childs[i]; 
-            std::cout<<"n_quals: "<<hsp->n_quals<<std::endl;
-            for(int i=0;i<hsp->n_quals;i++){
-                std::string str = std::string(hsp->quals[i]->left) + " " + 
-                    std::string(hsp->quals[i]->op) +  " " +std::string(hsp->quals[i]->right);
-                std::cout<<"pred: "<<str.c_str()<<" | parent: "<<hsp->quals[i]->parent_location<<","<<hsp->quals[i]->parent_op<<hsp->quals[i]->parent_op_id<<std::endl;
-            }
-            std::cout<<"and locations:"<<std::endl;
-            for(int i=0;i<hsp->n_and_locations;i++){
-                std::cout<<hsp->and_locations[i]<<" ";
-            }
-            std::cout<<std::endl;
-            std::cout<<"or locations:"<<std::endl;
-            for(int i=0;i<hsp->n_or_locations;i++){
-                std::cout<<hsp->or_locations[i]<<" ";
-            }            
-            std::cout<<std::endl;
-        }
+        // for(int i=0;i<hsps_.n_childs;i++){
+        //     auto hsp = hsps_.childs[i]; 
+        //     std::cout<<"n_quals: "<<hsp->n_quals<<std::endl;
+        //     for(int i=0;i<hsp->n_quals;i++){
+        //         std::string str = std::string(hsp->quals[i]->left) + " " + 
+        //             std::string(hsp->quals[i]->op) +  " " +std::string(hsp->quals[i]->right);
+        //         std::cout<<"pred: "<<str.c_str()<<" | parent: "<<hsp->quals[i]->parent_location<<","<<hsp->quals[i]->parent_op<<hsp->quals[i]->parent_op_id<<std::endl;
+        //     }
+        //     std::cout<<"and locations:"<<std::endl;
+        //     for(int i=0;i<hsp->n_and_locations;i++){
+        //         std::cout<<hsp->and_locations[i]<<" ";
+        //     }
+        //     std::cout<<std::endl;
+        //     std::cout<<"or locations:"<<std::endl;
+        //     for(int i=0;i<hsp->n_or_locations;i++){
+        //         std::cout<<hsp->or_locations[i]<<" ";
+        //     }            
+        //     std::cout<<std::endl;
+        // }
+        ShowPredTree(hsps_.expr_root);
     }
     
     pfree(total_es);
@@ -299,4 +300,70 @@ bool PlanStatFormat::Preprocessing(QueryDesc* qd){
 
 std::string PlanStatFormat::HashCanonicalPlan(char *json_plan){
     return std::to_string(hash_fn(std::string(json_plan)));
+}
+
+void PlanStatFormat::PrintIndent(int depth) {
+    for (int i = 0; i < depth; ++i) {
+        std::cout << "  ";  // 每层深度输出两个空格
+    }
+}
+
+void PlanStatFormat::ShowPredTree(PredExpression* p_expr, int depth) {
+    if (p_expr == nullptr) {
+        PrintIndent(depth);
+        std::cout << "pred expression is nullptr" << std::endl;
+        return;
+    }
+
+    if (p_expr->expr_case == PRED_EXPRESSION__EXPR_OP) {
+        // 打印 PredOperator 节点
+        PrintIndent(depth);
+        std::cout << "Operator: ";
+
+        switch (p_expr->op->type) {
+            case PRED_OPERATOR__PRED_OPERATOR_TYPE__AND:
+                std::cout << "AND";
+                break;
+            case PRED_OPERATOR__PRED_OPERATOR_TYPE__OR:
+                std::cout << "OR";
+                break;
+            case PRED_OPERATOR__PRED_OPERATOR_TYPE__NOT:
+                std::cout << "NOT";
+                break;
+            default:
+                std::cout << "UNKNOWN";
+                break;
+        }
+        std::cout << std::endl;
+
+        // 遍历子节点
+        for (size_t i = 0; i < p_expr->op->n_childs; ++i) {
+            ShowPredTree(p_expr->op->childs[i], depth + 1);
+        }
+    } else if (p_expr->expr_case == PRED_EXPRESSION__EXPR_QUAL) {
+        // 打印 Quals 节点
+        PrintIndent(depth);
+        std::cout << "Quals: " << std::endl;
+
+        PrintIndent(depth + 1);
+        std::cout << "Left: " << p_expr->qual->left << std::endl;
+
+        PrintIndent(depth + 1);
+        std::cout << "Right: " << p_expr->qual->right << std::endl;
+
+        PrintIndent(depth + 1);
+        std::cout << "Operator: " << p_expr->qual->op << std::endl;
+
+        PrintIndent(depth + 1);
+        std::cout << "Parent Location: " << p_expr->qual->parent_location << std::endl;
+
+        PrintIndent(depth + 1);
+        std::cout << "Parent Operator: " << p_expr->qual->parent_op << std::endl;
+
+        PrintIndent(depth + 1);
+        std::cout << "Parent Operator ID: " << p_expr->qual->parent_op_id << std::endl;
+    } else {
+        PrintIndent(depth);
+        std::cerr << "Unknown expression type." << std::endl;
+    }
 }

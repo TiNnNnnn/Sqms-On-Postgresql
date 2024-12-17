@@ -126,6 +126,7 @@ typedef struct
 	HistorySlowPlanStat	*hsp; 
 	int p_location;
 	Stack* op_stack;
+	Stack* expr_stack;
 	int and_count;
 	int or_count;
 	int not_count;
@@ -529,6 +530,7 @@ deparse_expression_pretty(Node *expr, List *dpcontext,
 	context.hsp = dpns->hsp;
 
 	context.op_stack = stack_init();
+	context.expr_stack = stack_init();
 
 	context.and_count = 0;
 	context.or_count = 0;
@@ -5209,26 +5211,57 @@ get_rule_expr(Node *node, deparse_context *context,
 				ListCell   *arg;
 				switch (expr->boolop)
 				{
-					case AND_EXPR:
-						context->hsp->and_locations = realloc(context->hsp->and_locations, 
-                                  (context->hsp->n_and_locations + 1) * sizeof(int32_t));
-						context->hsp->n_and_locations++;
+					case AND_EXPR:{
+						// context->hsp->and_locations = realloc(context->hsp->and_locations, 
+                        //           (context->hsp->n_and_locations + 1) * sizeof(int32_t));
+						// context->hsp->n_and_locations++;
+
+						PredOperator * expr_op = (PredOperator*)malloc(sizeof(PredOperator));
+						pred_operator__init(expr_op);
+						expr_op->childs = (PredExpression**)malloc(sizeof(PredExpression*)*list_length(expr->args));
+						expr_op->n_childs = list_length(expr->args);
+						expr_op->type = PRED_OPERATOR__PRED_OPERATOR_TYPE__AND;
+
+						PredExpression* expr_node = (PredExpression*)malloc(sizeof(PredExpression));
+						pred_expression__init(expr_node);
+						expr_node->op = expr_op;
+						expr_node->expr_case = PRED_EXPRESSION__EXPR_OP;
+						
+						if(stack_is_empty(context->expr_stack)){
+							context->hsp->expr_root = expr_node;
+						}
+						stack_push(context->expr_stack,expr_node);
+
 
 						context->and_count++;
 						context->hsp->location_cnt++;
 						stack_push(context->op_stack,"and");
-
-						context->hsp->and_locations[context->hsp->n_and_locations - 1] = context->hsp->location_cnt;
+						
+						//context->hsp->and_locations[context->hsp->n_and_locations - 1] = context->hsp->location_cnt;
 
 						if (!PRETTY_PAREN(context))
 							appendStringInfoChar(buf, '(');
+
+						int idx = 0;
 						get_rule_expr_paren(first_arg, context,
 											false, node,expr->location);
+						
+						PredExpression* child_node =  (PredExpression*) stack_peek(context->expr_stack);
+						assert(child_node);
+						stack_pop(context->expr_stack);
+						expr_op->childs[idx] = child_node;
+
 						for_each_from(arg, expr->args, 1)
 						{
+							idx++;
 							appendStringInfoString(buf, " AND ");
 							get_rule_expr_paren((Node *) lfirst(arg), context,
 												false, node,expr->location);
+
+							child_node =  (PredExpression*) stack_peek(context->expr_stack);
+							assert(child_node);
+							stack_pop(context->expr_stack);
+							expr_op->childs[idx] = child_node;
 						}
 
 						if (!PRETTY_PAREN(context))
@@ -5236,30 +5269,57 @@ get_rule_expr(Node *node, deparse_context *context,
 
 						context->hsp->location_cnt--;
 						stack_pop(context->op_stack);
-						break;
+					}break;
 
-					case OR_EXPR:
-						context->hsp->or_locations = realloc(context->hsp->or_locations, 
-                                  (context->hsp->n_or_locations + 1) * sizeof(int32_t));
-						context->hsp->n_or_locations++;
+					case OR_EXPR:{
+						// context->hsp->or_locations = realloc(context->hsp->or_locations, 
+                        //           (context->hsp->n_or_locations + 1) * sizeof(int32_t));
+						// context->hsp->n_or_locations++;
+
+						PredOperator * expr_op = (PredOperator*)malloc(sizeof(PredOperator));
+						pred_operator__init(expr_op);
+						expr_op->childs = (PredExpression**)malloc(sizeof(PredExpression*)*list_length(expr->args));
+						expr_op->n_childs = list_length(expr->args);
+						expr_op->type = PRED_OPERATOR__PRED_OPERATOR_TYPE__OR;
+
+						PredExpression* expr_node = (PredExpression*)malloc(sizeof(PredExpression));
+						pred_expression__init(expr_node);
+						expr_node->op = expr_op;
+						expr_node->expr_case = PRED_EXPRESSION__EXPR_OP;
+						
+						if(stack_is_empty(context->expr_stack)){
+							context->hsp->expr_root = expr_node;
+						}
+						stack_push(context->expr_stack,expr_node);
 						
 						context->or_count++;
 						context->hsp->location_cnt++;
 						stack_push(context->op_stack,"or");
 
-						context->hsp->or_locations[context->hsp->n_or_locations - 1] = context->hsp->location_cnt;
+						//context->hsp->or_locations[context->hsp->n_or_locations - 1] = context->hsp->location_cnt;
 						//context->p_location = context->hsp->location_cnt;
 						
-
+						int idx = 0;
 						if (!PRETTY_PAREN(context))
 							appendStringInfoChar(buf, '(');
 						get_rule_expr_paren(first_arg, context,
 											false, node,expr->location);
+						
+						PredExpression* child_node =  (PredExpression*) stack_peek(context->expr_stack);
+						assert(child_node);
+						stack_pop(context->expr_stack);
+						expr_op->childs[idx] = child_node;
+						
 						for_each_from(arg, expr->args, 1)
 						{
+							idx++;
 							appendStringInfoString(buf, " OR ");
 							get_rule_expr_paren((Node *) lfirst(arg), context,
 												false, node,expr->location);
+							child_node =  (PredExpression*) stack_peek(context->expr_stack);
+							assert(child_node);
+							stack_pop(context->expr_stack);
+							expr_op->childs[idx] = child_node;
 						}
 						if (!PRETTY_PAREN(context))
 							appendStringInfoChar(buf, ')');
@@ -5267,18 +5327,18 @@ get_rule_expr(Node *node, deparse_context *context,
 						context->hsp->location_cnt--;
 						stack_pop(context->op_stack);
 						//context->p_location = -1;
-						break;
+					}break;
 
-					case NOT_EXPR:
-						context->hsp->not_locations = realloc(context->hsp->not_locations, 
-                                  (context->hsp->n_not_locations + 1) * sizeof(int32_t));
-						context->hsp->n_not_locations++;
+					case NOT_EXPR: {
+						// context->hsp->not_locations = realloc(context->hsp->not_locations, 
+                        //           (context->hsp->n_not_locations + 1) * sizeof(int32_t));
+						// context->hsp->n_not_locations++;
 
 						context->not_count++;
 						context->hsp->location_cnt++;
 						stack_push(context->op_stack,"not");
 
-						context->hsp->not_locations[context->hsp->n_not_locations - 1] = context->hsp->location_cnt;
+						//context->hsp->not_locations[context->hsp->n_not_locations - 1] = context->hsp->location_cnt;
 						//context->p_location = context->hsp->location_cnt;
 						
 						if (!PRETTY_PAREN(context))
@@ -5292,7 +5352,7 @@ get_rule_expr(Node *node, deparse_context *context,
 						context->hsp->location_cnt--;
 						stack_pop(context->op_stack);
 						//context->p_location = -1;
-						break;
+					}break;
 
 					default:
 						elog(ERROR, "unrecognized boolop: %d",
@@ -6349,6 +6409,7 @@ get_oper_expr(OpExpr *expr, deparse_context *context)
                                   (context->hsp->n_quals + 1) * sizeof(Quals *));
 			context->hsp->n_quals++;
 		}
+
 		Quals* trace_qual = (Quals*) malloc(sizeof(Quals));
 		quals__init(trace_qual);
 
@@ -6383,6 +6444,12 @@ get_oper_expr(OpExpr *expr, deparse_context *context)
 			}
 			//memcpy(&trace_qual->parent_location,&context->,sizeof(context->p_location));
 			context->hsp->quals[context->hsp->n_quals-1] = trace_qual;
+
+			PredExpression* expr_node = (PredExpression*)malloc(sizeof(PredExpression));
+			pred_expression__init(expr_node);
+			expr_node->qual = trace_qual;
+			expr_node->expr_case =PRED_EXPRESSION__EXPR_QUAL;
+			stack_push(context->expr_stack,expr_node);
 		}
 	}
 	else

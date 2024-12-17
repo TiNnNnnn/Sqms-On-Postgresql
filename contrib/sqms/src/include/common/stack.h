@@ -1,3 +1,4 @@
+#pragma once 
 #include "postgres.h"
 #include "nodes/pg_list.h"
 #include <stdio.h>
