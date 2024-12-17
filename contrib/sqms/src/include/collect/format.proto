@@ -102,6 +102,7 @@ message Quals{
 	string op = 3;
 	int32 parent_location = 4;
 	string parent_op = 5;
+	int32 parent_op_id = 6;
 }
 
 message EquivlenceClass{	

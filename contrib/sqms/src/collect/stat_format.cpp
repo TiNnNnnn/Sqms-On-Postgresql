@@ -193,25 +193,46 @@ void PlanStatFormat::ParseExprs(HistorySlowPlanStat* hsps){
     }
 }
 
-void PlanStatFormat::PredDecompose(HistorySlowPlanStat* hsp){
 
-    std::unordered_map<int,std::vector<Quals*>> location2qual;
+typedef struct PredLevelList{
+    std::vector<Quals*> and_list;
+    std::vector<Quals*> or_list;
+    std::vector<Quals*> not_list;
+}PredLevelList;
+
+/**PredDecompose: merge expr form bottom to top
+ * example:
+ *  n_quals: 4
+ *  pred: tt.a > 10 | parent: 2,and
+ *  pred: max(tt.c) > 10 | parent: 2,and
+ *  pred: tt.a < 20 | parent: 1,or
+ *  pred: tt.a > 0 | parent: 1,or
+ *  
+ *  we first get preds value on parent = 2, use a stack to merge, stop until
+ *  the stack onlu has one/two element,then we get preds value on parent =1,repeated
+ *  action above
+ * 
+ */
+void PlanStatFormat::PredDecompose(HistorySlowPlanStat* hsp){
+    std::unordered_map<int,PredLevelList> location2qual;
     int max_parent = 0;
     for(int i=0;i<hsp->n_quals;i++){
-        max_parent = std::max(max_parent,hsp->quals[i]->parent_location);
-        location2qual[hsp->quals[i]->parent_location].push_back(hsp->quals[i]);
+        auto qual = hsp->quals[i];
+        max_parent = std::max(max_parent,qual->parent_location);
+        if(strcmp(qual->op,"and")){
+            location2qual[qual->parent_location].and_list.push_back(qual);
+        }else if(strcmp(qual->op,"or")){
+            location2qual[qual->parent_location].or_list.push_back(qual);
+        }else if(strcmp(qual->op,"not")){
+            location2qual[qual->parent_location].not_list.push_back(qual);
+        }else{
+            std::cerr<<"unknow compare predicate opeartor type: "<<qual->op<<std::endl;
+            return;
+        }
     }
 
     for(int i = max_parent; i>=0; i--){
-        auto q_list = location2qual[i];
-
-        // if(op == "and"){
-            
-        // }else if(op == "or"){
-
-        // }else if(op == "not"){
-
-        // }
+        auto pred_level_list = location2qual[i];
     }
 }
 
@@ -236,7 +257,7 @@ bool PlanStatFormat::Preprocessing(QueryDesc* qd){
             
             std::string str = std::string(hsps_.quals[i]->left) + " " + 
                 std::string(hsps_.quals[i]->op) +  " " +std::string(hsps_.quals[i]->right);
-            std::cout<<"pred: "<<str.c_str()<<" | parent: "<<hsps_.quals[i]->parent_location<<","<<hsps_.quals[i]->parent_op<<std::endl;
+            std::cout<<"pred: "<<str.c_str()<<" | parent: "<<hsps_.quals[i]->parent_location<<","<<hsps_.quals[i]->parent_op<<hsps_.quals[i]->parent_op_id<<std::endl;
         }
         std::cout<<"and locations:"<<std::endl;
         for(int i=0;i<hsps_.n_and_locations;i++){
@@ -256,7 +277,7 @@ bool PlanStatFormat::Preprocessing(QueryDesc* qd){
             for(int i=0;i<hsp->n_quals;i++){
                 std::string str = std::string(hsp->quals[i]->left) + " " + 
                     std::string(hsp->quals[i]->op) +  " " +std::string(hsp->quals[i]->right);
-                std::cout<<"pred: "<<str.c_str()<<" | parent: "<<hsp->quals[i]->parent_location<<","<<hsp->quals[i]->parent_op<<std::endl;
+                std::cout<<"pred: "<<str.c_str()<<" | parent: "<<hsp->quals[i]->parent_location<<","<<hsp->quals[i]->parent_op<<hsp->quals[i]->parent_op_id<<std::endl;
             }
             std::cout<<"and locations:"<<std::endl;
             for(int i=0;i<hsp->n_and_locations;i++){

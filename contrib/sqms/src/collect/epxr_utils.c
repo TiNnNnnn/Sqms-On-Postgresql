@@ -126,6 +126,9 @@ typedef struct
 	HistorySlowPlanStat	*hsp; 
 	int p_location;
 	Stack* op_stack;
+	int and_count;
+	int or_count;
+	int not_count;
 } deparse_context;
 
 /*
@@ -526,6 +529,10 @@ deparse_expression_pretty(Node *expr, List *dpcontext,
 	context.hsp = dpns->hsp;
 
 	context.op_stack = stack_init();
+
+	context.and_count = 0;
+	context.or_count = 0;
+	context.not_count = 0;
 
 	get_rule_expr(expr, &context, showimplicit);
 
@@ -5207,6 +5214,7 @@ get_rule_expr(Node *node, deparse_context *context,
                                   (context->hsp->n_and_locations + 1) * sizeof(int32_t));
 						context->hsp->n_and_locations++;
 
+						context->and_count++;
 						context->hsp->location_cnt++;
 						stack_push(context->op_stack,"and");
 
@@ -5235,6 +5243,7 @@ get_rule_expr(Node *node, deparse_context *context,
                                   (context->hsp->n_or_locations + 1) * sizeof(int32_t));
 						context->hsp->n_or_locations++;
 						
+						context->or_count++;
 						context->hsp->location_cnt++;
 						stack_push(context->op_stack,"or");
 
@@ -5265,6 +5274,7 @@ get_rule_expr(Node *node, deparse_context *context,
                                   (context->hsp->n_not_locations + 1) * sizeof(int32_t));
 						context->hsp->n_not_locations++;
 
+						context->not_count++;
 						context->hsp->location_cnt++;
 						stack_push(context->op_stack,"not");
 
@@ -6364,6 +6374,13 @@ get_oper_expr(OpExpr *expr, deparse_context *context)
 			//assert(context->p_location != -1);
 			trace_qual->parent_location = context->hsp->location_cnt;
 			trace_qual->parent_op =  (char *) stack_peek(context->op_stack);
+			if(!strcmp(trace_qual->parent_op,"and")){
+				trace_qual->parent_op_id  = context->and_count;
+			}else if(!strcmp(trace_qual->parent_op,"or")){
+				trace_qual->parent_op_id  = context->or_count;
+			}else{
+				trace_qual->parent_op_id  = context->not_count;
+			}
 			//memcpy(&trace_qual->parent_location,&context->,sizeof(context->p_location));
 			context->hsp->quals[context->hsp->n_quals-1] = trace_qual;
 		}

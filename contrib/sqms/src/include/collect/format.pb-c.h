@@ -197,10 +197,11 @@ struct  _Quals
   char *op;
   int32_t parent_location;
   char *parent_op;
+  int32_t parent_op_id;
 };
 #define QUALS__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&quals__descriptor) \
-    , (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string }
+    , (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, 0 }
 
 
 struct  _EquivlenceClass
