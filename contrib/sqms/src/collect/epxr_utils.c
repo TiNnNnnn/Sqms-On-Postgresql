@@ -5162,14 +5162,37 @@ get_rule_expr(Node *node, deparse_context *context,
 				Node	   *arg1 = (Node *) linitial(args);
 				Node	   *arg2 = (Node *) lsecond(args);
 
+				int	pre_offset = context->buf->len;
+
+				Quals* trace_qual = NULL;
+				trace_qual = (Quals*) malloc(sizeof(Quals));
+				if (trace_qual == NULL) {
+					fprintf(stderr, "Memory allocation failed\n");
+					exit(1);
+				}
+				quals__init(trace_qual);
+
 				if (!PRETTY_PAREN(context))
 					appendStringInfoChar(buf, '(');
 				get_rule_expr_paren(arg1, context, true, node,expr->location);
-				appendStringInfo(buf, " %s %s (",
-								 generate_operator_name(expr->opno,
+
+				int current_offset = context->buf->len;
+				trace_qual->left = malloc(current_offset-pre_offset+1);
+				strncpy(trace_qual->left,context->buf->data+pre_offset,current_offset-pre_offset);
+				trace_qual->left[current_offset - pre_offset] = '\0';
+
+				char *op = generate_operator_name(expr->opno,
 														exprType(arg1),
-														get_base_element_type(exprType(arg2))),
-								 expr->useOr ? "ANY" : "ALL");
+														get_base_element_type(exprType(arg2)));
+				char * use_or = expr->useOr ? "ANY" : "ALL";
+				
+				trace_qual->op = malloc(sizeof(op)+1);
+				strcpy(trace_qual->op,op);
+				trace_qual->use_or = malloc(sizeof(use_or)+1);
+				strcpy(trace_qual->use_or,use_or);
+
+				appendStringInfo(buf, " %s %s (",op, use_or);
+				pre_offset = context->buf->len;
 				get_rule_expr_paren(arg2, context, true, node,expr->location);
 
 				/*
@@ -5189,10 +5212,24 @@ get_rule_expr(Node *node, deparse_context *context,
 					appendStringInfo(buf, "::%s",
 									 format_type_with_typemod(exprType(arg2),
 															  exprTypmod(arg2)));
+				current_offset = context->buf->len;
+				/*---------------------------------------------------- */
+				trace_qual->right = malloc(current_offset-pre_offset+1);
+				strncpy(trace_qual->right,context->buf->data+pre_offset,current_offset-pre_offset);
+				trace_qual->right[current_offset - pre_offset] = '\0';				
+				PredExpression* expr_node = (PredExpression*)malloc(sizeof(PredExpression));
+				pred_expression__init(expr_node);
+				expr_node->qual = trace_qual;
+				expr_node->expr_case =PRED_EXPRESSION__EXPR_QUAL;
+				if(stack_is_empty(context->expr_stack)){
+					context->hsp->expr_root = expr_node;
+				}
+				stack_push(context->expr_stack,expr_node);
+				/*---------------------------------------------------- */
 				appendStringInfoChar(buf, ')');
 				if (!PRETTY_PAREN(context))
-					appendStringInfoChar(buf, ')');
-			}
+						appendStringInfoChar(buf, ')');
+				}
 			break;
 
 		case T_BoolExpr:
@@ -5239,9 +5276,12 @@ get_rule_expr(Node *node, deparse_context *context,
 												false, node,expr->location);
 
 							child_node =  (PredExpression*) stack_peek(context->expr_stack);
-							assert(child_node);
-							stack_pop(context->expr_stack);
-							expr_op->childs[idx] = child_node;
+							//assert(child_node);
+							if(child_node){
+								stack_pop(context->expr_stack);
+								expr_op->childs[idx] = child_node;
+							}
+
 						}
 
 						if (!PRETTY_PAREN(context))
@@ -5277,6 +5317,7 @@ get_rule_expr(Node *node, deparse_context *context,
 						assert(child_node);
 						stack_pop(context->expr_stack);
 						expr_op->childs[idx] = child_node;
+
 						
 						for_each_from(arg, expr->args, 1)
 						{
@@ -5285,9 +5326,12 @@ get_rule_expr(Node *node, deparse_context *context,
 							get_rule_expr_paren((Node *) lfirst(arg), context,
 												false, node,expr->location);
 							child_node =  (PredExpression*) stack_peek(context->expr_stack);
-							assert(child_node);
-							stack_pop(context->expr_stack);
-							expr_op->childs[idx] = child_node;
+							//assert(child_node);
+							if(child_node){
+								stack_pop(context->expr_stack);
+								expr_op->childs[idx] = child_node;
+							}
+	
 						}
 						if (!PRETTY_PAREN(context))
 							appendStringInfoChar(buf, ')');
@@ -5316,6 +5360,7 @@ get_rule_expr(Node *node, deparse_context *context,
 						assert(child_node);
 						stack_pop(context->expr_stack);
 						expr_op->childs[idx] = child_node;
+
 
 						if (!PRETTY_PAREN(context))
 							appendStringInfoChar(buf, ')');
@@ -6344,7 +6389,10 @@ looks_like_function(Node *node)
 
 
 static bool is_compare_expr(char* op){
-	if(!strcmp(op,">") || strcmp(op,"!=") || strcmp(op,">=") || strcmp(op,"<=") || strcmp(op,"=")|| strcmp(op,"<"))
+	if(!strcmp(op,">") || strcmp(op,"!=") || strcmp(op,">=") 
+		|| strcmp(op,"<=") || strcmp(op,"=")
+		|| strcmp(op,"<") || strcmp(op,"!~")
+		|| strcmp(op,"<>"))
 		return true;
 	return false;
 }
@@ -6375,8 +6423,7 @@ get_oper_expr(OpExpr *expr, deparse_context *context)
 		if(is_compare_expr(op)){
 			trace_qual = (Quals*) malloc(sizeof(Quals));
 			if (trace_qual == NULL) {
-				//fprintf(stderr, "Memory allocation failed\n");
-				printf("Memory allocation failed\n");
+				fprintf(stderr, "Memory allocation failed\n");
 				exit(1);
 			}
 			quals__init(trace_qual);

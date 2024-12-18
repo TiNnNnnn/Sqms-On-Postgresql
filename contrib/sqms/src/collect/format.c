@@ -1557,8 +1557,12 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		appendStringInfoString(es->str,ret.detail_str_->data);
 		appendStringInfoString(ces->str,ret.canonical_str_->data);
 		push_node_type_set(rs.node_type_set_,ret.node_type_set_);
-		hsp.childs[0] = malloc(sizeof(HistorySlowPlanStat));
-		*hsp.childs[0] = ret.hps_;
+
+		HistorySlowPlanStat* child = malloc(sizeof(HistorySlowPlanStat));
+		history_slow_plan_stat__init(child);
+		*child = ret.hps_;
+		hsp.childs[0] = child;
+		//*hsp.childs[0] = ret.hps_;
     }
 	/* lefttree */
 	if (outerPlanState(planstate)){
@@ -1568,8 +1572,13 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		appendStringInfoString(es->str,ret.detail_str_->data);
 		appendStringInfoString(ces->str,ret.canonical_str_->data);
 		push_node_type_set(rs.node_type_set_,ret.node_type_set_);
-		hsp.childs[0] = malloc(sizeof(HistorySlowPlanStat));
-		*hsp.childs[0] = ret.hps_;
+
+		// hsp.childs[0] = malloc(sizeof(HistorySlowPlanStat));
+		// *hsp.childs[0] = ret.hps_;
+		HistorySlowPlanStat* child = malloc(sizeof(HistorySlowPlanStat));
+		history_slow_plan_stat__init(child);
+		*child = ret.hps_;
+		hsp.childs[0] = child;
     }
 	/* righttree */
 	if (innerPlanState(planstate)){
@@ -1579,8 +1588,13 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		appendStringInfoString(es->str,ret.detail_str_->data);
 		appendStringInfoString(ces->str,ret.canonical_str_->data);
 		push_node_type_set(rs.node_type_set_,ret.node_type_set_);
-		hsp.childs[1] = malloc(sizeof(HistorySlowPlanStat));
-		*hsp.childs[1] = ret.hps_;
+
+		// hsp.childs[1] = malloc(sizeof(HistorySlowPlanStat));
+		// *hsp.childs[1] = ret.hps_;
+		HistorySlowPlanStat* child = malloc(sizeof(HistorySlowPlanStat));
+		history_slow_plan_stat__init(child);
+		*child = ret.hps_;
+		hsp.childs[1] = child;
     }
 	/**
 	 * TODO: we need update here
@@ -1634,8 +1648,12 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		appendStringInfoString(es->str,ret.detail_str_->data);
 		appendStringInfoString(ces->str,ret.canonical_str_->data);
 		push_node_type_set(rs.node_type_set_,ret.node_type_set_);
-		hsp.childs[0] = malloc(sizeof(HistorySlowPlanStat));
-		*hsp.childs[0] = ret.hps_;
+		// hsp.childs[0] = malloc(sizeof(HistorySlowPlanStat));
+		// *hsp.childs[0] = ret.hps_;
+		HistorySlowPlanStat* child = malloc(sizeof(HistorySlowPlanStat));
+		history_slow_plan_stat__init(child);
+		*child = ret.hps_;
+		hsp.childs[0] = child;
 	}
 
 	/* end of child plans */
@@ -1717,8 +1735,8 @@ show_plan_tlist(PlanState *planstate, List *ancestors, ExplainState *es, History
 	useprefix = list_length(es->rtable) > 1;
 
 
-	hsp->output = (char**)malloc(list_length(result) * sizeof(char*));
-	hsp->n_output = list_length(result);
+	hsp->output = (char**)malloc(list_length(plan->targetlist) * sizeof(char*));
+	hsp->n_output = list_length(plan->targetlist);
 
 	if (!hsp->output) {
         fprintf(stderr, "Memory allocation failed\n");
@@ -1734,8 +1752,8 @@ show_plan_tlist(PlanState *planstate, List *ancestors, ExplainState *es, History
 		char *expr =  deparse_expression_format((Node *) tle->expr, context,
 											useprefix, false);
 		result = lappend(result,expr);
-		hsp->output[i] = malloc(sizeof(expr)+1);
-		strcpy(hsp->output[i],expr);
+		hsp->output[i] = malloc(strlen(expr)+1);
+		memcpy(hsp->output[i],expr,strlen(expr));
 		++i;
 	}
 	FormatPropertyList("Output", result, es);
@@ -2090,9 +2108,10 @@ show_sort_group_keys(PlanState *planstate, const char *qlabel,
 		GroupSortKey *gs_key = (GroupSortKey *)malloc(sizeof(GroupSortKey));
 		group_sort_key__init(gs_key);
 
-		gs_key->key = malloc(sizeof(exprstr)+1);
-		strcpy(hsp->group_sort_keys[keyno]->key,exprstr);
+		gs_key->key = malloc(strlen(exprstr)+1);
+		memcpy(gs_key->key,exprstr,strlen(exprstr));
 		gs_key->sort_operators = (sortOperators != NULL);
+
 		if (sortOperators != NULL)
 			show_sortorder_options(&sortkeybuf,
 								   (Node *) target->expr,
@@ -2143,7 +2162,7 @@ show_sortorder_options(StringInfo buf, Node *sortexpr,
 			elog(ERROR, "cache lookup failed for collation %u", collation);
 		appendStringInfo(buf, " COLLATE %s", quote_identifier(collname));
 		
-		gs_key->sort_collation = malloc(sizeof(quote_identifier(collname))+1);
+		gs_key->sort_collation = malloc(strlen(quote_identifier(collname))+1);
 		strcpy(gs_key->sort_collation,quote_identifier(collname));
 	}
 
@@ -2162,7 +2181,7 @@ show_sortorder_options(StringInfo buf, Node *sortexpr,
 			elog(ERROR, "cache lookup failed for operator %u", sortOperator);
 		appendStringInfo(buf, " USING %s", opname);
 
-		gs_key->sort_direction = malloc(sizeof(opname)+1);
+		gs_key->sort_direction = malloc(strlen(opname)+1);
 		strcpy(gs_key->sort_direction,opname);
 		
 		/* Determine whether operator would be considered ASC or DESC */
@@ -3370,7 +3389,11 @@ ExplainSubPlans(List *plans, List *ancestors,
 	// }else if(strcmp(relationship,"InitPlan")){
 	// 	rs.node_type_set_ = lappend(rs.node_type_set_);
 	// }
+
+
 	HistorySlowPlanStat hsp = HISTORY_SLOW_PLAN_STAT__INIT;
+
+	//HistorySlowPlanStat * hsp = new HistorySlowPlanStat
 
 	size_t p_size = list_length(plans);
 	hsp.childs = (HistorySlowPlanStat**)malloc(sizeof(HistorySlowPlanStat*)*p_size);
@@ -3407,7 +3430,6 @@ ExplainSubPlans(List *plans, List *ancestors,
 		push_node_type_set(rs.node_type_set_,ret.node_type_set_);
 		ancestors = list_delete_first(ancestors);
 
-		//hsp.childs[idx] = (HistorySlowPlanStat*)malloc(sizeof(HistorySlowPlanStat));
 		HistorySlowPlanStat* child = (HistorySlowPlanStat*)malloc(sizeof(HistorySlowPlanStat));
 		history_slow_plan_stat__init(child);
 		*child = ret.hps_;
@@ -3416,6 +3438,7 @@ ExplainSubPlans(List *plans, List *ancestors,
 	}
 	hsp.json_plan = rs.detail_str_->data;
 	hsp.canonical_json_plan = rs.canonical_str_->data;
+	rs.hps_ = hsp;
 	return rs;
 }
 

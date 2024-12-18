@@ -130,31 +130,12 @@ struct  _HistorySlowPlanStat
   char *group_sort_qlabel;
   size_t n_group_sort_keys;
   GroupSortKey **group_sort_keys;
-  /*
-   *all prdicates of current subquery
-   */
-  size_t n_and_quals;
-  Quals **and_quals;
-  size_t n_or_quals;
-  Quals **or_quals;
   int32_t node_tag;
-  size_t n_quals;
-  Quals **quals;
-  /*
-   *collect all bool_expr locations
-   */
-  size_t n_and_locations;
-  int32_t *and_locations;
-  size_t n_or_locations;
-  int32_t *or_locations;
-  size_t n_not_locations;
-  int32_t *not_locations;
-  int32_t location_cnt;
   PredExpression *expr_root;
 };
 #define HISTORY_SLOW_PLAN_STAT__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&history_slow_plan_stat__descriptor) \
-    , 0, 0, 0, 0, 0, 0, 0,NULL, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, 0,NULL, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0,NULL, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, 0,NULL, (char *)protobuf_c_empty_string, 0,NULL, 0,NULL, 0,NULL, 0, 0,NULL, 0,NULL, 0,NULL, 0,NULL, 0, NULL }
+    , 0, 0, 0, 0, 0, 0, 0,NULL, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, 0,NULL, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0,NULL, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, 0,NULL, (char *)protobuf_c_empty_string, 0,NULL, 0, NULL }
 
 
 struct  _GroupSortKey
@@ -303,10 +284,11 @@ struct  _Quals
   char *left;
   char *right;
   char *op;
+  char *use_or;
 };
 #define QUALS__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&quals__descriptor) \
-    , (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string }
+    , (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string }
 
 
 /* HistorySlowPlanStat methods */
