@@ -457,7 +457,7 @@ void   quals__free_unpacked
   assert(message->base.descriptor == &quals__descriptor);
   protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
 }
-static const ProtobufCFieldDescriptor history_slow_plan_stat__field_descriptors[41] =
+static const ProtobufCFieldDescriptor history_slow_plan_stat__field_descriptors[50] =
 {
   {
     "custom_plan_provider",
@@ -951,6 +951,114 @@ static const ProtobufCFieldDescriptor history_slow_plan_stat__field_descriptors[
     0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
+  {
+    "cur_expr_tag",
+    44,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_ENUM,
+    0,   /* quantifier_offset */
+    offsetof(HistorySlowPlanStat, cur_expr_tag),
+    &pred_type_tag__descriptor,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "join_cond_expr_tree",
+    45,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_MESSAGE,
+    0,   /* quantifier_offset */
+    offsetof(HistorySlowPlanStat, join_cond_expr_tree),
+    &pred_expression__descriptor,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "join_filter_expr_tree",
+    46,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_MESSAGE,
+    0,   /* quantifier_offset */
+    offsetof(HistorySlowPlanStat, join_filter_expr_tree),
+    &pred_expression__descriptor,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "filter_tree",
+    47,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_MESSAGE,
+    0,   /* quantifier_offset */
+    offsetof(HistorySlowPlanStat, filter_tree),
+    &pred_expression__descriptor,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "one_time_filter_tree",
+    48,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_MESSAGE,
+    0,   /* quantifier_offset */
+    offsetof(HistorySlowPlanStat, one_time_filter_tree),
+    &pred_expression__descriptor,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "tid_cond_expr_tree",
+    49,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_MESSAGE,
+    0,   /* quantifier_offset */
+    offsetof(HistorySlowPlanStat, tid_cond_expr_tree),
+    &pred_expression__descriptor,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "recheck_cond_tree",
+    50,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_MESSAGE,
+    0,   /* quantifier_offset */
+    offsetof(HistorySlowPlanStat, recheck_cond_tree),
+    &pred_expression__descriptor,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "index_cond_expr_tree",
+    51,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_MESSAGE,
+    0,   /* quantifier_offset */
+    offsetof(HistorySlowPlanStat, index_cond_expr_tree),
+    &pred_expression__descriptor,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "order_by_expr_tree",
+    52,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_MESSAGE,
+    0,   /* quantifier_offset */
+    offsetof(HistorySlowPlanStat, order_by_expr_tree),
+    &pred_expression__descriptor,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
 };
 static const unsigned history_slow_plan_stat__field_indices_by_name[] = {
   2,   /* field[2] = actual_nloops */
@@ -961,16 +1069,21 @@ static const unsigned history_slow_plan_stat__field_indices_by_name[] = {
   29,   /* field[29] = canonical_json_plan */
   6,   /* field[6] = childs */
   20,   /* field[20] = command */
+  41,   /* field[41] = cur_expr_tag */
   0,   /* field[0] = custom_plan_provider */
   1,   /* field[1] = estimate_plan_width */
   40,   /* field[40] = expr_root */
   32,   /* field[32] = exprstr */
+  44,   /* field[44] = filter_tree */
   36,   /* field[36] = g_sets */
   38,   /* field[38] = group_sort_keys */
   37,   /* field[37] = group_sort_qlabel */
   17,   /* field[17] = idx_name */
+  48,   /* field[48] = index_cond_expr_tree */
   19,   /* field[19] = inner_unique */
   35,   /* field[35] = is_g_keys */
+  42,   /* field[42] = join_cond_expr_tree */
+  43,   /* field[43] = join_filter_expr_tree */
   18,   /* field[18] = join_type */
   28,   /* field[28] = json_plan */
   33,   /* field[33] = key_name */
@@ -979,10 +1092,13 @@ static const unsigned history_slow_plan_stat__field_indices_by_name[] = {
   7,   /* field[7] = node_type */
   12,   /* field[12] = object_name */
   14,   /* field[14] = object_tag */
+  45,   /* field[45] = one_time_filter_tree */
   11,   /* field[11] = operation */
+  49,   /* field[49] = order_by_expr_tree */
   21,   /* field[21] = output */
   9,   /* field[9] = partial_mode */
   31,   /* field[31] = qlabel */
+  47,   /* field[47] = recheck_cond_tree */
   22,   /* field[22] = relationship */
   26,   /* field[26] = repeatable_seed */
   24,   /* field[24] = sample_method */
@@ -993,13 +1109,14 @@ static const unsigned history_slow_plan_stat__field_indices_by_name[] = {
   27,   /* field[27] = sub_cost */
   30,   /* field[30] = sub_node_type_set */
   10,   /* field[10] = sub_plan_name */
+  46,   /* field[46] = tid_cond_expr_tree */
   23,   /* field[23] = total_cost */
 };
 static const ProtobufCIntRange history_slow_plan_stat__number_ranges[2 + 1] =
 {
   { 1, 0 },
   { 4, 1 },
-  { 0, 41 }
+  { 0, 50 }
 };
 const ProtobufCMessageDescriptor history_slow_plan_stat__descriptor =
 {
@@ -1009,7 +1126,7 @@ const ProtobufCMessageDescriptor history_slow_plan_stat__descriptor =
   "HistorySlowPlanStat",
   "",
   sizeof(HistorySlowPlanStat),
-  41,
+  50,
   history_slow_plan_stat__field_descriptors,
   history_slow_plan_stat__field_indices_by_name,
   2,  history_slow_plan_stat__number_ranges,
@@ -1608,4 +1725,46 @@ const ProtobufCMessageDescriptor quals__descriptor =
   1,  quals__number_ranges,
   (ProtobufCMessageInit) quals__init,
   NULL,NULL,NULL    /* reserved[123] */
+};
+static const ProtobufCEnumValue pred_type_tag__enum_values_by_number[9] =
+{
+  { "NONE", "PRED_TYPE_TAG__NONE", 0 },
+  { "JOIN_COND", "PRED_TYPE_TAG__JOIN_COND", 1 },
+  { "JOIN_FILTER", "PRED_TYPE_TAG__JOIN_FILTER", 2 },
+  { "FILTER", "PRED_TYPE_TAG__FILTER", 3 },
+  { "ONE_TIME_FILTER", "PRED_TYPE_TAG__ONE_TIME_FILTER", 4 },
+  { "TID_COND", "PRED_TYPE_TAG__TID_COND", 5 },
+  { "RECHECK_COND", "PRED_TYPE_TAG__RECHECK_COND", 6 },
+  { "INDEX_COND", "PRED_TYPE_TAG__INDEX_COND", 7 },
+  { "ORDER_BY", "PRED_TYPE_TAG__ORDER_BY", 8 },
+};
+static const ProtobufCIntRange pred_type_tag__value_ranges[] = {
+{0, 0},{0, 9}
+};
+static const ProtobufCEnumValueIndex pred_type_tag__enum_values_by_name[9] =
+{
+  { "FILTER", 3 },
+  { "INDEX_COND", 7 },
+  { "JOIN_COND", 1 },
+  { "JOIN_FILTER", 2 },
+  { "NONE", 0 },
+  { "ONE_TIME_FILTER", 4 },
+  { "ORDER_BY", 8 },
+  { "RECHECK_COND", 6 },
+  { "TID_COND", 5 },
+};
+const ProtobufCEnumDescriptor pred_type_tag__descriptor =
+{
+  PROTOBUF_C__ENUM_DESCRIPTOR_MAGIC,
+  "PredTypeTag",
+  "PredTypeTag",
+  "PredTypeTag",
+  "",
+  9,
+  pred_type_tag__enum_values_by_number,
+  9,
+  pred_type_tag__enum_values_by_name,
+  1,
+  pred_type_tag__value_ranges,
+  NULL,NULL,NULL,NULL   /* reserved[1234] */
 };

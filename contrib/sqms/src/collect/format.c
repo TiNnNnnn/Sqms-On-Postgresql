@@ -1170,26 +1170,32 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	switch (nodeTag(plan))
 	{
 		case T_IndexScan:
+			hsp.cur_expr_tag = PRED_TYPE_TAG__INDEX_COND;
 			show_scan_qual(((IndexScan *) plan)->indexqualorig,
 						   "Index Cond", planstate, ancestors, es,&hsp);
 			if (((IndexScan *) plan)->indexqualorig)
 				show_instrumentation_count("Rows Removed by Index Recheck", 2,
 										   planstate, es);
+			hsp.cur_expr_tag = PRED_TYPE_TAG__ORDER_BY;
 			show_scan_qual(((IndexScan *) plan)->indexorderbyorig,
 						   "Order By", planstate, ancestors, es,&hsp);
+			hsp.cur_expr_tag = PRED_TYPE_TAG__FILTER;
 			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
 			if (plan->qual)
 				show_instrumentation_count("Rows Removed by Filter", 1,
 										   planstate, es);
 			break;
 		case T_IndexOnlyScan:
+			hsp.cur_expr_tag = PRED_TYPE_TAG__INDEX_COND;
 			show_scan_qual(((IndexOnlyScan *) plan)->indexqual,
 						   "Index Cond", planstate, ancestors, es,&hsp);
 			if (((IndexOnlyScan *) plan)->recheckqual)
 				show_instrumentation_count("Rows Removed by Index Recheck", 2,
 										   planstate, es);
+			hsp.cur_expr_tag = PRED_TYPE_TAG__ORDER_BY;
 			show_scan_qual(((IndexOnlyScan *) plan)->indexorderby,
 						   "Order By", planstate, ancestors, es,&hsp);
+			hsp.cur_expr_tag = PRED_TYPE_TAG__FILTER;
 			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
 			if (plan->qual)
 				show_instrumentation_count("Rows Removed by Filter", 1,
@@ -1203,17 +1209,21 @@ ExplainNode(PlanState *planstate, List *ancestors,
 						   "Index Cond", planstate, ancestors, es,&hsp);
 			break;
 		case T_BitmapHeapScan:
+
+			hsp.cur_expr_tag = PRED_TYPE_TAG__RECHECK_COND;
 			show_scan_qual(((BitmapHeapScan *) plan)->bitmapqualorig,
 						   "Recheck Cond", planstate, ancestors, es,&hsp);
 			if (((BitmapHeapScan *) plan)->bitmapqualorig)
 				show_instrumentation_count("Rows Removed by Index Recheck", 2,
 										   planstate, es);
+			hsp.cur_expr_tag = PRED_TYPE_TAG__FILTER;
 			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
 			if (plan->qual)
 				show_instrumentation_count("Rows Removed by Filter", 1,
 										   planstate, es);
 			if (es->analyze)
 				show_tidbitmap_info((BitmapHeapScanState *) planstate, es);
+			hsp.cur_expr_tag = PRED_TYPE_TAG__NONE;
 			break;
 		case T_SampleScan:
 			show_tablesample(((SampleScan *) plan)->tablesample,
@@ -1226,15 +1236,18 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		case T_NamedTuplestoreScan:
 		case T_WorkTableScan:
 		case T_SubqueryScan:
+			hsp.cur_expr_tag = PRED_TYPE_TAG__FILTER;
 			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
 			if (plan->qual)
 				show_instrumentation_count("Rows Removed by Filter", 1,
 										   planstate, es);
+			hsp.cur_expr_tag = PRED_TYPE_TAG__NONE;
 			break;
 		case T_Gather:
 			{
 				Gather	   *gather = (Gather *) plan;
 
+				hsp.cur_expr_tag = PRED_TYPE_TAG__FILTER;
 				show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
 				if (plan->qual)
 					show_instrumentation_count("Rows Removed by Filter", 1,
@@ -1257,12 +1270,14 @@ ExplainNode(PlanState *planstate, List *ancestors,
 
 				if (gather->single_copy || es->format != EXPLAIN_FORMAT_TEXT)
 					FormatPropertyBool("Single Copy", gather->single_copy, es);
+				hsp.cur_expr_tag = PRED_TYPE_TAG__NONE;
 			}
 			break;
 		case T_GatherMerge:
 			{
 				GatherMerge *gm = (GatherMerge *) plan;
 
+				hsp.cur_expr_tag = PRED_TYPE_TAG__FILTER;
 				show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
 				if (plan->qual)
 					show_instrumentation_count("Rows Removed by Filter", 1,
@@ -1282,6 +1297,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 					FormatPropertyInteger("Workers Launched", NULL,
 										   nworkers, es);
 				}
+				hsp.cur_expr_tag = PRED_TYPE_TAG__NONE;
 			}
 			break;
 		case T_FunctionScan:
@@ -1301,10 +1317,12 @@ ExplainNode(PlanState *planstate, List *ancestors,
 								"Function Call", planstate, ancestors,
 								es->verbose, es,&hsp);
 			}
+			hsp.cur_expr_tag = PRED_TYPE_TAG__FILTER;
 			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
 			if (plan->qual)
 				show_instrumentation_count("Rows Removed by Filter", 1,
 										   planstate, es);
+			hsp.cur_expr_tag = PRED_TYPE_TAG__NONE;
 			break;
 		case T_TableFuncScan:
 			if (es->verbose)
@@ -1315,10 +1333,12 @@ ExplainNode(PlanState *planstate, List *ancestors,
 								"Table Function Call", planstate, ancestors,
 								es->verbose, es,&hsp);
 			}
+			hsp.cur_expr_tag = PRED_TYPE_TAG__FILTER;
 			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
 			if (plan->qual)
 				show_instrumentation_count("Rows Removed by Filter", 1,
 										   planstate, es);
+			hsp.cur_expr_tag = PRED_TYPE_TAG__NONE;
 			break;
 		case T_TidScan:
 			{
@@ -1327,86 +1347,106 @@ ExplainNode(PlanState *planstate, List *ancestors,
 				 * as an OR condition.
 				 */
 				List	   *tidquals = ((TidScan *) plan)->tidquals;
-
 				if (list_length(tidquals) > 1)
 					tidquals = list_make1(make_orclause(tidquals));
+				hsp.cur_expr_tag = PRED_TYPE_TAG__TID_COND;
 				show_scan_qual(tidquals, "TID Cond", planstate, ancestors, es,&hsp);
+				hsp.cur_expr_tag = PRED_TYPE_TAG__FILTER;
 				show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
 				if (plan->qual)
 					show_instrumentation_count("Rows Removed by Filter", 1,
 											   planstate, es);
+				hsp.cur_expr_tag = PRED_TYPE_TAG__NONE;
 			}
 			break;
 		case T_ForeignScan:
+			hsp.cur_expr_tag = PRED_TYPE_TAG__FILTER;
 			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
 			if (plan->qual)
 				show_instrumentation_count("Rows Removed by Filter", 1,
 										   planstate, es);
 			show_foreignscan_info((ForeignScanState *) planstate, es);
+			hsp.cur_expr_tag = PRED_TYPE_TAG__NONE;
 			break;
 		case T_CustomScan:
 			{
 				CustomScanState *css = (CustomScanState *) planstate;
-
+				hsp.cur_expr_tag = PRED_TYPE_TAG__FILTER;
 				show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
 				if (plan->qual)
 					show_instrumentation_count("Rows Removed by Filter", 1,
 											   planstate, es);
 				if (css->methods->ExplainCustomScan)
 					css->methods->ExplainCustomScan(css, ancestors, es);
+				hsp.cur_expr_tag = PRED_TYPE_TAG__NONE;
 			}
 			break;
 		case T_NestLoop:
+			hsp.cur_expr_tag = PRED_TYPE_TAG__JOIN_FILTER;
 			show_upper_qual(((NestLoop *) plan)->join.joinqual,
 							"Join Filter", planstate, ancestors, es,&hsp);
 			if (((NestLoop *) plan)->join.joinqual)
 				show_instrumentation_count("Rows Removed by Join Filter", 1,
 										   planstate, es);
+			hsp.cur_expr_tag = PRED_TYPE_TAG__FILTER;	
 			show_upper_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
 			if (plan->qual)
 				show_instrumentation_count("Rows Removed by Filter", 2,
 										   planstate, es);
+			hsp.cur_expr_tag = PRED_TYPE_TAG__NONE;
 			break;
 		case T_MergeJoin:
+			hsp.cur_expr_tag = PRED_TYPE_TAG__JOIN_COND;
 			show_upper_qual(((MergeJoin *) plan)->mergeclauses,
 							"Merge Cond", planstate, ancestors, es,&hsp);
+			hsp.cur_expr_tag = PRED_TYPE_TAG__JOIN_FILTER;
 			show_upper_qual(((MergeJoin *) plan)->join.joinqual,
 							"Join Filter", planstate, ancestors, es,&hsp);
 			if (((MergeJoin *) plan)->join.joinqual)
 				show_instrumentation_count("Rows Removed by Join Filter", 1,
 										   planstate, es);
+			hsp.cur_expr_tag = PRED_TYPE_TAG__FILTER;							   
 			show_upper_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
 			if (plan->qual)
 				show_instrumentation_count("Rows Removed by Filter", 2,
 										   planstate, es);
+			hsp.cur_expr_tag = PRED_TYPE_TAG__NONE;
 			break;
-		case T_HashJoin:
+		case T_HashJoin:{
+			hsp.cur_expr_tag = PRED_TYPE_TAG__JOIN_COND;
 			show_upper_qual(((HashJoin *) plan)->hashclauses,
 							"Hash Cond", planstate, ancestors, es,&hsp);
+			hsp.cur_expr_tag = PRED_TYPE_TAG__JOIN_FILTER;
 			show_upper_qual(((HashJoin *) plan)->join.joinqual,
 							"Join Filter", planstate, ancestors, es,&hsp);
 			if (((HashJoin *) plan)->join.joinqual)
 				show_instrumentation_count("Rows Removed by Join Filter", 1,
 										   planstate, es);
+			hsp.cur_expr_tag = PRED_TYPE_TAG__FILTER;
 			show_upper_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
 			if (plan->qual)
 				show_instrumentation_count("Rows Removed by Filter", 2,
 										   planstate, es);
-			break;
+			hsp.cur_expr_tag = PRED_TYPE_TAG__NONE;
+			}break;
 		case T_Agg:
 			show_agg_keys(castNode(AggState, planstate), ancestors, es,&hsp);
+			hsp.cur_expr_tag = PRED_TYPE_TAG__FILTER;
 			show_upper_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
 			show_hashagg_info((AggState *) planstate, es);
 			if (plan->qual)
 				show_instrumentation_count("Rows Removed by Filter", 1,
 										   planstate, es);
+			hsp.cur_expr_tag = PRED_TYPE_TAG__NONE;
 			break;
 		case T_Group:
 			show_group_keys(castNode(GroupState, planstate), ancestors, es,&hsp);
+			hsp.cur_expr_tag = PRED_TYPE_TAG__FILTER;
 			show_upper_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
 			if (plan->qual)
 				show_instrumentation_count("Rows Removed by Filter", 1,
 										   planstate, es);
+			hsp.cur_expr_tag = PRED_TYPE_TAG__NONE;
 			break;
 		case T_Sort:
 			show_sort_keys(castNode(SortState, planstate), ancestors, es,&hsp);
@@ -1423,12 +1463,15 @@ ExplainNode(PlanState *planstate, List *ancestors,
 								   ancestors, es,&hsp);
 			break;
 		case T_Result:
+			hsp.cur_expr_tag = PRED_TYPE_TAG__ONE_TIME_FILTER;
 			show_upper_qual((List *) ((Result *) plan)->resconstantqual,
 							"One-Time Filter", planstate, ancestors, es,&hsp);
+			hsp.cur_expr_tag = PRED_TYPE_TAG__FILTER;
 			show_upper_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
 			if (plan->qual)
 				show_instrumentation_count("Rows Removed by Filter", 1,
 										   planstate, es);
+			hsp.cur_expr_tag = PRED_TYPE_TAG__NONE;
 			break;
 		case T_ModifyTable:
 			show_modifytable_info(castNode(ModifyTableState, planstate), ancestors,

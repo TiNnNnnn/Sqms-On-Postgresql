@@ -66,6 +66,30 @@ message HistorySlowPlanStat{
 	int32 node_tag = 42;
 
 	PredExpression expr_root = 43;
+
+	PredTypeTag cur_expr_tag = 44;
+
+	//map<string,PredExpression> expr_tree = 45;
+	PredExpression join_cond_expr_tree = 45;
+	PredExpression join_filter_expr_tree = 46;
+	PredExpression filter_tree = 47;
+	PredExpression one_time_filter_tree = 48;
+	PredExpression tid_cond_expr_tree = 49;
+	PredExpression recheck_cond_tree = 50;
+	PredExpression index_cond_expr_tree = 51;
+	PredExpression order_by_expr_tree = 52;
+}
+
+enum PredTypeTag{
+	NONE = 0;
+	JOIN_COND = 1;
+	JOIN_FILTER = 2;
+	FILTER = 3;
+	ONE_TIME_FILTER = 4;
+	TID_COND = 5;
+	RECHECK_COND = 6;
+	INDEX_COND = 7;
+	ORDER_BY = 8;
 }
 
 message GroupSortKey{

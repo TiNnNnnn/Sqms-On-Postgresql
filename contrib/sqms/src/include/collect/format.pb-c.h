@@ -35,6 +35,18 @@ typedef enum _PredOperator__PredOperatorType {
   PRED_OPERATOR__PRED_OPERATOR_TYPE__NOT = 2
     PROTOBUF_C__FORCE_ENUM_TO_BE_INT_SIZE(PRED_OPERATOR__PRED_OPERATOR_TYPE)
 } PredOperator__PredOperatorType;
+typedef enum _PredTypeTag {
+  PRED_TYPE_TAG__NONE = 0,
+  PRED_TYPE_TAG__JOIN_COND = 1,
+  PRED_TYPE_TAG__JOIN_FILTER = 2,
+  PRED_TYPE_TAG__FILTER = 3,
+  PRED_TYPE_TAG__ONE_TIME_FILTER = 4,
+  PRED_TYPE_TAG__TID_COND = 5,
+  PRED_TYPE_TAG__RECHECK_COND = 6,
+  PRED_TYPE_TAG__INDEX_COND = 7,
+  PRED_TYPE_TAG__ORDER_BY = 8
+    PROTOBUF_C__FORCE_ENUM_TO_BE_INT_SIZE(PRED_TYPE_TAG)
+} PredTypeTag;
 
 /* --- messages --- */
 
@@ -132,10 +144,22 @@ struct  _HistorySlowPlanStat
   GroupSortKey **group_sort_keys;
   int32_t node_tag;
   PredExpression *expr_root;
+  PredTypeTag cur_expr_tag;
+  /*
+   *map<string,PredExpression> expr_tree = 45;
+   */
+  PredExpression *join_cond_expr_tree;
+  PredExpression *join_filter_expr_tree;
+  PredExpression *filter_tree;
+  PredExpression *one_time_filter_tree;
+  PredExpression *tid_cond_expr_tree;
+  PredExpression *recheck_cond_tree;
+  PredExpression *index_cond_expr_tree;
+  PredExpression *order_by_expr_tree;
 };
 #define HISTORY_SLOW_PLAN_STAT__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&history_slow_plan_stat__descriptor) \
-    , 0, 0, 0, 0, 0, 0, 0,NULL, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, 0,NULL, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0,NULL, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, 0,NULL, (char *)protobuf_c_empty_string, 0,NULL, 0, NULL }
+    , 0, 0, 0, 0, 0, 0, 0,NULL, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, 0,NULL, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0,NULL, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, 0,NULL, (char *)protobuf_c_empty_string, 0,NULL, 0, NULL, PRED_TYPE_TAG__NONE, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL }
 
 
 struct  _GroupSortKey
@@ -519,6 +543,7 @@ typedef void (*Quals_Closure)
 
 /* --- descriptors --- */
 
+extern const ProtobufCEnumDescriptor    pred_type_tag__descriptor;
 extern const ProtobufCMessageDescriptor history_slow_plan_stat__descriptor;
 extern const ProtobufCMessageDescriptor group_sort_key__descriptor;
 extern const ProtobufCMessageDescriptor group_keys__descriptor;

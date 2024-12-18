@@ -257,7 +257,8 @@ bool PlanStatFormat::Preprocessing(QueryDesc* qd){
     FormatEndOutput(total_es);
 
     if(debug){
-        ShowPredTree(hsps_.expr_root);
+        ShowAllPredTree(&hsps_);
+        //ShowPredTree(hsps_.expr_root);
     }
     
     pfree(total_es);
@@ -272,6 +273,41 @@ std::string PlanStatFormat::HashCanonicalPlan(char *json_plan){
 void PlanStatFormat::PrintIndent(int depth) {
     for (int i = 0; i < depth; ++i) {
         std::cout << "  ";
+    }
+}
+
+void PlanStatFormat::ShowAllPredTree(HistorySlowPlanStat* hsps){
+    if(hsps->join_cond_expr_tree){
+        std::cout<<"join_cond:"<<std::endl;
+        ShowPredTree(hsps->join_cond_expr_tree);
+    }
+    if(hsps->join_filter_expr_tree){
+        std::cout<<"join_filter:"<<std::endl;
+        ShowPredTree(hsps->join_filter_expr_tree);
+    }
+    if(hsps->filter_tree){
+        std::cout<<"filter:"<<std::endl;
+        ShowPredTree(hsps->filter_tree);
+    }
+    if(hsps->one_time_filter_tree){
+        std::cout<<"one_time_cond:"<<std::endl;
+        ShowPredTree(hsps->one_time_filter_tree);
+    }
+	if(hsps->tid_cond_expr_tree){
+        std::cout<<"tid_cond:"<<std::endl;
+        ShowPredTree(hsps->tid_cond_expr_tree);
+    }
+    if(hsps->recheck_cond_tree){
+        std::cout<<"recheck_cond:"<<std::endl;
+        ShowPredTree(hsps->recheck_cond_tree);
+    }
+	if(hsps->index_cond_expr_tree){
+        std::cout<<"index_cond:"<<std::endl;
+        ShowPredTree(hsps->index_cond_expr_tree);
+    }
+    if(hsps->order_by_expr_tree){
+        std::cout<<"join_cond:true"<<std::endl;
+        //ShowPredTree(hsps->order_by_expr_tree);
     }
 }
 

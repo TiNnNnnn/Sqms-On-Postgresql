@@ -40,7 +40,8 @@ private:
     void ParseExprs(HistorySlowPlanStat* hsps);
 
     void PredDecompose(PredExpression * root);
-
+    
+    void ShowAllPredTree(HistorySlowPlanStat* hsps);
     void ShowPredTree(PredExpression* p_expr, int depth = 0);
     void PrintIndent(int depth);
 

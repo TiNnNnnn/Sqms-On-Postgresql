@@ -125,6 +125,7 @@ typedef struct
 								 * back to the parent rel */
 	HistorySlowPlanStat	*hsp; 
 	Stack* expr_stack;
+
 } deparse_context;
 
 /*
@@ -464,6 +465,7 @@ static char *generate_function_name(Oid funcid, int nargs,
 									bool has_variadic, bool *use_variadic_p,
 									ParseExprKind special_exprkind);
 static char *generate_operator_name(Oid operid, Oid arg1, Oid arg2);
+static void set_expr_tree_root(HistorySlowPlanStat* hsp,PredExpression* node);
 
 #define only_marker(rte)  ((rte)->inh ? "" : "ONLY ")
 
@@ -4972,13 +4974,37 @@ get_rule_expr_paren(Node *node, deparse_context *context,
 }
 
 
-ExprRecureState NewExprRecureStat(){
-	ExprRecureState rs;
-	rs.detail_str_ = makeStringInfo();
-	rs.cnt_ = 0;
-	return rs;
+static void set_expr_tree_root(HistorySlowPlanStat* hsp,PredExpression* node){
+	assert(node);
+	switch(hsp->cur_expr_tag){
+		case PRED_TYPE_TAG__FILTER:
+			hsp->filter_tree = node;
+			break;
+		case PRED_TYPE_TAG__JOIN_FILTER:
+			hsp->join_filter_expr_tree = node;
+			break;
+		case PRED_TYPE_TAG__INDEX_COND:
+			hsp->index_cond_expr_tree = node;
+			break;
+		case PRED_TYPE_TAG__JOIN_COND:
+			hsp->join_cond_expr_tree = node;
+			break;
+		case PRED_TYPE_TAG__ONE_TIME_FILTER:
+			hsp->one_time_filter_tree = node;
+			break;
+		case PRED_TYPE_TAG__ORDER_BY:
+			break;
+		case PRED_TYPE_TAG__RECHECK_COND:
+			hsp->recheck_cond_tree = node;
+			break;
+		case PRED_TYPE_TAG__TID_COND:
+			hsp->tid_cond_expr_tree = node;
+			break;
+		default:
+			printf("unknow expr tag type\n");
+			exit(-1);
+	}
 }
-
 
 /* ----------
  * get_rule_expr			- Parse back an expression
@@ -5252,7 +5278,8 @@ get_rule_expr(Node *node, deparse_context *context,
 						expr_node->expr_case = PRED_EXPRESSION__EXPR_OP;
 						
 						if(stack_is_empty(context->expr_stack)){
-							context->hsp->expr_root = expr_node;
+							//context->hsp->expr_root = expr_node;
+							set_expr_tree_root(context->hsp,expr_node);
 						}
 						stack_push(context->expr_stack,expr_node);
 
@@ -5302,7 +5329,8 @@ get_rule_expr(Node *node, deparse_context *context,
 						expr_node->expr_case = PRED_EXPRESSION__EXPR_OP;
 						
 						if(stack_is_empty(context->expr_stack)){
-							context->hsp->expr_root = expr_node;
+							//context->hsp->expr_root = expr_node;
+							set_expr_tree_root(context->hsp,expr_node);
 						}
 						stack_push(context->expr_stack,expr_node);
 						
@@ -5348,6 +5376,12 @@ get_rule_expr(Node *node, deparse_context *context,
 						pred_expression__init(expr_node);
 						expr_node->op = expr_op;
 						expr_node->expr_case = PRED_EXPRESSION__EXPR_OP;
+
+						if(stack_is_empty(context->expr_stack)){
+							//context->hsp->expr_root = expr_node;
+							set_expr_tree_root(context->hsp,expr_node);
+						}
+						stack_push(context->expr_stack,expr_node);
 
 						int idx = 0;
 						if (!PRETTY_PAREN(context))
@@ -6456,7 +6490,8 @@ get_oper_expr(OpExpr *expr, deparse_context *context)
 			expr_node->qual = trace_qual;
 			expr_node->expr_case =PRED_EXPRESSION__EXPR_QUAL;
 			if(stack_is_empty(context->expr_stack)){
-				context->hsp->expr_root = expr_node;
+				//context->hsp->expr_root = expr_node;
+				set_expr_tree_root(context->hsp,expr_node);
 			}
 			stack_push(context->expr_stack,expr_node);
 		}
