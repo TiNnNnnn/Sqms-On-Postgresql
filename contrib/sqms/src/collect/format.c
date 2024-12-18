@@ -1734,7 +1734,8 @@ show_plan_tlist(PlanState *planstate, List *ancestors, ExplainState *es, History
 		char *expr =  deparse_expression_format((Node *) tle->expr, context,
 											useprefix, false);
 		result = lappend(result,expr);
-		hsp->output[i] = expr;
+		hsp->output[i] = malloc(sizeof(expr)+1);
+		strcpy(hsp->output[i],expr);
 		++i;
 	}
 	FormatPropertyList("Output", result, es);

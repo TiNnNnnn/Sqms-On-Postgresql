@@ -132,7 +132,7 @@ void StatCollecter::StmtExecutorEndWrapper(QueryDesc *queryDesc)
 {
 	if (queryDesc->totaltime && auto_explain_enabled()){
 		MemoryContext oldcxt;
-		double		msec;
+		double		msec; 
 		/*
 		 * Make sure we operate in the per-query context, so any cruft will be
 		 * discarded later during ExecutorEnd.

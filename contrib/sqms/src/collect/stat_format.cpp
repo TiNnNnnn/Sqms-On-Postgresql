@@ -11,6 +11,7 @@ PlanStatFormat& PlanStatFormat::getInstance() {
 }
 
 PlanStatFormat::~PlanStatFormat() {
+    history_slow_plan_stat__free_unpacked(&hsps_,NULL);
     delete pool_;
     pool_ = nullptr;
 }

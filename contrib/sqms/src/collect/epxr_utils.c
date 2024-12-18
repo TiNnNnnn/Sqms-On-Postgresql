@@ -6371,13 +6371,12 @@ get_oper_expr(OpExpr *expr, deparse_context *context)
 		int	pre_offset = context->buf->len;
 		char *op =  generate_operator_name(opno,exprType(arg1),exprType(arg2));
 		
-
 		Quals* trace_qual = NULL;
 		if(is_compare_expr(op)){
-			
 			trace_qual = (Quals*) malloc(sizeof(Quals));
 			if (trace_qual == NULL) {
-				fprintf(stderr, "Memory allocation failed\n");
+				//fprintf(stderr, "Memory allocation failed\n");
+				printf("Memory allocation failed\n");
 				exit(1);
 			}
 			quals__init(trace_qual);
@@ -6409,6 +6408,9 @@ get_oper_expr(OpExpr *expr, deparse_context *context)
 			pred_expression__init(expr_node);
 			expr_node->qual = trace_qual;
 			expr_node->expr_case =PRED_EXPRESSION__EXPR_QUAL;
+			if(stack_is_empty(context->expr_stack)){
+				context->hsp->expr_root = expr_node;
+			}
 			stack_push(context->expr_stack,expr_node);
 		}
 	}
