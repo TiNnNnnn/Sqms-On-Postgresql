@@ -41,7 +41,9 @@ private:
 
     void PredDecompose(PredExpression * root);
     
-    void ShowAllPredTree(HistorySlowPlanStat* hsps);
+    /* debug tools */
+    void ShowAllHspsTree(HistorySlowPlanStat* hsps,int hdepth = 0);
+    void ShowAllPredTree(HistorySlowPlanStat* hsps,int depth = 0);
     void ShowPredTree(PredExpression* p_expr, int depth = 0);
     void PrintIndent(int depth);
 

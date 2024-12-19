@@ -257,8 +257,8 @@ bool PlanStatFormat::Preprocessing(QueryDesc* qd){
     FormatEndOutput(total_es);
 
     if(debug){
-        ShowAllPredTree(&hsps_);
-        //ShowPredTree(hsps_.expr_root);
+        ShowAllHspsTree(&hsps_);
+        //ShowAllPredTree(&hsps_);
     }
     
     pfree(total_es);
@@ -276,37 +276,51 @@ void PlanStatFormat::PrintIndent(int depth) {
     }
 }
 
-void PlanStatFormat::ShowAllPredTree(HistorySlowPlanStat* hsps){
+void PlanStatFormat::ShowAllHspsTree(HistorySlowPlanStat* hsps,int h_depth){
+    if(!hsps)return;
+
+    std::cout << "["<<hsps->node_type<<"]:"<<std::endl;
+    PrintIndent(h_depth+1);
+    ShowAllPredTree(hsps,h_depth+2);
+    
+    for(int i=0;i<hsps->n_childs;i++){
+        ShowAllHspsTree(hsps->childs[i],h_depth+1);
+    }
+
+}
+
+void PlanStatFormat::ShowAllPredTree(HistorySlowPlanStat* hsps,int depth){
+    assert(hsps);
     if(hsps->join_cond_expr_tree){
-        std::cout<<"join_cond:"<<std::endl;
-        ShowPredTree(hsps->join_cond_expr_tree);
+        std::cout<<"<join_cond>:"<<std::endl;
+        ShowPredTree(hsps->join_cond_expr_tree,depth);
     }
     if(hsps->join_filter_expr_tree){
-        std::cout<<"join_filter:"<<std::endl;
-        ShowPredTree(hsps->join_filter_expr_tree);
+        std::cout<<"<join_filter>:"<<std::endl;
+        ShowPredTree(hsps->join_filter_expr_tree,depth);
     }
     if(hsps->filter_tree){
-        std::cout<<"filter:"<<std::endl;
-        ShowPredTree(hsps->filter_tree);
+        std::cout<<"<filter>:"<<std::endl;
+        ShowPredTree(hsps->filter_tree,depth);
     }
     if(hsps->one_time_filter_tree){
-        std::cout<<"one_time_cond:"<<std::endl;
-        ShowPredTree(hsps->one_time_filter_tree);
+        std::cout<<"<one_time_cond>:"<<std::endl;
+        ShowPredTree(hsps->one_time_filter_tree,depth);
     }
 	if(hsps->tid_cond_expr_tree){
-        std::cout<<"tid_cond:"<<std::endl;
-        ShowPredTree(hsps->tid_cond_expr_tree);
+        std::cout<<"<tid_cond>:"<<std::endl;
+        ShowPredTree(hsps->tid_cond_expr_tree,depth);
     }
     if(hsps->recheck_cond_tree){
-        std::cout<<"recheck_cond:"<<std::endl;
-        ShowPredTree(hsps->recheck_cond_tree);
+        std::cout<<"<recheck_cond>:"<<std::endl;
+        ShowPredTree(hsps->recheck_cond_tree,depth);
     }
 	if(hsps->index_cond_expr_tree){
-        std::cout<<"index_cond:"<<std::endl;
-        ShowPredTree(hsps->index_cond_expr_tree);
+        std::cout<<"<index_cond>:"<<std::endl;
+        ShowPredTree(hsps->index_cond_expr_tree,depth);
     }
     if(hsps->order_by_expr_tree){
-        std::cout<<"join_cond:true"<<std::endl;
+        std::cout<<"<join_cond:true>"<<std::endl;
         //ShowPredTree(hsps->order_by_expr_tree);
     }
 }
