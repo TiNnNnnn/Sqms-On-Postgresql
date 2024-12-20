@@ -1,10 +1,10 @@
-#include "collect/equivlence.hpp"
+#include "collect/level_mgr.hpp"
 
 /**
  * ComputeEquivlenceClass: calulate the equivelence class and its containment for
  * each level for plan
  */
-void EquivelenceManager::ComputeEquivlenceClass(){
+void LevelManager::ComputeTotalClass(){
     
     std::vector<HistorySlowPlanStat*>levels;
     std::vector<HistorySlowPlanStat*>tmp_levels;
@@ -25,21 +25,21 @@ void EquivelenceManager::ComputeEquivlenceClass(){
         std::swap(levels,tmp_levels);
     }
     std::reverse(level_collector.begin(),level_collector.end());
-
+	
+	height_ = level_collector.size();
     for(auto &lc : level_collector){
-        ComputLevlEquivlenceClass(lc);
+        ComputeLevelClass(lc);
     }
 }
 
-void EquivelenceManager::ComputLevlEquivlenceClass(const std::vector<HistorySlowPlanStat*>& list){
+void LevelManager::ComputeLevelClass(const std::vector<HistorySlowPlanStat*>& list){
     for(const auto& s : list){
         /*parse exprstr first,then caluate equivlence class*/
-        ParseExprs(s);    
+        HandleNode(s);    
     }
-
 }
 
-void EquivelenceManager::ParseExprs(HistorySlowPlanStat* hsps){
+void LevelManager::HandleNode(HistorySlowPlanStat* hsps){
     switch(hsps->node_tag){
         case T_Result:
 			break;
@@ -128,17 +128,48 @@ void EquivelenceManager::ParseExprs(HistorySlowPlanStat* hsps){
 }
 
 /**
- *  PredDecompose: merge expr form bottom to top
+ * EquivalenceClassesDecompase:calulate equivalance class shoule be
+ * the first step of ComputeLevelClass,we caluate other level attr 
+ * and class base on it's level equivalence calss 
+ */
+void LevelManager::EquivalenceClassesDecompase(PredExpression* root){
+    std::vector<std::vector<PredExpression*>> level_collector;
+	ExprLevelCollect(root,level_collector);
+	
+}
+
+/**
+ *  RangeConstrainedDecompose: merge expr form bottom to top
  *  we first get preds value on parent = 2, use a stack to merge, stop until
  *  the stack onlu has one/two element,then we get preds value on parent =1,repeated
  *  action above
  */
-void EquivelenceManager::PredDecompose(PredExpression * root){
-    std::vector<PredExpression*>levels;
-    std::vector<PredExpression*>tmp_levels;
+void LevelManager::RangeConstrainedDecompose(PredExpression * root){
     std::vector<std::vector<PredExpression*>> level_collector;
+	ExprLevelCollect(root,level_collector);
+    /**
+     * TODO: we must ensure left is the predicate such as t.a and so on,may be 
+     * we need check here before insert it into pred_map;
+    */
+    if(level_collector.size()==1){
+        /*if filter only has one predicate,then the expr root is qual*/
+        assert(level_collector[0].size()==1);
+        assert(level_collector[0][0]->expr_case == PRED_EXPRESSION__EXPR_QUAL);
+        auto qual = level_collector[0][0]->qual;
 
-    levels.push_back(root);
+    }
+    for(const auto& level : level_collector){
+
+    }
+}
+
+/**
+ * LevelCollect: For exprs in node such as join_cond,filter,one_time_filter....
+ */
+void LevelManager::ExprLevelCollect(PredExpression * tree,std::vector<std::vector<PredExpression *>> level_collector){
+    std::vector<PredExpression *>levels;
+    std::vector<PredExpression *>tmp_levels;
+    levels.push_back(tree);
     while(levels.size()){
         size_t sz = levels.size();
         for(size_t i=0;i<sz;i++){
@@ -158,21 +189,4 @@ void EquivelenceManager::PredDecompose(PredExpression * root){
         std::swap(levels,tmp_levels);
     }
     std::reverse(level_collector.begin(),level_collector.end());
-    /**
-     * TODO: we must ensure left is the predicate such as t.a and so on,may be 
-     * we need check here before insert it into pred_map;
-    */
-    if(level_collector.size()==1){
-        /*if filter only has one predicate,then the expr root is qual*/
-        assert(level_collector[0].size()==1);
-        assert(level_collector[0][0]->expr_case == PRED_EXPRESSION__EXPR_QUAL);
-        auto qual = level_collector[0][0]->qual;
-        
-        
-        //pred_map[]
-    }
-
-    for(const auto& level : level_collector){
-
-    }
 }

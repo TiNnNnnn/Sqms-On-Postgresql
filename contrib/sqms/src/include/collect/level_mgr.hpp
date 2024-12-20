@@ -39,20 +39,26 @@ class PredEquivlenceRange{
     std::string upper_limit;
 };
 
-class EquivelenceManager{
+class LevelManager{
 public:
-    EquivelenceManager(HistorySlowPlanStat* hsps, SlowPlanStat*sps)
+    LevelManager(HistorySlowPlanStat* hsps, SlowPlanStat*sps)
         :hsps_(hsps),sps_(sps)
     {}
-    void ComputeEquivlenceClass();
-    void ComputLevlEquivlenceClass(const std::vector<HistorySlowPlanStat*>& list);
-
-    void ParseExprs(HistorySlowPlanStat* hsps);
-
-    void PredDecompose(PredExpression * root);
+    void ComputeTotalClass();
 private:
-    HistorySlowPlanStat* hsps_;
-    SlowPlanStat * sps_;
+
+    void ComputeLevelClass(const std::vector<HistorySlowPlanStat*>& list);
+    void HandleNode(HistorySlowPlanStat* hsps);
+    void EquivalenceClassesDecompase(PredExpression* root);
+    void RangeConstrainedDecompose(PredExpression * root);
+
+private:
+    void ExprLevelCollect(PredExpression * tree,std::vector<std::vector<PredExpression *>> level_collector);
+
+private:
+    HistorySlowPlanStat* hsps_; /*plan we need to process to sps_*/
+    SlowPlanStat * sps_; /*final output,sps will dircetly storaged*/
+    int height_; /*plan height*/
 };
 
 

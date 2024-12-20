@@ -1,5 +1,5 @@
 #include "collect/stat_format.hpp"
-#include "collect/equivlence.hpp"
+#include "collect/level_mgr.hpp"
 #include <cstdlib>
 #include <vector>
 #include <functional>
@@ -49,10 +49,10 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd){
         std::vector<HistorySlowPlanStat*> list;
         context->executeStrategy(list);
         
-        SlowPlanStat *sps= new SlowPlanStat();
-        EquivelenceManager* qm =  new EquivelenceManager(hsps,sps);
         for(const auto& p : list){
-            qm->ComputeEquivlenceClass();
+            SlowPlanStat *sps= new SlowPlanStat();
+            LevelManager* lm =  new LevelManager(p,sps);
+            lm->ComputeTotalClass();
         }
 
         /*build fast filter tree, here need ensure thread safe,moreover,we
