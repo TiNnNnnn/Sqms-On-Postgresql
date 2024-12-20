@@ -132,6 +132,11 @@ message SlowPlanLevelStat{
     /*Agg*/
     repeated string group_by_set = 3;    
     /*Limit*/
+
+	/*Sort*/
+	repeated string sort_key_set = 4;
+	
+	bool stop = 5;
 };
 
 message SlowPlanStat{

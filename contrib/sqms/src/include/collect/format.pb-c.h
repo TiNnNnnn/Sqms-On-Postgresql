@@ -249,10 +249,16 @@ struct  _SlowPlanLevelStat
    */
   size_t n_group_by_set;
   char **group_by_set;
+  /*
+   *Sort
+   */
+  size_t n_sort_key_set;
+  char **sort_key_set;
+  protobuf_c_boolean stop;
 };
 #define SLOW_PLAN_LEVEL_STAT__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&slow_plan_level_stat__descriptor) \
-    , 0,NULL, 0,NULL, 0,NULL }
+    , 0,NULL, 0,NULL, 0,NULL, 0,NULL, 0 }
 
 
 struct  _SlowPlanStat

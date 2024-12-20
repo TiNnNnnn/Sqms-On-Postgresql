@@ -5,6 +5,7 @@
 #include "storage/RedisPlanStatProvider.hpp"
 #include "discovery/query_index.hpp"
 
+
 extern "C"{
 #include "postgres.h"
 #include "nodes/execnodes.h"
@@ -16,7 +17,6 @@ extern "C"{
 #include <stdlib.h>
 #include <string.h>
 };
-
 
 class PlanStatFormat{
     typedef const char *(*explain_get_index_name_hook_type) (Oid indexId);
@@ -33,13 +33,6 @@ public:
     bool ProcQueryDesc(QueryDesc* qd);
 private:
     std::string HashCanonicalPlan(char *json_plan);
-
-    void ComputeEquivlenceClass(HistorySlowPlanStat* hsps,SlowPlanStat *sps);
-    void ComputLevlEquivlenceClass(const std::vector<HistorySlowPlanStat*>& list,SlowPlanStat *sps);
-
-    void ParseExprs(HistorySlowPlanStat* hsps);
-
-    void PredDecompose(PredExpression * root);
     
     /* debug tools */
     void ShowAllHspsTree(HistorySlowPlanStat* hsps,int hdepth = 0);

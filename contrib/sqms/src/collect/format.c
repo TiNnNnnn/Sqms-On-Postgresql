@@ -1670,12 +1670,12 @@ ExplainNode(PlanState *planstate, List *ancestors,
 							   ((BitmapOrState *) planstate)->nplans,
 							   ancestors, es,ces);
 			break;
-		case T_SubqueryScan:
+		case T_SubqueryScan:{
 			RecureState ret = ExplainNode(((SubqueryScanState *) planstate)->subplan, ancestors,
 						"Subquery", NULL, es,ces);
 			cumulate_cost += ret.cost_;
 
-			break;
+			}break;
 		case T_CustomScan:
 			ExplainCustomChildren((CustomScanState *) planstate,
 								  ancestors, es,ces);

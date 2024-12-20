@@ -1415,7 +1415,7 @@ const ProtobufCMessageDescriptor range__descriptor =
   (ProtobufCMessageInit) range__init,
   NULL,NULL,NULL    /* reserved[123] */
 };
-static const ProtobufCFieldDescriptor slow_plan_level_stat__field_descriptors[3] =
+static const ProtobufCFieldDescriptor slow_plan_level_stat__field_descriptors[5] =
 {
   {
     "ec_list",
@@ -1453,16 +1453,42 @@ static const ProtobufCFieldDescriptor slow_plan_level_stat__field_descriptors[3]
     0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
+  {
+    "sort_key_set",
+    4,
+    PROTOBUF_C_LABEL_REPEATED,
+    PROTOBUF_C_TYPE_STRING,
+    offsetof(SlowPlanLevelStat, n_sort_key_set),
+    offsetof(SlowPlanLevelStat, sort_key_set),
+    NULL,
+    &protobuf_c_empty_string,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "stop",
+    5,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_BOOL,
+    0,   /* quantifier_offset */
+    offsetof(SlowPlanLevelStat, stop),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
 };
 static const unsigned slow_plan_level_stat__field_indices_by_name[] = {
   0,   /* field[0] = ec_list */
   2,   /* field[2] = group_by_set */
   1,   /* field[1] = output_col_set */
+  3,   /* field[3] = sort_key_set */
+  4,   /* field[4] = stop */
 };
 static const ProtobufCIntRange slow_plan_level_stat__number_ranges[1 + 1] =
 {
   { 1, 0 },
-  { 0, 3 }
+  { 0, 5 }
 };
 const ProtobufCMessageDescriptor slow_plan_level_stat__descriptor =
 {
@@ -1472,7 +1498,7 @@ const ProtobufCMessageDescriptor slow_plan_level_stat__descriptor =
   "SlowPlanLevelStat",
   "",
   sizeof(SlowPlanLevelStat),
-  3,
+  5,
   slow_plan_level_stat__field_descriptors,
   slow_plan_level_stat__field_indices_by_name,
   1,  slow_plan_level_stat__number_ranges,
