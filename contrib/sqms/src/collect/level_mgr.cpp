@@ -135,7 +135,61 @@ void LevelManager::HandleNode(HistorySlowPlanStat* hsps){
 void LevelManager::EquivalenceClassesDecompase(PredExpression* root){
     std::vector<std::vector<PredExpression*>> level_collector;
 	ExprLevelCollect(root,level_collector);
-	
+
+	LevelPredEquivlences * lpes = new LevelPredEquivlences();
+	if(!level_collector.size()){
+		/*no join_cond ,it means a full cartesian product*/
+	}else if(level_collector.size() == 1){
+        assert(level_collector[0].size()==1);
+        assert(level_collector[0][0]->expr_case == PRED_EXPRESSION__EXPR_QUAL);
+        auto& qual = level_collector[0][0]->qual;
+		if(strcmp(qual->op,"=")){
+			PredEquivlence* pe = new PredEquivlence();
+			pe->Insert(qual->left);
+			pe->Insert(qual->right);
+
+			lpes->Insert(pe);
+			pre_equlivlences_.push_back(lpes);
+		}else{
+			/**
+			 * except join_cond with op is "=", another operator can infer some infomation?
+			 */
+		}
+	}else{
+		/* more then one level,it means here is more than one join_cond in current node ,they connect by and/or/not*/
+		for(const auto& level : level_collector){
+			/**deep copy pre level pred_expr_equliclence into this level */
+			for(const auto& expr : level){
+				if(expr->expr_case == PRED_EXPRESSION__EXPR_OP){
+					auto cur_op = expr->op;
+					switch(cur_op->type){
+						case PRED_OPERATOR__PRED_OPERATOR_TYPE__AND:{
+							for(size_t i=0;i<cur_op->n_childs;i++){
+								auto child = cur_op->childs[i];
+								if(child->expr_case == PRED_EXPRESSION__EXPR_QUAL){
+									/*1. check exist equivalence classes in lpes*/
+									
+								}else{
+									/**nothing to do,sub_qual has been process*/
+
+								}
+							}
+						}break;
+						case PRED_OPERATOR__PRED_OPERATOR_TYPE__OR:{
+
+						}break;
+						case PRED_OPERATOR__PRED_OPERATOR_TYPE__NOT:{
+							
+						}break;
+						default:
+							std::cerr<<"level_collector:expr type error"<<std::endl;
+							return;
+					}
+				}
+			}
+    	}
+
+	}
 }
 
 /**
@@ -151,16 +205,61 @@ void LevelManager::RangeConstrainedDecompose(PredExpression * root){
      * TODO: we must ensure left is the predicate such as t.a and so on,may be 
      * we need check here before insert it into pred_map;
     */
-    if(level_collector.size()==1){
+   	if(!level_collector.size()){
+
+	}else if(level_collector.size()==1){
         /*if filter only has one predicate,then the expr root is qual*/
         assert(level_collector[0].size()==1);
         assert(level_collector[0][0]->expr_case == PRED_EXPRESSION__EXPR_QUAL);
         auto qual = level_collector[0][0]->qual;
+    }else{
+		for(const auto& level : level_collector){
 
-    }
-    for(const auto& level : level_collector){
+		}
+	}
+}
 
-    }
+/**
+ * Insert: just for join_cond with "="
+ */
+bool PredEquivlence::Insert(const std::string& s){
+	auto ret = set_.insert(s);
+	if(ret.second)return true;
+	return false;
+}
+
+bool PredEquivlence::Serach(Quals* qual){
+	if(set_.find(qual->left) != set_.end()){
+		return true;
+	}else{
+		return false;
+	}
+}
+
+/*
+* Update: upodate equivlence ranges,we should check if the expr is in set
+*/
+bool PredEquivlence::UpdateRanges(Quals* qual){
+	if(Serach(qual)){
+		
+	}else{
+		/**
+		 * TODO: maybe we can use insert and then update ranges,such as [] operator in std::map
+		 */
+		return false;
+	}
+}
+
+bool PredEquivlence::Compare(PredEquivlence* pe){
+	return true;
+}
+
+bool PredEquivlence::Copy(PredEquivlence* pe){
+	return true;
+}
+
+void PredEquivlence::ShowPredEquivlence(){
+	
 }
 
 /**

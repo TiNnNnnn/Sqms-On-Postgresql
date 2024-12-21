@@ -23,6 +23,8 @@ extern int	stat_log_level;
 //extern constexpr size_t bit_map_size;
 #define bit_map_size 100
 
+#define LOWER_LIMIT "SQMS_LOW_LIMIT"
+#define UPPER_LIMIT "SQMS_UPPER_LIMIT"
 
 extern const char* redis_host;
 extern int redis_port;

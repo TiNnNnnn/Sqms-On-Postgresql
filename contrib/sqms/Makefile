@@ -1,17 +1,22 @@
 MODULE_big = sqms
 
 OBJS = \
-$(WIN32RES) \
-src/common/config.o \
-src/include/collect/format.pb-c.o \
-src/collect/format.o \
-src/collect/epxr_utils.o \
-src/collect/stat_collect.o \
-src/collect/stat_format.o \
-src/discovery/discovery.o \
-src/excavate/ExcavateProvider.o \
-src/storage/RedisPlanStatProvider.o\
-src/collect/level_mgr.o\
+    $(WIN32RES) \
+    src/common/config.o \
+    src/common/bloom_filter/bloom_filter.o \
+    src/common/codec.o \
+    src/common/hash_util.o \
+    src/common/util.o \
+    src/include/collect/format.pb-c.o \
+    src/collect/format.o \
+    src/collect/epxr_utils.o \
+    src/collect/stat_collect.o \
+    src/collect/stat_format.o \
+    src/discovery/discovery.o \
+    src/excavate/ExcavateProvider.o \
+    src/storage/RedisPlanStatProvider.o \
+    src/collect/level_mgr.o
+
 #src/discovery/levels.o\ 
 
 
