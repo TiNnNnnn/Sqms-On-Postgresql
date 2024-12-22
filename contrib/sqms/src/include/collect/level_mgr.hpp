@@ -4,8 +4,11 @@
 #include<algorithm>
 #include<iostream>
 #include<unordered_set>
+#include<unordered_map>
 #include<set>
+#include<memory>
 #include "format.pb-c.h"
+#include "common/bloom_filter/bloom_filter.hpp"
 
 extern "C"{
     #include "postgres.h"
@@ -24,17 +27,23 @@ enum PType{
     RANGE,
 };
 
+class AbstractPredEquivlenceRange{
+
+};
+
 /**
  *TODO：should we note the range data type? such as int,string,and so on ...
  */
-class PredEquivlenceRange{
+class PredEquivlenceRange : public AbstractPredEquivlenceRange{
 public:
     PredEquivlenceRange(const std::string&left = LOWER_LIMIT,const std::string&right = UPPER_LIMIT)
         :lower_limit_(left),upper_limit_(right){}
+    
     PType type_;
     std::string lower_limit_ = LOWER_LIMIT;
     std::string upper_limit_ = UPPER_LIMIT;
 };
+
 /**
  * LevelPredEquivlences: storage a equivlences. we sort all ranges classes by lower bound to accelate serach
  * example: 
@@ -51,6 +60,7 @@ class PredEquivlence{
     };
 public:
     bool Insert(const std::string& s);
+    bool Insert(Quals* qual,bool only_left = true);
     bool Delete(Quals* quals);
     bool UpdateRanges(Quals* quals);
     bool UpdateRanges(PredEquivlence* pe);
@@ -65,6 +75,10 @@ private:
 
 class LevelPredEquivlences{
 public:
+    LevelPredEquivlences(){
+        //bf_ = std::make_unique<BloomFilter>(30);
+    }
+    bool Insert(Quals* quals,bool only_left = true);
     bool Insert(PredEquivlence* pe);
     bool Delete(PredEquivlence* quals);
     bool UpdateRanges(Quals* quals);
@@ -74,9 +88,11 @@ public:
     bool Copy(PredEquivlence* pe);
     void ShowLevelPredEquivlences();
 private:
-    std::vector<PredEquivlence*> level_pe_list;
+    std::vector<PredEquivlence*> level_pe_list_;
     /**bloomfilter: we use it to check whether a attr is in the total level*/
-    
+    //std::unique_ptr<FilterPolicy> bf_;
+
+    std::unordered_map<std::string,int> level_idx_; 
 };
 
 
@@ -105,7 +121,7 @@ private:
      * Temporary derivation of data container
      * we need reverse them wehen all finish
      * */
-    std::vector<LevelPredEquivlences*> pre_equlivlences_;
+    std::vector<LevelPredEquivlences*> equlivlences_;
 };
 
 
