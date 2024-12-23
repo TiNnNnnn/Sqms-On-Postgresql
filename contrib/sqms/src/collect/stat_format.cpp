@@ -102,7 +102,7 @@ std::string PlanStatFormat::HashCanonicalPlan(char *json_plan){
 }
 
 void PlanStatFormat::PrintIndent(int depth) {
-    for (size_t i = 0; i < depth; ++i) {
+    for (int i = 0; i < depth; ++i) {
         std::cout << "  ";
     }
 }
