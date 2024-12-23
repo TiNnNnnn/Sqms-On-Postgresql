@@ -5188,7 +5188,7 @@ get_rule_expr(Node *node, deparse_context *context,
 				Node	   *arg1 = (Node *) linitial(args);
 				Node	   *arg2 = (Node *) lsecond(args);
 
-				int	pre_offset = context->buf->len;
+				
 
 				Quals* trace_qual = NULL;
 				trace_qual = (Quals*) malloc(sizeof(Quals));
@@ -5200,6 +5200,8 @@ get_rule_expr(Node *node, deparse_context *context,
 
 				if (!PRETTY_PAREN(context))
 					appendStringInfoChar(buf, '(');
+
+				int	pre_offset = context->buf->len;
 				get_rule_expr_paren(arg1, context, true, node,expr->location);
 
 				int current_offset = context->buf->len;
@@ -5218,9 +5220,15 @@ get_rule_expr(Node *node, deparse_context *context,
 				strcpy(trace_qual->use_or,use_or);
 
 				appendStringInfo(buf, " %s %s (",op, use_or);
+				
 				pre_offset = context->buf->len;
 				get_rule_expr_paren(arg2, context, true, node,expr->location);
-
+				current_offset = context->buf->len;
+				
+				trace_qual->right = malloc(current_offset-pre_offset+1);
+				strncpy(trace_qual->right,context->buf->data+pre_offset,current_offset-pre_offset);
+				trace_qual->right[current_offset - pre_offset] = '\0';	
+				
 				/*
 				 * There's inherent ambiguity in "x op ANY/ALL (y)" when y is
 				 * a bare sub-SELECT.  Since we're here, the sub-SELECT must
@@ -5233,22 +5241,23 @@ get_rule_expr(Node *node, deparse_context *context,
 				 * indeed most likely what the user wrote to get the construct
 				 * accepted in the first place.
 				 */
-				if (IsA(arg2, SubLink) &&
-					((SubLink *) arg2)->subLinkType == EXPR_SUBLINK)
-					appendStringInfo(buf, "::%s",
-									 format_type_with_typemod(exprType(arg2),
-															  exprTypmod(arg2)));
-				current_offset = context->buf->len;
-				/*---------------------------------------------------- */
-				trace_qual->right = malloc(current_offset-pre_offset+1);
-				strncpy(trace_qual->right,context->buf->data+pre_offset,current_offset-pre_offset);
-				trace_qual->right[current_offset - pre_offset] = '\0';				
+				
+				if (IsA(arg2, SubLink) && ((SubLink *) arg2)->subLinkType == EXPR_SUBLINK){
+					char* format_type = format_type_with_typemod(exprType(arg2),
+															  exprTypmod(arg2));
+					appendStringInfo(buf, "::%s", format_type);
+					
+					trace_qual->format_type = malloc(strlen(format_type)+1);
+					strcpy(trace_qual->format_type,format_type);
+					//trace_qual->format_type[current_offset - pre_offset] = '\0';	
+				}
+				/*---------------------------------------------------- */			
 				PredExpression* expr_node = (PredExpression*)malloc(sizeof(PredExpression));
 				pred_expression__init(expr_node);
 				expr_node->qual = trace_qual;
 				expr_node->expr_case =PRED_EXPRESSION__EXPR_QUAL;
 				if(stack_is_empty(context->expr_stack)){
-					context->hsp->expr_root = expr_node;
+					set_expr_tree_root(context->hsp,expr_node);
 				}
 				stack_push(context->expr_stack,expr_node);
 				/*---------------------------------------------------- */

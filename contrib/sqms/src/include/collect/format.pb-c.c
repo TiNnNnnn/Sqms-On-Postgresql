@@ -1675,7 +1675,7 @@ const ProtobufCMessageDescriptor pred_operator__descriptor =
   (ProtobufCMessageInit) pred_operator__init,
   NULL,NULL,NULL    /* reserved[123] */
 };
-static const ProtobufCFieldDescriptor quals__field_descriptors[6] =
+static const ProtobufCFieldDescriptor quals__field_descriptors[7] =
 {
   {
     "left",
@@ -1714,8 +1714,20 @@ static const ProtobufCFieldDescriptor quals__field_descriptors[6] =
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
   {
-    "use_or",
+    "format_type",
     4,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_STRING,
+    0,   /* quantifier_offset */
+    offsetof(Quals, format_type),
+    NULL,
+    &protobuf_c_empty_string,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "use_or",
+    5,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_STRING,
     0,   /* quantifier_offset */
@@ -1727,7 +1739,7 @@ static const ProtobufCFieldDescriptor quals__field_descriptors[6] =
   },
   {
     "hash_sub_plan",
-    5,
+    6,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_BOOL,
     0,   /* quantifier_offset */
@@ -1739,7 +1751,7 @@ static const ProtobufCFieldDescriptor quals__field_descriptors[6] =
   },
   {
     "sub_plan_name",
-    6,
+    7,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_STRING,
     0,   /* quantifier_offset */
@@ -1751,17 +1763,18 @@ static const ProtobufCFieldDescriptor quals__field_descriptors[6] =
   },
 };
 static const unsigned quals__field_indices_by_name[] = {
-  4,   /* field[4] = hash_sub_plan */
+  3,   /* field[3] = format_type */
+  5,   /* field[5] = hash_sub_plan */
   0,   /* field[0] = left */
   2,   /* field[2] = op */
   1,   /* field[1] = right */
-  5,   /* field[5] = sub_plan_name */
-  3,   /* field[3] = use_or */
+  6,   /* field[6] = sub_plan_name */
+  4,   /* field[4] = use_or */
 };
 static const ProtobufCIntRange quals__number_ranges[1 + 1] =
 {
   { 1, 0 },
-  { 0, 6 }
+  { 0, 7 }
 };
 const ProtobufCMessageDescriptor quals__descriptor =
 {
@@ -1771,7 +1784,7 @@ const ProtobufCMessageDescriptor quals__descriptor =
   "Quals",
   "",
   sizeof(Quals),
-  6,
+  7,
   quals__field_descriptors,
   quals__field_indices_by_name,
   1,  quals__number_ranges,

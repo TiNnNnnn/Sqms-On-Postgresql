@@ -1146,8 +1146,6 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		show_plan_tlist(planstate, ancestors, es, &hsp);
 	}
 	
-
-
 	/* unique join */
 	switch (nodeTag(plan))
 	{
