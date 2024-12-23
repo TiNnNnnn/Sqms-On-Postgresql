@@ -166,5 +166,9 @@ message Quals{
 	string left = 1;
 	string right = 2;
 	string op = 3;
+
 	string use_or = 4;
+
+	bool hash_sub_plan = 5;
+	string sub_plan_name = 6;
 }

@@ -315,10 +315,12 @@ struct  _Quals
   char *right;
   char *op;
   char *use_or;
+  protobuf_c_boolean hash_sub_plan;
+  char *sub_plan_name;
 };
 #define QUALS__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&quals__descriptor) \
-    , (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string }
+    , (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string }
 
 
 /* HistorySlowPlanStat methods */

@@ -1608,11 +1608,6 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		appendStringInfoString(es->str,ret.detail_str_->data);
 		appendStringInfoString(ces->str,ret.canonical_str_->data);
 		push_node_type_set(rs.node_type_set_,ret.node_type_set_);
-
-		// HistorySlowPlanStat* child = malloc(sizeof(HistorySlowPlanStat));
-		// history_slow_plan_stat__init(child);
-		// *child = ret.hps_;
-		// hsp.childs[0] = child;
     }
 	/* lefttree */
 	if (outerPlanState(planstate)){
@@ -1623,8 +1618,6 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		appendStringInfoString(ces->str,ret.canonical_str_->data);
 		push_node_type_set(rs.node_type_set_,ret.node_type_set_);
 
-		// hsp.childs[0] = malloc(sizeof(HistorySlowPlanStat));
-		// *hsp.childs[0] = ret.hps_;
 		HistorySlowPlanStat* child = malloc(sizeof(HistorySlowPlanStat));
 		history_slow_plan_stat__init(child);
 		*child = ret.hps_;
@@ -1702,12 +1695,6 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		appendStringInfoString(es->str,ret.detail_str_->data);
 		appendStringInfoString(ces->str,ret.canonical_str_->data);
 		push_node_type_set(rs.node_type_set_,ret.node_type_set_);
-		// // hsp.childs[0] = malloc(sizeof(HistorySlowPlanStat));
-		// // *hsp.childs[0] = ret.hps_;
-		// HistorySlowPlanStat* child = malloc(sizeof(HistorySlowPlanStat));
-		// history_slow_plan_stat__init(child);
-		// *child = ret.hps_;
-		// hsp.childs[0] = child;
 	}
 
 	/* end of child plans */
@@ -1739,6 +1726,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		//elog(stat_log_level,ces->str->data);
 	}
 	//elog(stat_log_level,"finish a node format");
+
 	/*here we can't free es, hsp still use its data*/
 	/*FreeFormatState(es);*/
 	return rs;

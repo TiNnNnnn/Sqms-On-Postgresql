@@ -198,15 +198,28 @@ void PlanStatFormat::ShowPredTree(PredExpression* p_expr, int depth) {
        
         PrintIndent(depth);
         std::cout << "Quals: " << std::endl;
+        if(strlen(p_expr->qual->op)){
+            PrintIndent(depth + 1);
+            std::cout << "Left: " << p_expr->qual->left << std::endl;
 
-        PrintIndent(depth + 1);
-        std::cout << "Left: " << p_expr->qual->left << std::endl;
+            PrintIndent(depth + 1);
+            std::cout << "Right: " << p_expr->qual->right << std::endl;
 
-        PrintIndent(depth + 1);
-        std::cout << "Right: " << p_expr->qual->right << std::endl;
+            PrintIndent(depth + 1);
+            std::cout << "Operator: " << p_expr->qual->op << std::endl;
 
-        PrintIndent(depth + 1);
-        std::cout << "Operator: " << p_expr->qual->op << std::endl;
+            if(p_expr->qual->use_or){
+                PrintIndent(depth + 1);
+                std::cout << "Use_or: " << p_expr->qual->use_or << std::endl;
+            }
+        }else if(p_expr->qual->sub_plan_name){
+            PrintIndent(depth + 1);
+            std::cout << "Hashed: " << ((p_expr->qual->hash_sub_plan == 0)?"false":"true")<< std::endl;
+            PrintIndent(depth + 1);
+            std::cout << "SubPlan: " << p_expr->qual->sub_plan_name << std::endl;
+        }else{
+
+        }
     } else {
         PrintIndent(depth);
         std::cerr << "Unknown expression type." << std::endl;

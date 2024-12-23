@@ -5292,8 +5292,8 @@ get_rule_expr(Node *node, deparse_context *context,
 						
 						PredExpression* child_node =  (PredExpression*) stack_peek(context->expr_stack);
 						assert(child_node);
-						stack_pop(context->expr_stack);
 						expr_op->childs[idx] = child_node;
+						stack_pop(context->expr_stack);
 
 						for_each_from(arg, expr->args, 1)
 						{
@@ -5303,11 +5303,10 @@ get_rule_expr(Node *node, deparse_context *context,
 												false, node,expr->location);
 
 							child_node =  (PredExpression*) stack_peek(context->expr_stack);
-							//assert(child_node);
-							if(child_node){
-								stack_pop(context->expr_stack);
-								expr_op->childs[idx] = child_node;
-							}
+							assert(child_node);
+							expr_op->childs[idx] = child_node;
+							stack_pop(context->expr_stack);
+
 
 						}
 
@@ -5343,9 +5342,8 @@ get_rule_expr(Node *node, deparse_context *context,
 						
 						PredExpression* child_node =  (PredExpression*) stack_peek(context->expr_stack);
 						assert(child_node);
-						stack_pop(context->expr_stack);
 						expr_op->childs[idx] = child_node;
-
+						stack_pop(context->expr_stack);
 						
 						for_each_from(arg, expr->args, 1)
 						{
@@ -5354,11 +5352,10 @@ get_rule_expr(Node *node, deparse_context *context,
 							get_rule_expr_paren((Node *) lfirst(arg), context,
 												false, node,expr->location);
 							child_node =  (PredExpression*) stack_peek(context->expr_stack);
-							//assert(child_node);
-							if(child_node){
-								stack_pop(context->expr_stack);
-								expr_op->childs[idx] = child_node;
-							}
+							
+							assert(child_node);
+							expr_op->childs[idx] = child_node;
+							stack_pop(context->expr_stack);
 	
 						}
 						if (!PRETTY_PAREN(context))
@@ -5368,8 +5365,11 @@ get_rule_expr(Node *node, deparse_context *context,
 					case NOT_EXPR: {
 						PredOperator * expr_op = (PredOperator*)malloc(sizeof(PredOperator));
 						pred_operator__init(expr_op);
-						expr_op->childs = (PredExpression**)malloc(sizeof(PredExpression*)*list_length(expr->args));
-						expr_op->n_childs = list_length(expr->args);
+						
+						int arg_size = list_length(expr->args);
+						assert(arg_size == 1);
+						expr_op->childs = (PredExpression**)malloc(sizeof(PredExpression*)*arg_size);
+						expr_op->n_childs = arg_size;
 						expr_op->type = PRED_OPERATOR__PRED_OPERATOR_TYPE__NOT;
 
 						PredExpression* expr_node = (PredExpression*)malloc(sizeof(PredExpression));
@@ -5378,12 +5378,10 @@ get_rule_expr(Node *node, deparse_context *context,
 						expr_node->expr_case = PRED_EXPRESSION__EXPR_OP;
 
 						if(stack_is_empty(context->expr_stack)){
-							//context->hsp->expr_root = expr_node;
 							set_expr_tree_root(context->hsp,expr_node);
 						}
 						stack_push(context->expr_stack,expr_node);
 
-						int idx = 0;
 						if (!PRETTY_PAREN(context))
 							appendStringInfoChar(buf, '(');
 						appendStringInfoString(buf, "NOT ");
@@ -5392,9 +5390,8 @@ get_rule_expr(Node *node, deparse_context *context,
 
 						PredExpression* child_node =  (PredExpression*) stack_peek(context->expr_stack);
 						assert(child_node);
+						expr_op->childs[0] = child_node;
 						stack_pop(context->expr_stack);
-						expr_op->childs[idx] = child_node;
-
 
 						if (!PRETTY_PAREN(context))
 							appendStringInfoChar(buf, ')');
@@ -5421,13 +5418,32 @@ get_rule_expr(Node *node, deparse_context *context,
 				 * reconstruct the original SQL, just reference the subplan
 				 * that appears elsewhere in EXPLAIN's result.
 				 */
-				if (subplan->useHashTable)
-					appendStringInfo(buf, "(hashed %s)", subplan->plan_name);
-				else
-					appendStringInfo(buf, "(%s)", subplan->plan_name);
-			}
-			break;
+				
+				Quals* trace_qual = (Quals*) malloc(sizeof(Quals));
+				if (trace_qual == NULL) {
+					fprintf(stderr, "Memory allocation failed\n");
+					exit(1);
+				}
+				quals__init(trace_qual);
+				trace_qual->sub_plan_name = malloc(strlen(subplan->plan_name)+1);
+				strcpy(trace_qual->sub_plan_name,subplan->plan_name);
 
+				if (subplan->useHashTable){
+					appendStringInfo(buf, "(hashed %s)", subplan->plan_name);
+					trace_qual->hash_sub_plan = true;
+				}else{
+					appendStringInfo(buf, "(%s)", subplan->plan_name);
+					trace_qual->hash_sub_plan = false;
+				}
+				PredExpression* expr_node = (PredExpression*)malloc(sizeof(PredExpression));
+				pred_expression__init(expr_node);
+				expr_node->qual = trace_qual;
+				expr_node->expr_case =PRED_EXPRESSION__EXPR_QUAL;
+				if(stack_is_empty(context->expr_stack)){
+					set_expr_tree_root(context->hsp,expr_node);
+				}
+				stack_push(context->expr_stack,expr_node);
+		}break;
 		case T_AlternativeSubPlan:
 			{
 				AlternativeSubPlan *asplan = (AlternativeSubPlan *) node;
