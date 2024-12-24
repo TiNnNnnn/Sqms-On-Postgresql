@@ -6,11 +6,12 @@
 #include<unordered_set>
 #include<unordered_map>
 #include<set>
+#include<assert.h>
 #include<memory>
 #include "common/bloom_filter/bloom_filter.hpp"
 
+
 extern "C"{
-    #include "format.pb-c.h"
     #include "postgres.h"
     #include "access/parallel.h"
     #include "collect/format.h"
@@ -19,8 +20,8 @@ extern "C"{
     #include "jit/jit.h"
     #include "utils/guc.h"
     #include "common/config.h" 
+	#include "collect/format.pb-c.h"
 }
-
 
 enum class AbstractPredNodeType{
     OPERATOR = 0,
@@ -35,23 +36,28 @@ enum class PType{
     LIST
 };
 
+enum class QualType{
+    COMMON,
+    SUBQUERY,
+};
+
 class AbstractPredNode{
 public:
-    AbstractPredNodeType Type(){return type_;}
+    
     AbstractPredNode(AbstractPredNodeType type)
        :type_(type){}
 
+    AbstractPredNodeType Type(){return type_;}
     virtual AbstractPredNode* GetParent() = 0;
     virtual void SetParent(AbstractPredNode* parent) = 0;
 
-    
-    virtual ~AbstractPredNode() = default;
     AbstractPredNodeType type_;
 };
 
 class PredOperatorWrap: public AbstractPredNode{
 public:
-    PredOperatorWrap(PredOperator__PredOperatorType op_type , AbstractPredNode* parent = nullptr):AbstractPredNode(AbstractPredNodeType::OPERATOR)
+    PredOperatorWrap(PredOperator__PredOperatorType op_type , AbstractPredNode* parent = nullptr)
+        :AbstractPredNode(AbstractPredNodeType::OPERATOR)
         ,op_type_(op_type),parent_(parent){}
     
     AbstractPredNode * Child(size_t idx){
@@ -60,19 +66,17 @@ public:
     }
 
     size_t ChildSize(){return childs_.size();}
+    void SetChildSize(int size){
+        childs_.resize(size);
+    }
     void AddChild(AbstractPredNode* child){childs_.push_back(child);}
     
     void ReSetChild(AbstractPredNode* child,int pos){
-        assert(!parent_ || parent_->Type() == AbstractPredNodeType::OPERATOR);
-        if(!parent_){
-            /*cur node is pred tree node, just rebuild it into a LevelPredEquivlences*/
-        }else{
-
-        }
+        childs_[pos] = child;
     }
 
-    AbstractPredNode* GetParent(){return parent_;}
-    void SetParent(AbstractPredNode* parent){parent_ = parent;}
+    AbstractPredNode* GetParent() override {return parent_;}
+    void SetParent(AbstractPredNode* parent) override {parent_ = parent;}
 
     PredOperator__PredOperatorType GetOpType(){return op_type_;}
 
@@ -84,15 +88,28 @@ private:
 
 class QualsWarp: public AbstractPredNode {
 public:
-    QualsWarp(AbstractPredNode* parent = nullptr):AbstractPredNode(AbstractPredNodeType::QUALS)
-        ,parent_(parent){}
+    QualsWarp(Quals* qual,AbstractPredNode* parent = nullptr):AbstractPredNode(AbstractPredNodeType::QUALS)
+        ,parent_(parent){
+        size_t msg_size = quals__get_packed_size(qual);
+        uint8_t *buffer = (uint8_t*)malloc(msg_size);
+        if (buffer == NULL) {
+            perror("Failed to allocate memory");
+            return;
+        }
+       quals__pack(qual,buffer);
+       qual_ = quals__unpack(NULL, msg_size, buffer);
+    }
 
     AbstractPredNode* GetParent(){return parent_;}
     void SetParent(AbstractPredNode* parent){parent_ = parent;}
-private:    
+
+    Quals* GetQual() {return qual_;}
+
+private:
+    Quals* qual_;
     AbstractPredNode* parent_;
 };
-
+ 
 /**
  *TODO：should we note the range data type? such as int,string,and so on ...
  */
@@ -162,7 +179,8 @@ public:
     bool Compare(PredEquivlence* range);
     bool Copy(PredEquivlence* pe);
     void ShowLevelPredEquivlences();
-    std::vector<PredEquivlence*> LevelPeList(){return level_pe_list_;};
+
+    std::vector<PredEquivlence*>& LevelPeList(){return level_pe_list_;};
     
     AbstractPredNode* GetParent(){return parent_;}
     void SetParent(AbstractPredNode* parent){parent_ = parent;}
@@ -195,6 +213,8 @@ private:
     HistorySlowPlanStat* hsps_; /*plan we need to process to sps_*/
     SlowPlanStat * sps_; /*final output,sps will dircetly storaged*/
     int height_; /*plan height*/
+
+    AbstractPredNode* pred_root_ = nullptr;
 };
 
 

@@ -1,5 +1,4 @@
 #include "collect/level_mgr.hpp"
-
 /**
  * ComputeEquivlenceClass: calulate the equivelence class and its containment for
  * each level for plan
@@ -164,33 +163,52 @@ void LevelManager::EquivalenceClassesDecompase(PredExpression* root){
 					auto cur_op = static_cast<PredOperatorWrap*>(expr);
 					switch(cur_op->GetOpType()){
 						case PRED_OPERATOR__PRED_OPERATOR_TYPE__AND:{
-							assert(cur_op->ChildSize() == 2);
-							auto left_type = cur_op->Child(0)->Type();
-							auto right_type = cur_op->Child(1)->Type();
-							if(left_type == AbstractPredNodeType::QUALS && right_type == AbstractPredNodeType::QUALS){
-								LevelPredEquivlences * lpes =  new LevelPredEquivlences();
-								auto left_qual = static_cast<QualsWarp*>(cur_op->Child(0));
-								auto right_qual = static_cast<QualsWarp*>(cur_op->Child(1));
-								lpes->Insert(left_qual,false);
-								lpes->Insert(right_qual,false);
-								
-								auto parent = cur_op->GetParent();
-								
+							LevelPredEquivlences * lpes = new LevelPredEquivlences();
+							int child_merge_cnt = 0;
+							std::vector<AbstractPredNode*>or_op_list;
+							for(int i=0;i<cur_op->ChildSize();i++){
+								auto type = cur_op->Child(0)->Type();
+								switch (type){
+									case AbstractPredNodeType::QUALS:{
+										auto qual = static_cast<QualsWarp*>(cur_op->Child(i));
+										lpes->Insert(qual->GetQual(),false);
+										child_merge_cnt++;
+									}break;
+									case AbstractPredNodeType::LEVELPREDEQUIVLENCES:{
+										auto child_lpes = static_cast<LevelPredEquivlences*>(cur_op->Child(i));
+										for(const auto& pe : child_lpes->LevelPeList()){
+											lpes->Insert(pe);
+										}
+										child_merge_cnt++;
+									}break;	
+									case AbstractPredNodeType::OPERATOR:{	
+										if(cur_op->GetOpType() != PRED_OPERATOR__PRED_OPERATOR_TYPE__OR){
+											std::cerr<<"error child operator type :"<< cur_op->GetOpType()<<std::endl;
+											exit(-1);
+										}else{
+											or_op_list.push_back(cur_op->Child(i));
+										}
+									}break;
+									default:{
+										std::cerr<<"unknown child type:"<<std::endl;
+										exit(-1);
+									}
+								}
 							}
-							// for(size_t i=0;i<cur_op->ChildSize();i++){
-							// 	LevelPredEquivlences* lpes = new LevelPredEquivlences();
-							// 	auto child = cur_op->Child(i);
-							// 	if(child->Type() == AbstractPredNodeType::QUALS){
-							// 		/*1. check exist equivalence classes in lpes*/
-							// 		auto qual = static_cast<QualsWarp*>(child);
-
-							// 		//lpes->Insert(child->qual,false);
-							// 	}else if (child->Type() == AbstractPredNodeType::LEVELPREDEQUIVLENCES){
-									
-							// 	}else{
-							// 		/*here must be operator or*/
-							// 	}
-							// }
+							int new_child_size = cur_op->ChildSize() - child_merge_cnt + 1;
+							auto parent = cur_op->GetParent();
+							if(!parent){
+								
+							}else{
+								assert(parent->Type() == AbstractPredNodeType::OPERATOR);
+								assert(new_child_size-1 == or_op_list.size());
+								auto p = static_cast<PredOperatorWrap*>(parent);
+								for(int i = 0;i<new_child_size-1;i++){
+									p->ReSetChild(or_op_list[i],i);
+								}
+								p->ReSetChild(lpes,new_child_size-1);
+								p->SetChildSize(new_child_size);
+							}
 						}break;
 						case PRED_OPERATOR__PRED_OPERATOR_TYPE__OR:{
 
@@ -281,7 +299,7 @@ void PredEquivlence::ShowPredEquivlence(){
 /**
  * LevelCollect: For exprs in node such as join_cond,filter,one_time_filter....
  */
-void LevelManager::ExprLevelCollect(PredExpression * tree, std::vector<std::vector<AbstractPredNode *>>& level_collector){
+void LevelManager::ExprLevelCollect(PredExpression * tree, std::vector<std::vector<AbstractPredNode*>>& level_collector){
     
 	std::vector<PredExpression *>levels;
     std::vector<PredExpression *>tmp_levels;
@@ -291,7 +309,7 @@ void LevelManager::ExprLevelCollect(PredExpression * tree, std::vector<std::vect
 
 	AbstractPredNode * root = nullptr;
 	if(tree->expr_case == PRED_EXPRESSION__EXPR_QUAL){
-		root = new QualsWarp();
+		root = new QualsWarp(tree->qual);
 	}else if(tree->expr_case == PRED_EXPRESSION__EXPR_OP){
 		root = new PredOperatorWrap(tree->op->type);
 	}else{
@@ -311,7 +329,7 @@ void LevelManager::ExprLevelCollect(PredExpression * tree, std::vector<std::vect
 					AbstractPredNode * new_child = nullptr;
 					auto child = levels[i]->op->childs[j];
 					if(child->expr_case == PRED_EXPRESSION__EXPR_QUAL){
-						new_child = new QualsWarp();
+						new_child = new QualsWarp(child->qual);
 					}else if(child->expr_case == PRED_EXPRESSION__EXPR_OP){
 						new_child = new PredOperatorWrap(child->op->type);
 					}else{
