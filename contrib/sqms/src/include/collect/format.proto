@@ -144,13 +144,13 @@ message SlowPlanStat{
     repeated SlowPlanLevelStat stats = 1;
 }
 
-
 message PredExpression {
     oneof expr {
         PredOperator op = 1;
         Quals qual = 2;
     }
 }
+
 
 message PredOperator {
 	enum PredOperatorType {

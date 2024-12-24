@@ -7,10 +7,10 @@
 #include<unordered_map>
 #include<set>
 #include<memory>
-#include "format.pb-c.h"
 #include "common/bloom_filter/bloom_filter.hpp"
 
 extern "C"{
+    #include "format.pb-c.h"
     #include "postgres.h"
     #include "access/parallel.h"
     #include "collect/format.h"
@@ -22,29 +22,85 @@ extern "C"{
 }
 
 
-
-
-
-
-class AbstractPredNode{
-protected:
+enum class AbstractPredNodeType{
+    OPERATOR = 0,
+    QUALS,
+    LEVELPREDEQUIVLENCES,
 };
 
-enum PType{
-    /*for pred without range, we just make const = lower_limit*/
+/*for pred without range, we just make const = lower_limit*/
+enum class PType{
     EQUAL = 0,
     RANGE,
     LIST
+};
+
+class AbstractPredNode{
+public:
+    AbstractPredNodeType Type(){return type_;}
+    AbstractPredNode(AbstractPredNodeType type)
+       :type_(type){}
+
+    virtual AbstractPredNode* GetParent() = 0;
+    virtual void SetParent(AbstractPredNode* parent) = 0;
+
+    
+    virtual ~AbstractPredNode() = default;
+    AbstractPredNodeType type_;
+};
+
+class PredOperatorWrap: public AbstractPredNode{
+public:
+    PredOperatorWrap(PredOperator__PredOperatorType op_type , AbstractPredNode* parent = nullptr):AbstractPredNode(AbstractPredNodeType::OPERATOR)
+        ,op_type_(op_type),parent_(parent){}
+    
+    AbstractPredNode * Child(size_t idx){
+        assert(idx < childs_.size() && idx >=0);
+        return childs_[idx];
+    }
+
+    size_t ChildSize(){return childs_.size();}
+    void AddChild(AbstractPredNode* child){childs_.push_back(child);}
+    
+    void ReSetChild(AbstractPredNode* child,int pos){
+        assert(!parent_ || parent_->Type() == AbstractPredNodeType::OPERATOR);
+        if(!parent_){
+            /*cur node is pred tree node, just rebuild it into a LevelPredEquivlences*/
+        }else{
+
+        }
+    }
+
+    AbstractPredNode* GetParent(){return parent_;}
+    void SetParent(AbstractPredNode* parent){parent_ = parent;}
+
+    PredOperator__PredOperatorType GetOpType(){return op_type_;}
+
+private:
+    PredOperator__PredOperatorType op_type_;
+    AbstractPredNode* parent_;
+    std::vector<AbstractPredNode*>childs_;
+};
+
+class QualsWarp: public AbstractPredNode {
+public:
+    QualsWarp(AbstractPredNode* parent = nullptr):AbstractPredNode(AbstractPredNodeType::QUALS)
+        ,parent_(parent){}
+
+    AbstractPredNode* GetParent(){return parent_;}
+    void SetParent(AbstractPredNode* parent){parent_ = parent;}
+private:    
+    AbstractPredNode* parent_;
 };
 
 /**
  *TODO：should we note the range data type? such as int,string,and so on ...
  */
 class PredEquivlence;
-class PredEquivlenceRange : public AbstractPredNode{
+class PredEquivlenceRange{
 public:
     PredEquivlenceRange(const std::string&left = LOWER_LIMIT,const std::string&right = UPPER_LIMIT)
-        :lower_limit_(left),upper_limit_(right),AbstractPredNode(){}
+        :lower_limit_(left),upper_limit_(right){}
     
     std::string LowerLimit() const {return lower_limit_;}
     std::string UpperLimit() const {return upper_limit_;}
@@ -69,7 +125,7 @@ private:
  * 1. set: {A.a,B.b} , ranges: {150,200}
  * 2. set：{C.c}     , ranges: {250,UPPER_LIMIT}
  */
-class PredEquivlence : public AbstractPredNode{
+class PredEquivlence {
     struct RangesCompare {
     bool operator()(const PredEquivlenceRange* per1, const PredEquivlenceRange* per2) const {
         if (per1->LowerLimit() != per2->LowerLimit())
@@ -92,28 +148,30 @@ private:
     std::set<PredEquivlenceRange*,RangesCompare>ranges_;
 };
 
-// class LevelPredEquivlences{
-// public:
-//     LevelPredEquivlences(){
-//         //bf_ = std::make_unique<BloomFilter>(30);
-//     }
-//     bool Insert(Quals* quals,bool only_left = true);
-//     bool Insert(PredEquivlence* pe);
-//     bool Delete(PredEquivlence* quals);
-//     bool UpdateRanges(Quals* quals);
-//     bool UpdateRanges(PredEquivlence* pe);
-//     bool Serach(PredEquivlence* quals);
-//     bool Compare(PredEquivlence* range);
-//     bool Copy(PredEquivlence* pe);
-//     void ShowLevelPredEquivlences();
-// private:
-//     std::vector<PredEquivlence*> level_pe_list_;
-//     /**bloomfilter: we use it to check whether a attr is in the total level*/
-//     //std::unique_ptr<FilterPolicy> bf_;
+class LevelPredEquivlences : public AbstractPredNode{
+public:
+    LevelPredEquivlences()
+        :AbstractPredNode(AbstractPredNodeType::LEVELPREDEQUIVLENCES){}
+    bool Insert(Quals* quals,bool only_left = true);
+    bool Insert(QualsWarp* quals,bool only_left = true);
+    bool Insert(PredEquivlence* pe);
+    bool Delete(PredEquivlence* quals);
+    bool UpdateRanges(Quals* quals);
+    bool UpdateRanges(PredEquivlence* pe);
+    bool Serach(PredEquivlence* quals);
+    bool Compare(PredEquivlence* range);
+    bool Copy(PredEquivlence* pe);
+    void ShowLevelPredEquivlences();
+    std::vector<PredEquivlence*> LevelPeList(){return level_pe_list_;};
+    
+    AbstractPredNode* GetParent(){return parent_;}
+    void SetParent(AbstractPredNode* parent){parent_ = parent;}
 
-//     std::unordered_map<std::string,int> level_idx_; 
-// };
-
+private:
+    std::vector<PredEquivlence*> level_pe_list_;
+    std::unordered_map<std::string,int> level_idx_;
+    AbstractPredNode* parent_;
+};
 
 class LevelManager{
 public:
@@ -129,14 +187,14 @@ private:
     void RangeConstrainedDecompose(PredExpression * root);
 
 private:
-    void ExprLevelCollect(PredExpression * tree,std::vector<std::vector<PredExpression *>> level_collector);
+    void ExprLevelCollect(PredExpression * tree,std::vector<std::vector<AbstractPredNode*>>& level_collector);
+
+    //void ConvertExpr(PredExpression * tree, LevelPredEquivlences* lpes_tree);
 
 private:
     HistorySlowPlanStat* hsps_; /*plan we need to process to sps_*/
     SlowPlanStat * sps_; /*final output,sps will dircetly storaged*/
     int height_; /*plan height*/
-
-    
 };
 
 
