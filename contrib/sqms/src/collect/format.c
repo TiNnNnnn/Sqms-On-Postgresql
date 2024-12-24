@@ -3373,7 +3373,7 @@ show_modifytable_info(ModifyTableState *mtstate, List *ancestors,
 								 other_path, 0, es);
 		}
 	}
-
+	
 	if (labeltargets)
 		FormatCloseGroup("Target Tables", "Target Tables", false, es);
 }
@@ -3429,15 +3429,9 @@ ExplainSubPlans(List *plans, List *ancestors,
 	// }else if(strcmp(relationship,"InitPlan")){
 	// 	rs.node_type_set_ = lappend(rs.node_type_set_);
 	// }
-
-	//HistorySlowPlanStat hsp = HISTORY_SLOW_PLAN_STAT__INIT;
-
 	size_t p_size = list_length(plans);
-	//hsp.childs = (HistorySlowPlanStat**)malloc(sizeof(HistorySlowPlanStat*)*p_size);
-	//hsp.n_childs = p_size;
 	foreach(lst, plans)
 	{
-		
 		SubPlanState *sps = (SubPlanState *) lfirst(lst);
 		SubPlan    *sp = sps->subplan;
 		/*
@@ -3473,10 +3467,6 @@ ExplainSubPlans(List *plans, List *ancestors,
 		hsp->childs[idx] = child;
 		idx++;
 	}
-
-	//hsp.json_plan = rs.detail_str_->data;
-	//hsp.canonical_json_plan = rs.canonical_str_->data;
-	//rs.hps_ = hsp;
 	return rs;
 }
 

@@ -130,28 +130,31 @@ void LevelManager::HandleNode(HistorySlowPlanStat* hsps){
 /**
  * EquivalenceClassesDecompase:calulate equivalance class shoule be
  * the first step of ComputeLevelClass,we caluate other level attr 
- * and class base on it's level equivalence class
+ * and class base on it's level equivalence calss 
  */
 void LevelManager::EquivalenceClassesDecompase(PredExpression* root){
     std::vector<std::vector<PredExpression*>> level_collector;
 	ExprLevelCollect(root,level_collector);
 
-	LevelPredEquivlences * lpes = new LevelPredEquivlences();
+	//LevelPredEquivlences * lpes = new LevelPredEquivlences();
 	if(!level_collector.size()){
 		/*no join_cond ,it means a full cartesian product*/
 	}else if(level_collector.size() == 1){
+		/*actully,maybe its the most common condition*/ 
         assert(level_collector[0].size()==1);
         assert(level_collector[0][0]->expr_case == PRED_EXPRESSION__EXPR_QUAL);
         auto& qual = level_collector[0][0]->qual;
 		if(strcmp(qual->op,"=")){
-			lpes->Insert(qual,false);
-			equlivlences_.push_back(lpes);
+			PredEquivlence* pe = new PredEquivlence();
+			pe->Insert(qual->left);
+			pe->Insert(qual->right);
+
+			//lpes->Insert(pe);
+			//equlivlences_.push_back(lpes);
 		}else{
 			/**
-			 * TODO: except join_cond with op is "=", another operator can infer some infomation?
-			 * and how to storage quals like this?
-			 */
-
+			 * except join_cond with op is "=", another operator can infer some infomation?
+			 */\
 		}
 	}else{
 		/* more then one level,it means here is more than one join_cond in current node ,they connect by and/or/not*/
@@ -169,7 +172,7 @@ void LevelManager::EquivalenceClassesDecompase(PredExpression* root){
 									
 								}else{
 									/**nothing to do,sub_qual has been process*/
-									
+
 								}
 							}
 						}break;
@@ -186,6 +189,7 @@ void LevelManager::EquivalenceClassesDecompase(PredExpression* root){
 				}
 			}
     	}
+
 	}
 }
 
@@ -217,62 +221,6 @@ void LevelManager::RangeConstrainedDecompose(PredExpression * root){
 }
 
 /**
- * Insert: insert a qual to a pred equivlence in current level.
- * if only_left = true , it indeciates t.a > 10 ,else is t.a =/>.. t2.b
- */
-bool LevelPredEquivlences::Insert(Quals* qual,bool only_left){
-	auto iter = level_idx_.find(qual->left);
-	if(iter != level_idx_.end()){
-		auto pe = level_pe_list_[iter->second];
-		return pe->Insert(qual,only_left);
-	}else{
-		/*create new pred equivlence,update level_idx and level_pe_list_*/
-		PredEquivlence* pe = new PredEquivlence();
-		bool ret = pe->Insert(qual);
-		level_idx_.insert(std::make_pair(qual->left,level_idx_.size()));
-		level_pe_list_.push_back(pe);
-		return ret;
-	}
-	return true;
-}
-
-bool LevelPredEquivlences::Insert(PredEquivlence* pe){
-	
-}
-
-bool LevelPredEquivlences::Delete(PredEquivlence* quals){
-
-}
-
-bool LevelPredEquivlences::UpdateRanges(Quals* quals){
-
-}
-
-bool LevelPredEquivlences::UpdateRanges(PredEquivlence* pe){
-
-}
-
-bool LevelPredEquivlences::Serach(PredEquivlence* quals){
-
-}
-
-bool LevelPredEquivlences::Compare(PredEquivlence* range){
-
-}
-
-bool LevelPredEquivlences::Copy(PredEquivlence* pe){
-
-}
-
-void LevelPredEquivlences::ShowLevelPredEquivlences(){
-
-}
-
-bool PredEquivlence::Insert(Quals* qual,bool only_left){
-
-}
-
-/**
  * Insert: just for join_cond with "="
  */
 bool PredEquivlence::Insert(const std::string& s){
@@ -294,7 +242,7 @@ bool PredEquivlence::Serach(Quals* qual){
 */
 bool PredEquivlence::UpdateRanges(Quals* qual){
 	if(Serach(qual)){
-		
+		return true;
 	}else{
 		/**
 		 * TODO: maybe we can use insert and then update ranges,such as [] operator in std::map
