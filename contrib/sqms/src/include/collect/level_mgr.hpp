@@ -53,7 +53,7 @@ public:
 
     AbstractPredNodeType type_;
 };
-
+class LevelPredEquivlences;
 class PredOperatorWrap: public AbstractPredNode{
 public:
     PredOperatorWrap(PredOperator__PredOperatorType op_type , AbstractPredNode* parent = nullptr)
@@ -80,10 +80,18 @@ public:
 
     PredOperator__PredOperatorType GetOpType(){return op_type_;}
 
+
+    void SetOrLpesList(std::vector<LevelPredEquivlences*>* or_lpes_list){
+        or_lpes_list_ = or_lpes_list;
+    }
+    std::vector<LevelPredEquivlences*>* GetOrLpesList(){return or_lpes_list_;}
+
 private:
     PredOperator__PredOperatorType op_type_;
     AbstractPredNode* parent_;
     std::vector<AbstractPredNode*>childs_;
+
+    std::vector<LevelPredEquivlences*>* or_lpes_list_;
 };
 
 class QualsWarp: public AbstractPredNode {
@@ -169,9 +177,11 @@ class LevelPredEquivlences : public AbstractPredNode{
 public:
     LevelPredEquivlences()
         :AbstractPredNode(AbstractPredNodeType::LEVELPREDEQUIVLENCES){}
-    bool Insert(Quals* quals,bool only_left = true);
-    bool Insert(QualsWarp* quals,bool only_left = true);
-    bool Insert(PredEquivlence* pe);
+
+    bool Insert(Quals* quals,bool only_left = true,bool is_or = false);
+    bool Insert(PredEquivlence* pe,bool only_left = true);
+    bool Insert(LevelPredEquivlences* pe,bool only_left = true ,bool is_or = false);
+
     bool Delete(PredEquivlence* quals);
     bool UpdateRanges(Quals* quals);
     bool UpdateRanges(PredEquivlence* pe);

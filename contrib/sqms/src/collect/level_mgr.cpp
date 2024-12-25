@@ -139,21 +139,19 @@ void LevelManager::EquivalenceClassesDecompase(PredExpression* root){
 	if(!level_collector.size()){
 		/*no join_cond ,it means a full cartesian product*/
 	}else if(level_collector.size() == 1){
-		/*actully,maybe its the most common condition*/ 
+		/*actually,maybe its the most common condition*/ 
         assert(level_collector[0].size()==1);
         assert(level_collector[0][0]->Type() == AbstractPredNodeType::QUALS);
-        auto qual = static_cast<QualsWarp*>(level_collector[0][0]);			
-		// if(strcmp(qual->,"=")){
-		// 	//PredEquivlence* pe = new PredEquivlence();
-		// 	//pe->Insert(qual->left);
-		// 	//pe->Insert(qual->right);
-		// 	//lpes->Insert(pe);
-		// 	//equlivlences_.push_back(lpes);
-		// }else{
-		// 	/**
-		// 	 * except join_cond with op is "=", another operator can infer some infomation?
-		// 	 */
-		// }
+        auto qual = static_cast<QualsWarp*>(level_collector[0][0])->GetQual();
+		LevelPredEquivlences * lpes = new LevelPredEquivlences();
+		if(strcmp(qual->op,"=")){
+			PredEquivlence* pe = new PredEquivlence();
+			lpes->Insert(pe);
+		}else{
+			/**
+			 * except join_cond with op is "=", another operator can infer some infomation?
+			 */
+		}
 	}else{
 		/* more then one level,it means here is more than one join_cond in current node ,they connect by and/or/not*/
 		for(const auto& level : level_collector){
@@ -165,7 +163,6 @@ void LevelManager::EquivalenceClassesDecompase(PredExpression* root){
 						case PRED_OPERATOR__PRED_OPERATOR_TYPE__AND:{
 							LevelPredEquivlences * lpes = new LevelPredEquivlences();
 							int child_merge_cnt = 0;
-							std::vector<AbstractPredNode*>or_op_list;
 							for(int i=0;i<cur_op->ChildSize();i++){
 								auto type = cur_op->Child(0)->Type();
 								switch (type){
@@ -186,7 +183,12 @@ void LevelManager::EquivalenceClassesDecompase(PredExpression* root){
 											std::cerr<<"error child operator type :"<< cur_op->GetOpType()<<std::endl;
 											exit(-1);
 										}else{
-											or_op_list.push_back(cur_op->Child(i));
+											/* if it's an or operator node, it's child must has been process into or_lpes_list*/
+											auto or_lpes_list = cur_op->GetOrLpesList();
+											assert(or_lpes_list->size());
+											for(const auto& lpes : *or_lpes_list){
+												lpes->Insert(lpes,true,true);
+											}
 										}
 									}break;
 									default:{
@@ -195,26 +197,51 @@ void LevelManager::EquivalenceClassesDecompase(PredExpression* root){
 									}
 								}
 							}
-							int new_child_size = cur_op->ChildSize() - child_merge_cnt + 1;
+
+							/* update tree structure,replace current opeator node into lpes node*/
 							auto parent = cur_op->GetParent();
 							if(!parent){
-								
 							}else{
 								assert(parent->Type() == AbstractPredNodeType::OPERATOR);
-								assert(new_child_size-1 == or_op_list.size());
 								auto p = static_cast<PredOperatorWrap*>(parent);
-								for(int i = 0;i<new_child_size-1;i++){
-									p->ReSetChild(or_op_list[i],i);
-								}
-								p->ReSetChild(lpes,new_child_size-1);
-								p->SetChildSize(new_child_size);
+								p->ReSetChild(lpes,0);
+								p->SetChildSize(1);
 							}
 						}break;
 						case PRED_OPERATOR__PRED_OPERATOR_TYPE__OR:{
-
+							std::vector<LevelPredEquivlences*>* or_lpes_list = new std::vector<LevelPredEquivlences*>();
+							int child_merge_cnt = 0;
+							std::vector<AbstractPredNode*>or_op_list;
+							for(int i=0;i<cur_op->ChildSize();i++){
+								auto type = cur_op->Child(0)->Type();
+								switch (type){
+									case AbstractPredNodeType::QUALS:{
+										LevelPredEquivlences * lpes = new LevelPredEquivlences();
+										auto qual = static_cast<QualsWarp*>(cur_op->Child(i));
+										lpes->Insert(qual->GetQual(),false);
+										or_lpes_list->push_back(lpes);
+										child_merge_cnt++;
+									}break;
+									case AbstractPredNodeType::LEVELPREDEQUIVLENCES:{
+										auto child_lpes = static_cast<LevelPredEquivlences*>(cur_op->Child(i));
+										or_lpes_list->push_back(child_lpes);
+									}
+									case AbstractPredNodeType::OPERATOR:{
+										std::cerr<<"error child operator type :"<< cur_op->GetOpType()<<std::endl;
+										exit(-1);
+									}break;
+									default:{
+										std::cerr<<"unknown child type:"<<std::endl;
+										exit(-1);
+									}
+								}
+							}
+							cur_op->SetOrLpesList(or_lpes_list);
 						}break;
 						case PRED_OPERATOR__PRED_OPERATOR_TYPE__NOT:{
-							
+							/**
+							 * TODO: implement this 
+							 */
 						}break;
 						default:
 							std::cerr<<"level_collector:expr type error"<<std::endl;
@@ -296,6 +323,14 @@ void PredEquivlence::ShowPredEquivlence(){
 	
 }
 
+
+bool LevelPredEquivlences::Insert(Quals* quals,bool only_left,bool is_or){
+	return true;
+}
+
+bool LevelPredEquivlences::Insert(LevelPredEquivlences* pe,bool only_left ,bool is_or){
+	return true;
+}
 /**
  * LevelCollect: For exprs in node such as join_cond,filter,one_time_filter....
  */
