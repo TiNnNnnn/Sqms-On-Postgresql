@@ -26,7 +26,6 @@ extern "C"{
 enum class AbstractPredNodeType{
     OPERATOR = 0,
     QUALS,
-    LEVELPREDEQUIVLENCES,
 };
 
 /*for pred without range, we just make const = lower_limit*/
@@ -54,6 +53,7 @@ public:
     AbstractPredNodeType type_;
 };
 class LevelPredEquivlences;
+class LevelPredEquivlencesList;
 class PredOperatorWrap: public AbstractPredNode{
 public:
     PredOperatorWrap(PredOperator__PredOperatorType op_type , AbstractPredNode* parent = nullptr)
@@ -70,28 +70,26 @@ public:
         childs_.resize(size);
     }
     void AddChild(AbstractPredNode* child){childs_.push_back(child);}
-    
-    void ReSetChild(AbstractPredNode* child,int pos){
-        childs_[pos] = child;
-    }
+    void ReSetChild(AbstractPredNode* child,int pos){childs_[pos] = child;}
 
     AbstractPredNode* GetParent() override {return parent_;}
     void SetParent(AbstractPredNode* parent) override {parent_ = parent;}
 
     PredOperator__PredOperatorType GetOpType(){return op_type_;}
 
+    void SetOrLpesList(LevelPredEquivlencesList* or_lpes_list){or_lpes_list_ = or_lpes_list;}
+    LevelPredEquivlencesList* GetOrLpesList(){return or_lpes_list_;}
 
-    void SetOrLpesList(std::vector<LevelPredEquivlences*>* or_lpes_list){
-        or_lpes_list_ = or_lpes_list;
-    }
-    std::vector<LevelPredEquivlences*>* GetOrLpesList(){return or_lpes_list_;}
-
+    void SetAndLpesList(LevelPredEquivlencesList* and_lpes_list){and_lpes_list_ = and_lpes_list;}
+    LevelPredEquivlencesList* GetAndLpesList(){return and_lpes_list_;}
+    
 private:
     PredOperator__PredOperatorType op_type_;
-    AbstractPredNode* parent_;
+    AbstractPredNode* parent_ = nullptr;
     std::vector<AbstractPredNode*>childs_;
 
-    std::vector<LevelPredEquivlences*>* or_lpes_list_;
+    LevelPredEquivlencesList* or_lpes_list_ = nullptr;
+    LevelPredEquivlencesList* and_lpes_list_ = nullptr;
 };
 
 class QualsWarp: public AbstractPredNode {
@@ -114,8 +112,8 @@ public:
     Quals* GetQual() {return qual_;}
 
 private:
-    Quals* qual_;
-    AbstractPredNode* parent_;
+    Quals* qual_ = nullptr;
+    AbstractPredNode* parent_ = nullptr;
 };
  
 /**
@@ -173,11 +171,8 @@ private:
     std::set<PredEquivlenceRange*,RangesCompare>ranges_;
 };
 
-class LevelPredEquivlences : public AbstractPredNode{
+class LevelPredEquivlences{
 public:
-    LevelPredEquivlences()
-        :AbstractPredNode(AbstractPredNodeType::LEVELPREDEQUIVLENCES){}
-
     bool Insert(Quals* quals,bool only_left = true,bool is_or = false);
     bool Insert(PredEquivlence* pe,bool only_left = true);
     bool Insert(LevelPredEquivlences* pe,bool only_left = true ,bool is_or = false);
@@ -187,18 +182,27 @@ public:
     bool UpdateRanges(PredEquivlence* pe);
     bool Serach(PredEquivlence* quals);
     bool Compare(PredEquivlence* range);
-    bool Copy(PredEquivlence* pe);
+    bool Copy(LevelPredEquivlences* pe);
     void ShowLevelPredEquivlences();
 
     std::vector<PredEquivlence*>& LevelPeList(){return level_pe_list_;};
-    
-    AbstractPredNode* GetParent(){return parent_;}
-    void SetParent(AbstractPredNode* parent){parent_ = parent;}
 
 private:
     std::vector<PredEquivlence*> level_pe_list_;
     std::unordered_map<std::string,int> level_idx_;
-    AbstractPredNode* parent_;
+};
+
+/**
+ * LevelPredEquivlencesList: LevelPredEquivlences in this class is or relation.
+ */
+class LevelPredEquivlencesList{
+public:
+    LevelPredEquivlencesList(){};
+    bool Insert(LevelPredEquivlences* lpes,bool only_left = true ,bool is_or = false);
+    bool Insert(LevelPredEquivlencesList* lpes_list,bool is_or = false);
+    size_t Size(){return lpes_list_.size();}
+private:
+    std::vector<LevelPredEquivlences*> lpes_list_;
 };
 
 class LevelManager{
@@ -224,7 +228,9 @@ private:
     SlowPlanStat * sps_; /*final output,sps will dircetly storaged*/
     int height_; /*plan height*/
 
-    AbstractPredNode* pred_root_ = nullptr;
+    int cur_height_;
+    //std::vector<LevelPredEquivlences*> total_equivlences_;
+    std::vector<LevelPredEquivlencesList*> total_equivlences_;
 };
 
 
