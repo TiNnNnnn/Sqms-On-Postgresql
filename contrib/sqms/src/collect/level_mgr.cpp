@@ -280,6 +280,7 @@ void LevelManager::EquivalenceClassesDecompase(PredExpression* root){
 		if(total_equivlences_.size()){
 			final_lpes_list->Insert(total_equivlences_.back(),false);
 		}
+		total_equivlences_.push_back(final_lpes_list);
 	}
 }
 
@@ -353,24 +354,77 @@ void PredEquivlence::ShowPredEquivlence(){
 	
 }
 
-
 bool LevelPredEquivlences::Insert(Quals* quals,bool only_left,bool is_or){
 	return true;
 }
 
 bool LevelPredEquivlences::Insert(LevelPredEquivlences* pe,bool only_left ,bool is_or){
+	
 	return true;
 }
 
-bool LevelPredEquivlences::Copy(LevelPredEquivlences* pe){
+bool LevelPredEquivlences::Copy(LevelPredEquivlences* lpes){
+	assert(lpes);
+	for(const auto& pe : *lpes){
+		PredEquivlence* new_pred = new PredEquivlence();
+		pe->Copy(new_pred);
+		lpes->Insert(new_pred);
+	}
 	return true;
 }
 
+/**
+ * LevelPredEquivlencesList::Insert 
+ */
 bool LevelPredEquivlencesList::Insert(LevelPredEquivlences* pe,bool only_left,bool is_or){
+	assert(pe);
+	if(!is_or){
+		lpes_list_.push_back(pe);
+	}else{
+		for(auto& dst : lpes_list_){
+			dst->Insert(pe);
+		}
+	}
+	/**
+	 * TODO: merge
+	 **/
 	return true;
 }
 
+/**
+ * LevelPredEquivlencesList::Insert:
+ * 1.or_model: directly add all level_pred_equivlences in lpes_list into current lpes_list
+ * 2.and_model: here we should pair wise union
+ * 				for example:
+ *					dst: {[A.a,B.b],[C.c]},{[A.a,B.c],[D.d]}
+ *              	src: {[B.b,C.c]}
+ * 					--> dst': {[A.a,B.b,C.c]},{[A.a,B.c],[B.b,C.c],[D.d]}
+ */
 bool LevelPredEquivlencesList::Insert(LevelPredEquivlencesList* lpes_list,bool is_or){
+	assert(lpes_list);
+	if(!is_or){
+		for(const auto& lpes: *lpes_list){
+			Insert(lpes,false);
+		}
+	}else{
+		size_t sz = lpes_list->Size();
+		while(sz--){
+			for(const auto& dst : lpes_list_){
+				LevelPredEquivlences* new_lpes = new LevelPredEquivlences();
+				dst->Copy(new_lpes);
+				lpes_list_.push_back(new_lpes);
+			}
+		}
+		for(auto& src : *lpes_list){
+			for(auto& dst : lpes_list_){
+				dst->Insert(src);
+			}
+		}
+
+		/**
+		 * TODO: merge, best metod isn't merge lpes here, instead, we wish merge before each Insert
+		 * */
+	}
 	return true;
 }
 

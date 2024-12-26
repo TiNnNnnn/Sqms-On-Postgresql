@@ -184,8 +184,12 @@ public:
     bool Compare(PredEquivlence* range);
     bool Copy(LevelPredEquivlences* pe);
     void ShowLevelPredEquivlences();
-
     std::vector<PredEquivlence*>& LevelPeList(){return level_pe_list_;};
+
+    std::vector<PredEquivlence*>::iterator begin() { return level_pe_list_.begin(); }
+    std::vector<PredEquivlence*>::iterator end() { return level_pe_list_.end(); }
+    std::vector<PredEquivlence*>::const_iterator begin() const { return level_pe_list_.cbegin(); }
+    std::vector<PredEquivlence*>::const_iterator end() const { return level_pe_list_.cend();}
 
 private:
     std::vector<PredEquivlence*> level_pe_list_;
@@ -201,6 +205,11 @@ public:
     bool Insert(LevelPredEquivlences* lpes,bool only_left = true ,bool is_or = false);
     bool Insert(LevelPredEquivlencesList* lpes_list,bool is_or = false);
     size_t Size(){return lpes_list_.size();}
+
+    std::vector<LevelPredEquivlences*>::iterator begin() { return lpes_list_.begin(); }
+    std::vector<LevelPredEquivlences*>::iterator end() { return lpes_list_.end(); }
+    std::vector<LevelPredEquivlences*>::const_iterator begin() const { return lpes_list_.cbegin(); }
+    std::vector<LevelPredEquivlences*>::const_iterator end() const { return lpes_list_.cend();}
 private:
     std::vector<LevelPredEquivlences*> lpes_list_;
 };
