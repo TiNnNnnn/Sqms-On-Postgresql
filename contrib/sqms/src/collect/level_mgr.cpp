@@ -320,16 +320,33 @@ bool PredEquivlence::Insert(const std::string& s){
 	return false;
 }
 
-bool PredEquivlence::Serach(Quals* qual){
-	if(set_.find(qual->left) != set_.end()){
-		return true;
+bool PredEquivlence::Serach(Quals* quals,bool only_left){
+	assert(quals);
+	bool left = set_.find(quals->left) != set_.end();
+	if(only_left){
+		return left;
 	}else{
-		return false;
+		bool right = set_.find(quals->right) != set_.end();
+		return left || right;
 	}
 }
 
+/**
+ * Serach: check if two pred equivlences can be merged
+ */
+bool PredEquivlence::Serach(PredEquivlence* pe){
+	assert(pe);
+	auto set = pe->GetPredSet();
+	for(const auto& pred_name : set){
+		if(set_.find(pred_name) != set_.end()){
+			return true;
+		}
+	}
+	return false;
+}
+
 /*
-* Update: upodate equivlence ranges,we should check if the expr is in set
+* Update: update equivlence ranges,we should check if the expr is in set
 */
 bool PredEquivlence::UpdateRanges(Quals* qual){
 	if(Serach(qual)){
@@ -343,10 +360,12 @@ bool PredEquivlence::UpdateRanges(Quals* qual){
 }
 
 bool PredEquivlence::Compare(PredEquivlence* pe){
+
 	return true;
 }
 
 bool PredEquivlence::Copy(PredEquivlence* pe){
+
 	return true;
 }
 
@@ -354,15 +373,104 @@ void PredEquivlence::ShowPredEquivlence(){
 	
 }
 
+/**
+ * LevelPredEquivlences::Insert
+ */
 bool LevelPredEquivlences::Insert(Quals* quals,bool only_left,bool is_or){
-	return true;
-}
-
-bool LevelPredEquivlences::Insert(LevelPredEquivlences* pe,bool only_left ,bool is_or){
+	assert(quals);
 	
 	return true;
 }
 
+/**
+ * LevelPredEquivlences::Insert
+ */
+bool LevelPredEquivlences::Insert(LevelPredEquivlences* lpes){
+	assert(lpes);
+	for(const auto& pe : *lpes){
+		PredEquivlence* new_pe =  new PredEquivlence();
+		std::vector<PredEquivlence*>merge_pe_list;
+		if(Serach(pe,merge_pe_list)){
+			if(!MergePredEquivlences(new_pe,merge_pe_list)){
+				return false;
+			}
+		}else{
+			pe->Copy(new_pe);
+			level_pe_sets_.insert(new_pe);
+		}
+	}
+	return true;
+}
+
+/**
+ * LevelPredEquivlences::MergePredEquivlences,here 
+ */
+bool LevelPredEquivlences::MergePredEquivlences(PredEquivlence* new_pe,const std::vector<PredEquivlence*>& merge_pe_list){
+	if(new_pe){
+		new_pe = new PredEquivlence();
+	}
+
+	std::set<std::string>pred_name_set;
+	for(const auto& mpe : merge_pe_list){
+		auto pred_set = mpe->GetPredSet();
+		for(const auto& pred_name: pred_set){
+			pred_name_set.insert(pred_name);
+		}
+		switch(mpe->GetType()){
+			case PType::EQUAL:
+			case PType::RANGE:{
+				
+			}break;
+			case PType::LIST:{
+
+			}break;
+			case PType::SUBQUERY:{
+
+			}break;
+			default:{
+				std::cerr<<"unknow type of pe"<<std::endl;
+				exit(-1);
+			}
+		}
+
+	}
+	return true;
+}
+
+/**
+ * LevelPredEquivlences::Serach: use before insert new pred_equivlence into level_pred_equivlences,
+ * ret: 
+ * 	- true: we can merge some pes into one new eq
+ * 		- example: 
+ * 			before: [A.a,B.b],[C.c]
+ * 			insert: [B.b,C.c]
+ * 			after:  [A.a,B.b,C.c]
+ * 	- false: we can merge new pe into any pes, instead ,we need create and insert a new pe into lpes
+ * 		- example: 
+ * 			before: [A.a,B.b],[C.c]
+ * 			insert: [D.d]
+ * 			after:  [A.a,B.b],[C.c],[D.d]
+ */
+bool LevelPredEquivlences::Serach(PredEquivlence* pe, std::vector<PredEquivlence*>& pe_idx_list){
+	assert(pe);
+	bool ret = false;
+	for(const auto& item : level_pe_sets_){
+		if(item->Serach(pe)){
+			pe_idx_list.push_back(item);
+			ret = true;
+		}
+	}
+	return ret;
+}
+
+bool LevelPredEquivlences::Serach(Quals* quals, std::vector<PredEquivlence*>& pe_idx_list){
+	assert(quals);
+	return true;
+}
+
+/**
+ * LevelPredEquivlences::Copy
+ */
 bool LevelPredEquivlences::Copy(LevelPredEquivlences* lpes){
 	assert(lpes);
 	for(const auto& pe : *lpes){

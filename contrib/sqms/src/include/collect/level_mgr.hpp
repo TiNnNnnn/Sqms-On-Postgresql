@@ -32,11 +32,7 @@ enum class AbstractPredNodeType{
 enum class PType{
     EQUAL = 0,
     RANGE,
-    LIST
-};
-
-enum class QualType{
-    COMMON,
+    LIST,
     SUBQUERY,
 };
 
@@ -156,17 +152,28 @@ class PredEquivlence {
         return per1->UpperLimit() < per2->UpperLimit();
     }
     };
+
 public:
     bool Insert(const std::string& s);
     bool Insert(Quals* qual,bool only_left = true);
     bool Delete(Quals* quals);
     bool UpdateRanges(Quals* quals);
     bool UpdateRanges(PredEquivlence* pe);
-    bool Serach(Quals* quals);
+    
+    bool Serach(Quals* quals,bool only_left = true);
+    bool Serach(PredEquivlence* pe);
+
     bool Compare(PredEquivlence* range);
     bool Copy(PredEquivlence* pe);
     void ShowPredEquivlence();
+
+    std::unordered_set<std::string>& GetPredSet(){return set_;}
+
+    void SetType(PType type) {pe_type = type;}
+    PType GetType(){return pe_type;}
+
 private:
+    PType pe_type;
     std::unordered_set<std::string> set_;
     std::set<PredEquivlenceRange*,RangesCompare>ranges_;
 };
@@ -175,25 +182,38 @@ class LevelPredEquivlences{
 public:
     bool Insert(Quals* quals,bool only_left = true,bool is_or = false);
     bool Insert(PredEquivlence* pe,bool only_left = true);
-    bool Insert(LevelPredEquivlences* pe,bool only_left = true ,bool is_or = false);
+    bool Insert(LevelPredEquivlences* pe);
 
     bool Delete(PredEquivlence* quals);
     bool UpdateRanges(Quals* quals);
     bool UpdateRanges(PredEquivlence* pe);
-    bool Serach(PredEquivlence* quals);
+
+    bool Serach(Quals* quals, std::vector<PredEquivlence*>& merge_pe_list);
+    bool Serach(PredEquivlence* pe, std::vector<PredEquivlence*>& merge_pe_list);
+    
     bool Compare(PredEquivlence* range);
     bool Copy(LevelPredEquivlences* pe);
-    void ShowLevelPredEquivlences();
-    std::vector<PredEquivlence*>& LevelPeList(){return level_pe_list_;};
 
-    std::vector<PredEquivlence*>::iterator begin() { return level_pe_list_.begin(); }
-    std::vector<PredEquivlence*>::iterator end() { return level_pe_list_.end(); }
-    std::vector<PredEquivlence*>::const_iterator begin() const { return level_pe_list_.cbegin(); }
-    std::vector<PredEquivlence*>::const_iterator end() const { return level_pe_list_.cend();}
+    bool MergePredEquivlences(PredEquivlence* new_pe,const std::vector<PredEquivlence*>& merge_pe_list);
+
+    void ShowLevelPredEquivlences();
+
+    std::unordered_set<PredEquivlence*>& LevelPeList(){return level_pe_sets_;};
+
+    std::unordered_set<PredEquivlence*>::iterator begin() { return level_pe_sets_.begin(); }
+    std::unordered_set<PredEquivlence*>::iterator end() { return level_pe_sets_.end(); }
+    std::unordered_set<PredEquivlence*>::const_iterator begin() const { return level_pe_sets_.cbegin(); }
+    std::unordered_set<PredEquivlence*>::const_iterator end() const { return level_pe_sets_.cend(); }
 
 private:
-    std::vector<PredEquivlence*> level_pe_list_;
-    std::unordered_map<std::string,int> level_idx_;
+    std::unordered_set<PredEquivlence*> level_pe_sets_;
+     
+    /**
+     * level pred equivlences index:
+     * example:
+     *    1. A.a --> 0, B.b --> 0,C.c --> 1
+     */
+    //std::unordered_map<std::string,int> level_idx_;
 };
 
 /**
