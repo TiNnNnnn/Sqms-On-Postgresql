@@ -118,6 +118,7 @@ private:
 class PredEquivlence;
 class PredEquivlenceRange{
 public:
+
     PredEquivlenceRange(const std::string&left = LOWER_LIMIT,const std::string&right = UPPER_LIMIT)
         :lower_limit_(left),upper_limit_(right){}
     
@@ -130,12 +131,19 @@ public:
     void SetList(const std::vector<std::string>& list){list_ = list;}
 
     void SetBoundaryConstraint(std::pair<bool,bool> bc){boundary_constraint_ = bc;}
+    std::pair<bool,bool>& GetBoundaryConstraint(){return boundary_constraint_;}
+
     void SetLowerBoundaryConstraint(bool b){boundary_constraint_.first = b;}
     void SetUpperBoundaryConstraint(bool b){boundary_constraint_.second = b;}
-    std::pair<bool,bool>& GetBoundaryConstraint(){return boundary_constraint_;}
+    bool GetLowerBoundaryConstraint(){return boundary_constraint_.first;}
+    bool GetUpperBoundaryConstraint(){return boundary_constraint_.second;}
+    
 
     void SetPredType(PType type){type_ = type;}
     PType PredType(){return type_;}
+
+    void Copy(PredEquivlenceRange* new_range);
+    bool Serach(PredEquivlenceRange* range);
 
 private:
     PType type_;
@@ -163,12 +171,14 @@ public:
     PredEquivlence(){}
     PredEquivlence(Quals* qual,bool only_left = true);
 
-    bool Insert(const std::string& s);
     bool Insert(Quals* qual,bool only_left = true);
+    bool Insert(PredEquivlence* pe, bool check_can_merged = true);
+
     bool Delete(Quals* quals);
     
     bool Serach(Quals* quals,bool only_left = true);
     bool Serach(PredEquivlence* pe);
+    bool RangesSerach(PredEquivlenceRange* range,std::vector<PredEquivlenceRange*>& merge_pe_list);
 
     bool Compare(PredEquivlence* range);
     bool Copy(PredEquivlence* pe);
@@ -180,6 +190,7 @@ public:
     std::set<PredEquivlenceRange*,RangesCompare>& GetRanges(){return ranges_;}
     void SetRanges(std::set<PredEquivlenceRange*,RangesCompare> ranges){ranges_ = ranges;}
 
+    bool MergePredEquivlenceRanges(const std::vector<PredEquivlenceRange*>& merge_pe_list);
 private:
     std::set<std::string> set_;
     std::set<PredEquivlenceRange*,RangesCompare>ranges_;

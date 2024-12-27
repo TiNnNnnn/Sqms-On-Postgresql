@@ -1,4 +1,5 @@
 #include "collect/level_mgr.hpp"
+#include <algorithm>
 /**
  * ComputeEquivlenceClass: calulate the equivelence class and its containment for
  * each level for plan
@@ -311,6 +312,59 @@ void LevelManager::RangeConstrainedDecompose(PredExpression * root){
 	}
 }
 
+/**
+ * PredEquivlenceRange::Serach: Check if there is any intersection between the two range
+ * TODO: 24-12-27 it a rough version
+ */
+bool PredEquivlenceRange::Serach(PredEquivlenceRange* range){
+	assert(range);
+	switch(type_){
+		case PType::NOT_EQUAL:{
+			if(range->PredType() == PType::NOT_EQUAL){
+				return range->UpperLimit() == UpperLimit();	
+			}else{
+				return false;
+			}
+		}break;
+		case PType::EQUAL:{
+			if(range->PredType() == PType::NOT_EQUAL){
+				return range->UpperLimit() == UpperLimit();	
+			}else{
+				return false;
+			}
+		}break;
+		case PType::RANGE:{
+			if(range->PredType() == PType::RANGE){
+				bool intersected = 
+					(range->UpperLimit() < LowerLimit())||
+					(range->LowerLimit() > UpperLimit())||
+					(range->UpperLimit() == LowerLimit() && (!GetLowerBoundaryConstraint()||!range->GetUpperBoundaryConstraint()))||
+					(range->LowerLimit() == UpperLimit() && (!GetUpperBoundaryConstraint()||!range->GetLowerBoundaryConstraint()));
+				return !intersected;
+			}else if (range->PredType() == PType::EQUAL){
+				/*if this qual num is in the range of this->ranges,then we just convert ptype into PType::EQUAL*/
+				bool intersected = 
+					((range->UpperLimit() < LowerLimit())) ||
+					(range->UpperLimit() == LowerLimit() && (!GetLowerBoundaryConstraint()||!range->GetUpperBoundaryConstraint()));
+				return !intersected;
+			}else{
+				return false;
+			}
+		}break;
+		case PType::LIST:{
+			return false;
+		}break;
+		case PType::SUBQUERY:{
+			return false;
+		}break;
+		default:{
+			std::cerr<<"unknow type of pe"<<std::endl;
+			exit(-1);
+		}
+	}	
+	return false;
+}
+
 PredEquivlence::PredEquivlence(Quals* qual,bool only_left){
 	assert(qual);
 	if(qual->op){
@@ -367,12 +421,101 @@ PredEquivlence::PredEquivlence(Quals* qual,bool only_left){
 }
 
 /**
- * Insert: just for join_cond with "="
+ * PredEquivlence::Insert: used while pred_equivlences merging
  */
-bool PredEquivlence::Insert(const std::string& s){
-	/**
-	 * TODO: not implement 
-	 */
+bool PredEquivlence::Insert(PredEquivlence* pe, bool check_can_merged){
+	assert(pe);
+	if(!check_can_merged){
+		/*we should check if the pe can insert into current pe*/
+		if(!Serach(pe)){
+			return false;
+		}
+	}
+	/*update pred_name set*/
+	auto pred_set = pe->GetPredSet();
+		for(const auto& pred_name: pred_set){
+			set_.insert(pred_name);
+	}
+	/*update ranges*/
+	for(const auto& r : pe->GetRanges()){
+		std::vector<PredEquivlenceRange*> merge_range_list;
+		if(RangesSerach(r,merge_range_list)){
+			if(!MergePredEquivlenceRanges(merge_range_list)){
+				return false;
+			}
+		}else{
+			PredEquivlenceRange* range = new PredEquivlenceRange();
+			r->Copy(range);
+			ranges_.insert(r);
+		}
+	}
+	return true;
+}
+
+/**
+ * PredEquivlence::RangesSerach: serach if the range has intersection with this->ranges_:
+ * ret:
+ * 	- true:
+ *  - false:
+ */
+bool PredEquivlence::RangesSerach(PredEquivlenceRange* range,std::vector<PredEquivlenceRange*>& merge_range_list){
+	assert(range);
+	bool found = false;
+	for(const auto& r : ranges_){
+		if(r->Serach(range)){
+			merge_range_list.push_back(r);
+			found = true;
+		}
+	}
+	return found;	
+}
+/**
+ * PredEquivlence::MergePredEquivlenceRanges: 
+ * TODO: 24-12-27 current we only can merge ranges which types are all PType::Range!
+ */
+bool PredEquivlence::MergePredEquivlenceRanges(const std::vector<PredEquivlenceRange*>& merge_range_list) {
+	PredEquivlenceRange* new_range = new PredEquivlenceRange();
+	int idx = 0;
+	
+	std::string upper_bound;
+	std::string lower_bound;
+	bool left = false;
+	bool right = false;
+
+	for(const auto& r : merge_range_list){
+		if(r->PredType() != PType::RANGE){
+			std::cerr<<"only support range type merge currently"<<std::endl;
+			exit(-1);
+		}
+
+		if(idx == 0){
+			upper_bound = merge_range_list[0]->UpperLimit();
+			lower_bound = merge_range_list[0]->LowerLimit();
+			left = merge_range_list[0]->GetLowerBoundaryConstraint();
+			right = merge_range_list[0]->GetUpperBoundaryConstraint();
+		}else{
+
+			if((r->UpperLimit() > upper_bound && upper_bound != UPPER_LIMIT)||
+			   (r->UpperLimit() == UPPER_LIMIT)||
+			   (r->UpperLimit() == upper_bound && r->GetUpperBoundaryConstraint() && !right)
+			){
+				upper_bound = r->UpperLimit();
+				right = r->GetUpperBoundaryConstraint();
+			}
+			
+			if((r->LowerLimit() < lower_bound && lower_bound != LOWER_LIMIT)||
+			   (r->LowerLimit() == LOWER_LIMIT)||
+			   (r->LowerLimit() == lower_bound && r->GetLowerBoundaryConstraint() && !left)
+			){
+				lower_bound = r->LowerLimit();
+				left = r->GetLowerBoundaryConstraint();
+			}
+		}
+		ranges_.erase(r);
+		++idx;
+	}
+	ranges_.insert(new_range);
+	return true;
 }
 
 bool PredEquivlence::Serach(Quals* quals,bool only_left){
@@ -407,7 +550,7 @@ bool PredEquivlence::Compare(PredEquivlence* pe){
 }
 
 bool PredEquivlence::Copy(PredEquivlence* pe){
-
+	
 	return true;
 }
 
@@ -456,33 +599,22 @@ bool LevelPredEquivlences::Insert(LevelPredEquivlences* lpes){
  * LevelPredEquivlences::MergePredEquivlences,here 
  */
 bool LevelPredEquivlences::MergePredEquivlences(const std::vector<PredEquivlence*>& merge_pe_list){
-	
 	PredEquivlence* new_pe = new PredEquivlence();
 	std::set<std::string>pred_name_set;
+	int idx = 0;
 	for(const auto& mpe : merge_pe_list){
-		auto pred_set = mpe->GetPredSet();
-		for(const auto& pred_name: pred_set){
-			pred_name_set.insert(pred_name);
+		
+		if(idx == 0){
+			mpe[idx].Copy(new_pe);
+		}else{
+			new_pe->Insert(mpe,true);
 		}
-		for(const auto& r : mpe->GetRanges()){
-			switch(r->PredType()){
-				case PType::EQUAL:
-				case PType::RANGE:{
-					
-				}break;
-				case PType::LIST:{
-
-				}break;
-				case PType::SUBQUERY:{
-
-				}break;
-				default:{
-					std::cerr<<"unknow type of pe"<<std::endl;
-					exit(-1);
-				}
-			}
-		}
+		/*remove the pe has been merged*/
+		level_pe_sets_.erase(mpe);
+		++idx;
 	}
+	/*insert the new pe*/
+	level_pe_sets_.insert(new_pe);
 	return true;
 }
 
