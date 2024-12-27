@@ -312,6 +312,12 @@ void LevelManager::RangeConstrainedDecompose(PredExpression * root){
 	}
 }
 
+void PrintIndent(int depth) {
+    for (int i = 0; i < depth; ++i) {
+        std::cout << "  ";
+    }
+}
+
 /**
  * PredEquivlenceRange::Serach: Check if there is any intersection between the two range
  * TODO: 24-12-27 it a rough version
@@ -363,6 +369,51 @@ bool PredEquivlenceRange::Serach(PredEquivlenceRange* range){
 		}
 	}	
 	return false;
+}
+
+void PredEquivlenceRange::PrintPredEquivlenceRange(int depth){
+	PrintIndent(depth);
+	std::string output;
+	switch(type_){
+		case PType::EQUAL:{
+			output += "=";
+			output += lower_limit_;
+		}break;
+		case PType::NOT_EQUAL:{
+			output += "<>";
+			output += lower_limit_;
+		}break;
+		case PType::RANGE:{
+			if(boundary_constraint_.first){
+				output+="[";
+			}else{
+				output+="(";
+			}
+			output += lower_limit_;
+			output += ",";
+			output += upper_limit_;
+			if(boundary_constraint_.second){
+				output+="]";
+			}else{
+				output+=")";
+			}
+		}break;
+		case PType::LIST:{
+			output+="[";
+			for(int i=0;i<list_.size();i++){
+				output += list_[i];
+				if(i != list_.size()-1) output +=",";
+			}
+			output+="]";
+		}break;
+		case PType::SUBQUERY:{
+			output+="SUBQUERY";
+		}break;
+		default:{
+			std::cerr<<"unknow type of pe_range"<<std::endl;
+			exit(-1);
+		}
+	}
 }
 
 PredEquivlence::PredEquivlence(Quals* qual,bool only_left){
@@ -543,19 +594,41 @@ bool PredEquivlence::Serach(PredEquivlence* pe){
 	return false;
 }
 
-
+/**
+ * PredEquivlence::Compare: use while check if is the slow subqueries
+ * TODO: not implement
+ */
 bool PredEquivlence::Compare(PredEquivlence* pe){
-	
 	return true;
 }
 
 bool PredEquivlence::Copy(PredEquivlence* pe){
-	
+	pe->GetPredSet() = set_;
+	pe->GetRanges() = ranges_;
 	return true;
 }
 
-void PredEquivlence::ShowPredEquivlence(){
+void PredEquivlence::ShowPredEquivlence(int depth){
+	PrintIndent(depth);
+	std::cout<<"pe name sets:[";
+	int idx = 0;
+	for(auto iter = set_.begin();iter != set_.end();iter++){
+		if (idx) 
+			std::cout<<",";
+		std::cout<<*iter;
+		idx++;
+	}
+	std::cout<<"]"<<std::endl;
 	
+	idx = 0;
+	std::cout<<"pe range sets:[";
+	for(const auto& range : ranges_){
+		if(idx)
+			std::cout<<",";
+		range->PrintPredEquivlenceRange(depth);
+		idx++;
+	}
+	std::cout<<"]"<<std::endl;
 }
 
 /**
@@ -663,6 +736,19 @@ bool LevelPredEquivlences::Copy(LevelPredEquivlences* lpes){
 	return true;
 }
 
+void LevelPredEquivlences::ShowLevelPredEquivlences(int depth){
+	PrintIndent(depth);
+	std::cout<<"{";
+	int idx  = 0; 
+	for(const auto& pe : level_pe_sets_){
+		if(idx)
+			std::cout<<",";
+		pe->ShowPredEquivlence(depth);
+		idx++;
+	}
+	std::cout<<"}\n";
+}
+
 /**
  * LevelPredEquivlencesList::Insert 
  */
@@ -716,6 +802,15 @@ bool LevelPredEquivlencesList::Insert(LevelPredEquivlencesList* lpes_list,bool i
 		 * */
 	}
 	return true;
+}
+
+
+void LevelPredEquivlencesList::ShowLevelPredEquivlencesList(int depth){
+	PrintIndent(depth);
+	std::cout<<"lpes list:"<<std::endl;
+	for(const auto& lpe: lpes_list_){
+		lpe->ShowLevelPredEquivlences(depth+1);
+	}	
 }
 
 /**

@@ -138,12 +138,13 @@ public:
     bool GetLowerBoundaryConstraint(){return boundary_constraint_.first;}
     bool GetUpperBoundaryConstraint(){return boundary_constraint_.second;}
     
-
     void SetPredType(PType type){type_ = type;}
     PType PredType(){return type_;}
 
     void Copy(PredEquivlenceRange* new_range);
     bool Serach(PredEquivlenceRange* range);
+
+    void PrintPredEquivlenceRange(int depth = 0);
 
 private:
     PType type_;
@@ -181,8 +182,9 @@ public:
     bool RangesSerach(PredEquivlenceRange* range,std::vector<PredEquivlenceRange*>& merge_pe_list);
 
     bool Compare(PredEquivlence* range);
+
     bool Copy(PredEquivlence* pe);
-    void ShowPredEquivlence();
+    void ShowPredEquivlence(int ident = 0);
 
     std::set<std::string>& GetPredSet(){return set_;}
     void SetPredSet(std::set<std::string> set){set_ = set;}
@@ -214,7 +216,7 @@ public:
 
     bool MergePredEquivlences(const std::vector<PredEquivlence*>& merge_pe_list);
 
-    void ShowLevelPredEquivlences();
+    void ShowLevelPredEquivlences(int depth = 0);
 
     std::unordered_set<PredEquivlence*>& LevelPeList(){return level_pe_sets_;};
 
@@ -248,6 +250,9 @@ public:
     std::vector<LevelPredEquivlences*>::iterator end() { return lpes_list_.end(); }
     std::vector<LevelPredEquivlences*>::const_iterator begin() const { return lpes_list_.cbegin(); }
     std::vector<LevelPredEquivlences*>::const_iterator end() const { return lpes_list_.cend();}
+
+    void ShowLevelPredEquivlencesList(int depth);
+
 private:
     std::vector<LevelPredEquivlences*> lpes_list_;
 };
