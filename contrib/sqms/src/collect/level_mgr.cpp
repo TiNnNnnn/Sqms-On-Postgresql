@@ -311,13 +311,68 @@ void LevelManager::RangeConstrainedDecompose(PredExpression * root){
 	}
 }
 
+PredEquivlence::PredEquivlence(Quals* qual,bool only_left){
+	assert(qual);
+	if(qual->op){
+		set_.insert(qual->left);
+		PredEquivlenceRange* range = new PredEquivlenceRange(); 
+		if(qual->use_or){
+			/* use_or = true, it means it a list predicate,such as A.a in {1,2,3,4} , B.b > ANY[1,2,3,4] */
+			assert(only_left);
+			/**
+			 * TODO: not implement yet: we should convert str_list into true list
+			 */
+		}else{
+			if(!only_left && !strcmp(qual->op,"=")){
+				set_.insert(qual->right);
+			}
+			/* predicate like A.a < 100,B.b > 10... */
+			auto op = qual->op;
+			if(only_left){
+				if(!strcmp(op,"=")){
+					range->SetPredType(PType::EQUAL);
+					range->SetLowerLimit(qual->right);
+					range->SetUpperLimit(qual->right);
+				}else if(!strcmp(op,">")){
+					range->SetPredType(PType::RANGE);
+					range->SetLowerLimit(qual->right);
+					range->SetBoundaryConstraint(std::make_pair(false,true));
+				}else if(!strcmp(op,">=")){
+					range->SetPredType(PType::RANGE);
+					range->SetLowerLimit(qual->right);
+					range->SetBoundaryConstraint(std::make_pair(true,true));
+				}else if(!strcmp(op,"<")){
+					range->SetPredType(PType::RANGE);
+					range->SetUpperLimit(qual->right);
+					range->SetBoundaryConstraint(std::make_pair(true,false));
+				}else if(!strcmp(op,"<=")){
+					range->SetPredType(PType::RANGE);
+					range->SetUpperLimit(qual->right);
+					range->SetBoundaryConstraint(std::make_pair(false,false));
+				}else if(!strcmp(op,"!=") or !strcmp(op,"<>")){
+					range->SetPredType(PType::NOT_EQUAL);
+					range->SetLowerLimit(qual->right);
+					range->SetUpperLimit(qual->right);
+				}else if(!strcmp(op,"!~")){
+					range->SetPredType(PType::NOT_EQUAL);
+					/**
+					 * not implement: regular expression check
+					 */
+				}
+			}
+		}
+	}else if(qual->hash_sub_plan){
+		/*nothing to do*/
+	}
+}
+
 /**
  * Insert: just for join_cond with "="
  */
 bool PredEquivlence::Insert(const std::string& s){
-	auto ret = set_.insert(s);
-	if(ret.second)return true;
-	return false;
+	/**
+	 * TODO: not implement 
+	 */
 }
 
 bool PredEquivlence::Serach(Quals* quals,bool only_left){
@@ -345,22 +400,9 @@ bool PredEquivlence::Serach(PredEquivlence* pe){
 	return false;
 }
 
-/*
-* Update: update equivlence ranges,we should check if the expr is in set
-*/
-bool PredEquivlence::UpdateRanges(Quals* qual){
-	if(Serach(qual)){
-		return true;
-	}else{
-		/**
-		 * TODO: maybe we can use insert and then update ranges,such as [] operator in std::map
-		 */
-		return false;
-	}
-}
 
 bool PredEquivlence::Compare(PredEquivlence* pe){
-
+	
 	return true;
 }
 
@@ -378,7 +420,15 @@ void PredEquivlence::ShowPredEquivlence(){
  */
 bool LevelPredEquivlences::Insert(Quals* quals,bool only_left,bool is_or){
 	assert(quals);
-	
+	std::vector<PredEquivlence*>merge_pe_list;
+	if(Serach(quals,merge_pe_list)){
+		if(!MergePredEquivlences(merge_pe_list)){
+			return false;
+		}
+	}else{
+		PredEquivlence* pe = new PredEquivlence(quals,only_left);
+		level_pe_sets_.insert(pe);
+	}
 	return true;
 }
 
@@ -388,13 +438,13 @@ bool LevelPredEquivlences::Insert(Quals* quals,bool only_left,bool is_or){
 bool LevelPredEquivlences::Insert(LevelPredEquivlences* lpes){
 	assert(lpes);
 	for(const auto& pe : *lpes){
-		PredEquivlence* new_pe =  new PredEquivlence();
 		std::vector<PredEquivlence*>merge_pe_list;
 		if(Serach(pe,merge_pe_list)){
-			if(!MergePredEquivlences(new_pe,merge_pe_list)){
+			if(!MergePredEquivlences(merge_pe_list)){
 				return false;
 			}
 		}else{
+			PredEquivlence* new_pe =  new PredEquivlence();
 			pe->Copy(new_pe);
 			level_pe_sets_.insert(new_pe);
 		}
@@ -405,37 +455,37 @@ bool LevelPredEquivlences::Insert(LevelPredEquivlences* lpes){
 /**
  * LevelPredEquivlences::MergePredEquivlences,here 
  */
-bool LevelPredEquivlences::MergePredEquivlences(PredEquivlence* new_pe,const std::vector<PredEquivlence*>& merge_pe_list){
-	if(new_pe){
-		new_pe = new PredEquivlence();
-	}
-
+bool LevelPredEquivlences::MergePredEquivlences(const std::vector<PredEquivlence*>& merge_pe_list){
+	
+	PredEquivlence* new_pe = new PredEquivlence();
 	std::set<std::string>pred_name_set;
 	for(const auto& mpe : merge_pe_list){
 		auto pred_set = mpe->GetPredSet();
 		for(const auto& pred_name: pred_set){
 			pred_name_set.insert(pred_name);
 		}
-		switch(mpe->GetType()){
-			case PType::EQUAL:
-			case PType::RANGE:{
-				
-			}break;
-			case PType::LIST:{
+		for(const auto& r : mpe->GetRanges()){
+			switch(r->PredType()){
+				case PType::EQUAL:
+				case PType::RANGE:{
+					
+				}break;
+				case PType::LIST:{
 
-			}break;
-			case PType::SUBQUERY:{
+				}break;
+				case PType::SUBQUERY:{
 
-			}break;
-			default:{
-				std::cerr<<"unknow type of pe"<<std::endl;
-				exit(-1);
+				}break;
+				default:{
+					std::cerr<<"unknow type of pe"<<std::endl;
+					exit(-1);
+				}
 			}
 		}
-
 	}
 	return true;
 }
+
 
 /**
  * LevelPredEquivlences::Serach: use before insert new pred_equivlence into level_pred_equivlences,

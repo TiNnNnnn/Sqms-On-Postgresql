@@ -30,7 +30,8 @@ enum class AbstractPredNodeType{
 
 /*for pred without range, we just make const = lower_limit*/
 enum class PType{
-    EQUAL = 0,
+    NOT_EQUAL = 0,
+    EQUAL,
     RANGE,
     LIST,
     SUBQUERY,
@@ -75,7 +76,6 @@ public:
 
     void SetOrLpesList(LevelPredEquivlencesList* or_lpes_list){or_lpes_list_ = or_lpes_list;}
     LevelPredEquivlencesList* GetOrLpesList(){return or_lpes_list_;}
-
     void SetAndLpesList(LevelPredEquivlencesList* and_lpes_list){and_lpes_list_ = and_lpes_list;}
     LevelPredEquivlencesList* GetAndLpesList(){return and_lpes_list_;}
     
@@ -124,18 +124,25 @@ public:
     std::string LowerLimit() const {return lower_limit_;}
     std::string UpperLimit() const {return upper_limit_;}
     std::vector<std::string> const List(){return list_;}
-    PType PredType(){return type_;}
 
     void SetLowerLimit(const std::string & lower_limit){lower_limit_ = lower_limit;}
     void SetUpperLimit(const std::string & upper_limit){upper_limit_ = upper_limit;}
-    void SetUpperLimit(const std::vector<std::string>& list){list_ = list;}
+    void SetList(const std::vector<std::string>& list){list_ = list;}
+
+    void SetBoundaryConstraint(std::pair<bool,bool> bc){boundary_constraint_ = bc;}
+    void SetLowerBoundaryConstraint(bool b){boundary_constraint_.first = b;}
+    void SetUpperBoundaryConstraint(bool b){boundary_constraint_.second = b;}
+    std::pair<bool,bool>& GetBoundaryConstraint(){return boundary_constraint_;}
+
     void SetPredType(PType type){type_ = type;}
+    PType PredType(){return type_;}
+
 private:
     PType type_;
-    std::string lower_limit_;
-    std::string upper_limit_;
+    std::string lower_limit_ = LOWER_LIMIT;
+    std::string upper_limit_ = UPPER_LIMIT;
+    std::pair<bool,bool> boundary_constraint_ = std::make_pair(true,true);
     std::vector<std::string> list_;
-    std::vector<PredEquivlence*>childs_;
 };
 
 /**
@@ -152,13 +159,13 @@ class PredEquivlence {
         return per1->UpperLimit() < per2->UpperLimit();
     }
     };
-
 public:
+    PredEquivlence(){}
+    PredEquivlence(Quals* qual,bool only_left = true);
+
     bool Insert(const std::string& s);
     bool Insert(Quals* qual,bool only_left = true);
     bool Delete(Quals* quals);
-    bool UpdateRanges(Quals* quals);
-    bool UpdateRanges(PredEquivlence* pe);
     
     bool Serach(Quals* quals,bool only_left = true);
     bool Serach(PredEquivlence* pe);
@@ -167,14 +174,14 @@ public:
     bool Copy(PredEquivlence* pe);
     void ShowPredEquivlence();
 
-    std::unordered_set<std::string>& GetPredSet(){return set_;}
+    std::set<std::string>& GetPredSet(){return set_;}
+    void SetPredSet(std::set<std::string> set){set_ = set;}
 
-    void SetType(PType type) {pe_type = type;}
-    PType GetType(){return pe_type;}
+    std::set<PredEquivlenceRange*,RangesCompare>& GetRanges(){return ranges_;}
+    void SetRanges(std::set<PredEquivlenceRange*,RangesCompare> ranges){ranges_ = ranges;}
 
 private:
-    PType pe_type;
-    std::unordered_set<std::string> set_;
+    std::set<std::string> set_;
     std::set<PredEquivlenceRange*,RangesCompare>ranges_;
 };
 
@@ -194,7 +201,7 @@ public:
     bool Compare(PredEquivlence* range);
     bool Copy(LevelPredEquivlences* pe);
 
-    bool MergePredEquivlences(PredEquivlence* new_pe,const std::vector<PredEquivlence*>& merge_pe_list);
+    bool MergePredEquivlences(const std::vector<PredEquivlence*>& merge_pe_list);
 
     void ShowLevelPredEquivlences();
 
@@ -207,7 +214,7 @@ public:
 
 private:
     std::unordered_set<PredEquivlence*> level_pe_sets_;
-     
+
     /**
      * level pred equivlences index:
      * example:
