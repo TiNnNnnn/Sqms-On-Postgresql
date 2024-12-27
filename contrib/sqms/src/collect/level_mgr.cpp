@@ -34,9 +34,8 @@ void LevelManager::ComputeTotalClass(){
 
 void LevelManager::ComputeLevelClass(const std::vector<HistorySlowPlanStat*>& list){
     for(const auto& s : list){
-        /*parse exprstr first,then caluate equivlence class*/
         HandleNode(s);    
-    }
+	}
 }
 
 void LevelManager::HandleNode(HistorySlowPlanStat* hsps){
@@ -61,7 +60,10 @@ void LevelManager::HandleNode(HistorySlowPlanStat* hsps){
 		case T_MergeJoin:
 		case T_HashJoin:
             /*jion*/
-
+			if(hsps->join_cond_expr_tree){
+				EquivalenceClassesDecompase(hsps->join_cond_expr_tree);
+				ShowTotalPredClass();
+			}
 			break;
 		case T_SeqScan:
 
@@ -133,7 +135,7 @@ void LevelManager::HandleNode(HistorySlowPlanStat* hsps){
  * and class base on it's level equivalence calss 
  */
 void LevelManager::EquivalenceClassesDecompase(PredExpression* root){
-	
+	assert(root);
 	std::vector<std::vector<AbstractPredNode*>> level_collector;
 	ExprLevelCollect(root,level_collector);
 
@@ -316,6 +318,13 @@ void PrintIndent(int depth) {
     for (int i = 0; i < depth; ++i) {
         std::cout << "  ";
     }
+}
+
+void PrintLine(int len){
+	for(int i=0;i<len;++i){
+		std::cout << "-";
+	}
+	std::cout<<std::endl;
 }
 
 /**
@@ -637,7 +646,7 @@ void PredEquivlence::ShowPredEquivlence(int depth){
 bool LevelPredEquivlences::Insert(Quals* quals,bool only_left,bool is_or){
 	assert(quals);
 	std::vector<PredEquivlence*>merge_pe_list;
-	if(Serach(quals,merge_pe_list)){
+	if(Serach(quals,only_left,merge_pe_list)){
 		if(!MergePredEquivlences(merge_pe_list)){
 			return false;
 		}
@@ -718,8 +727,15 @@ bool LevelPredEquivlences::Serach(PredEquivlence* pe, std::vector<PredEquivlence
 	return ret;
 }
 
-bool LevelPredEquivlences::Serach(Quals* quals, std::vector<PredEquivlence*>& pe_idx_list){
+bool LevelPredEquivlences::Serach(Quals* quals,bool only_left,std::vector<PredEquivlence*>& pe_idx_list){
 	assert(quals);
+	bool ret = false;
+	for(const auto& item : level_pe_sets_){
+		if(item->Serach(quals,only_left)){
+			pe_idx_list.push_back(item);
+			ret = true;
+		}
+	}
 	return true;
 }
 
@@ -804,7 +820,6 @@ bool LevelPredEquivlencesList::Insert(LevelPredEquivlencesList* lpes_list,bool i
 	return true;
 }
 
-
 void LevelPredEquivlencesList::ShowLevelPredEquivlencesList(int depth){
 	PrintIndent(depth);
 	std::cout<<"lpes list:"<<std::endl;
@@ -874,4 +889,19 @@ void LevelManager::ExprLevelCollect(PredExpression * tree, std::vector<std::vect
 		std::swap(wrap_levels,wrap_tmp_levels);
     }
     std::reverse(level_collector.begin(),level_collector.end());
+}
+
+void LevelManager::ShowPredClass(int height,int depth){
+	assert(height>=0);
+	PrintIndent(depth);
+	std::cout << "level ["+ std::to_string(height) <<"] pred equivelnces"<<std::endl;
+	total_equivlences_[height]->ShowLevelPredEquivlencesList(depth+1);
+	PrintLine(20);
+}
+
+void LevelManager::ShowTotalPredClass(int depth){
+	std::cout<<"Total Pred Class: "<<std::endl;
+	for(int i = 0; i< total_equivlences_.size();i++){
+		ShowPredClass(i,depth);
+	}
 }

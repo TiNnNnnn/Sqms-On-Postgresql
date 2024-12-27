@@ -208,7 +208,7 @@ public:
     bool UpdateRanges(Quals* quals);
     bool UpdateRanges(PredEquivlence* pe);
 
-    bool Serach(Quals* quals, std::vector<PredEquivlence*>& merge_pe_list);
+    bool Serach(Quals* quals, bool only_left,std::vector<PredEquivlence*>& merge_pe_list);
     bool Serach(PredEquivlence* pe, std::vector<PredEquivlence*>& merge_pe_list);
     
     bool Compare(PredEquivlence* range);
@@ -262,7 +262,12 @@ public:
     LevelManager(HistorySlowPlanStat* hsps, SlowPlanStat*sps)
         :hsps_(hsps),sps_(sps)
     {}
+    
     void ComputeTotalClass();
+
+    void ShowPredClass(int height,int depth = 0);
+    void ShowTotalPredClass(int depth = 0);
+
 private:
 
     void ComputeLevelClass(const std::vector<HistorySlowPlanStat*>& list);
