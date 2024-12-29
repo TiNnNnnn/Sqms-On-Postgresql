@@ -638,7 +638,7 @@ bool PredEquivlence::Copy(PredEquivlence* pe){
 }
 
 void PredEquivlence::ShowPredEquivlence(int depth){
-	std::cout<<"name_sets: [";
+	std::cout<<"(name_sets: [";
 	int idx = 0;
 	for(auto iter = set_.begin();iter != set_.end();iter++){
 		if (idx) 
@@ -656,7 +656,7 @@ void PredEquivlence::ShowPredEquivlence(int depth){
 		range->PrintPredEquivlenceRange(depth);
 		idx++;
 	}
-	std::cout<<"]";
+	std::cout<<"])";
 }
 
 /**
