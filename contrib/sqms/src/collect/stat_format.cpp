@@ -11,20 +11,16 @@ PlanStatFormat& PlanStatFormat::getInstance() {
     return instance;
 }
 
-PlanStatFormat::~PlanStatFormat() {
-    history_slow_plan_stat__free_unpacked(&hsps_,NULL);
-    delete pool_;
-    pool_ = nullptr;
-}
+PlanStatFormat::~PlanStatFormat() {}
 
-PlanStatFormat::PlanStatFormat()
-    : pool_(new ThreadPool(pool_size_)){
+PlanStatFormat::PlanStatFormat(int psize)
+    : pool_(std::make_shared<ThreadPool>(psize)),pool_size_(psize){
     history_slow_plan_stat__init(&hsps_);
-    storage_ = new RedisSlowPlanStatProvider(std::string(redis_host),redis_port,totalFetchTimeoutMillis,totalSetTimeMillis,defaultTTLSeconds); 
+    storage_ = std::make_shared<RedisSlowPlanStatProvider>(std::string(redis_host),redis_port,totalFetchTimeoutMillis,totalSetTimeMillis,defaultTTLSeconds); 
 }
 
 bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd){
-    ExcavateContext *context = new ExcavateContext();
+   
     Preprocessing(qd);
     if(!&hsps_){
         std::cout<<"hsps is nullptr"<<std::endl;
@@ -37,15 +33,21 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd){
         return 1;
     }
     history_slow_plan_stat__pack(&hsps_,buffer);
-    pool_->submit([&]() -> bool {
+    
+    pool_->submit([msg_size,buffer]() -> bool {
+
+        ExcavateContext *context = new ExcavateContext();
+        std::cout<<"Thread: "<<ThreadPool::GetTid()<<" Begin Working..."<<std::endl;
         /**
          * Due to the use of thread separation to ensure the main thread flow, we need 
          * to deeply copy the proto structure to the child threads
          */
         HistorySlowPlanStat *hsps = history_slow_plan_stat__unpack(NULL, msg_size, buffer);
-
+        if(!hsps){
+            std::cerr<<"history_slow_plan_stat__unpack failed in thered: "<<ThreadPool::GetTid()<<std::endl;
+        }
         /*execute core slow query execavate strategy*/
-        context->setStrategy(std::make_shared<CostBasedExcavateStrategy>(hsps));
+        context->setStrategy(std::make_shared<NoProcessedExcavateStrategy>(hsps));
         std::vector<HistorySlowPlanStat*> list;
         context->executeStrategy(list);
         
@@ -55,20 +57,22 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd){
             lm->ComputeTotalClass();
         }
 
-        /*build fast filter tree, here need ensure thread safe,moreover,we
-        need rebuild it after db restarting*/
+        /**
+         * build fast filter tree, here need ensure thread safe,moreover,we
+         * need rebuild it after db restarting
+        */
 
 
         /**
          * TODO: 11-23 storage the slow sub query
          */
-        for(auto q : list){
-            std::string hash_val = HashCanonicalPlan(q->json_plan);
-            storage_->PutStat(hash_val,hsps);
-        }
+        // for(auto q : list){
+        //     std::string hash_val = HashCanonicalPlan(q->json_plan);
+        //     storage_->PutStat(hash_val,hsps);
+        // }
 
         history_slow_plan_stat__free_unpacked(hsps,NULL);
-
+        std::cout<<"Thread: "<<ThreadPool::GetTid()<<" Finish Working..."<<std::endl;
         return true;
     });
     return true;

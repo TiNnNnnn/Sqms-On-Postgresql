@@ -201,7 +201,7 @@ private:
 class LevelPredEquivlences{
 public:
     bool Insert(Quals* quals,bool only_left = true,bool is_or = false);
-    bool Insert(PredEquivlence* pe,bool only_left = true);
+    bool Insert(PredEquivlence* pe);
     bool Insert(LevelPredEquivlences* pe);
 
     bool Delete(PredEquivlence* quals);
@@ -272,6 +272,7 @@ private:
 
     void ComputeLevelClass(const std::vector<HistorySlowPlanStat*>& list);
     void HandleNode(HistorySlowPlanStat* hsps);
+    
     void EquivalenceClassesDecompase(PredExpression* root);
     void RangeConstrainedDecompose(PredExpression * root);
 

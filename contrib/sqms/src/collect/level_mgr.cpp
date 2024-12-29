@@ -15,9 +15,7 @@ void LevelManager::ComputeTotalClass(){
         size_t sz = levels.size();
         for(size_t i=0;i<sz;i++){
             for(size_t j = 0; j < levels[i]->n_childs ; j++){
-                if(levels[i]->childs[j]){
-                    tmp_levels.push_back(levels[i]);
-                }
+                tmp_levels.push_back(levels[i]->childs[j]);
             }
         }
         level_collector.push_back(levels);
@@ -27,6 +25,7 @@ void LevelManager::ComputeTotalClass(){
     std::reverse(level_collector.begin(),level_collector.end());
 	
 	height_ = level_collector.size();
+
     for(auto &lc : level_collector){
         ComputeLevelClass(lc);
     }
@@ -58,13 +57,16 @@ void LevelManager::HandleNode(HistorySlowPlanStat* hsps){
 			break;
 		case T_NestLoop:
 		case T_MergeJoin:
-		case T_HashJoin:
+		case T_HashJoin:{
             /*jion*/
 			if(hsps->join_cond_expr_tree){
 				EquivalenceClassesDecompase(hsps->join_cond_expr_tree);
 				ShowTotalPredClass();
 			}
-			break;
+			if(hsps->join_filter_expr_tree){
+
+			}
+		}break;
 		case T_SeqScan:
 
 			break;
@@ -380,6 +382,14 @@ bool PredEquivlenceRange::Serach(PredEquivlenceRange* range){
 	return false;
 }
 
+void PredEquivlenceRange::Copy(PredEquivlenceRange* new_range){
+	new_range->SetPredType(type_);
+	new_range->SetLowerLimit(lower_limit_);
+	new_range->SetUpperLimit(upper_limit_);
+	new_range->SetBoundaryConstraint(boundary_constraint_);
+	new_range->SetList(list_);
+}
+
 void PredEquivlenceRange::PrintPredEquivlenceRange(int depth){
 	PrintIndent(depth);
 	std::string output;
@@ -411,7 +421,7 @@ void PredEquivlenceRange::PrintPredEquivlenceRange(int depth){
 			output+="[";
 			for(int i=0;i<list_.size();i++){
 				output += list_[i];
-				if(i != list_.size()-1) output +=",";
+				if(i != int(list_.size()-1)) output +=",";
 			}
 			output+="]";
 		}break;
@@ -657,6 +667,21 @@ bool LevelPredEquivlences::Insert(Quals* quals,bool only_left,bool is_or){
 	return true;
 }
 
+bool LevelPredEquivlences::Insert(PredEquivlence* pe){
+	assert(pe);
+	std::vector<PredEquivlence*>merge_pe_list;
+	if(Serach(pe,merge_pe_list)){
+		if(!MergePredEquivlences(merge_pe_list)){
+				return false;
+		}
+	}else{
+		PredEquivlence* new_pe = new PredEquivlence();
+		pe->Copy(new_pe);
+		level_pe_sets_.insert(new_pe);
+	}
+	return true;
+}
+
 /**
  * LevelPredEquivlences::Insert
  */
@@ -736,7 +761,7 @@ bool LevelPredEquivlences::Serach(Quals* quals,bool only_left,std::vector<PredEq
 			ret = true;
 		}
 	}
-	return true;
+	return ret;
 }
 
 /**
@@ -901,7 +926,7 @@ void LevelManager::ShowPredClass(int height,int depth){
 
 void LevelManager::ShowTotalPredClass(int depth){
 	std::cout<<"Total Pred Class: "<<std::endl;
-	for(int i = 0; i< total_equivlences_.size();i++){
+	for(size_t i = 0; i< total_equivlences_.size();i++){
 		ShowPredClass(i,depth);
 	}
 }

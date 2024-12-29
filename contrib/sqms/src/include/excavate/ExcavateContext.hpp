@@ -4,17 +4,17 @@
 
 class ExcavateContext{
 public:
-    void setStrategy(std::shared_ptr<AbstractExcavateStrategy> Strategy) {
-        strategy = Strategy;
+    void setStrategy(std::shared_ptr<AbstractExcavateStrategy> strategy) {
+        strategy_ = strategy;
     }
 
     void executeStrategy(std::vector<HistorySlowPlanStat*>& list) const {
-        if (strategy) {
-            strategy->excavate(list);
+        if (strategy_) {
+            strategy_->excavate(list);
         } else {
             std::cerr << "No excavate strategy set!" << std::endl;
         }
     }
 private:
-    std::shared_ptr<AbstractExcavateStrategy> strategy;
+    std::shared_ptr<AbstractExcavateStrategy> strategy_;
 };

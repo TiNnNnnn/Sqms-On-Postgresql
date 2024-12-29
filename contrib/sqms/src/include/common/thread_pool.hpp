@@ -11,9 +11,13 @@
 
 #ifndef THREAD_POOL_HPP
 #define THREAD_POOL_HPP
+
+/**
+ * global singletons are guaranteed
+ */
 class ThreadPool {
 public:
-    explicit ThreadPool(size_t threadCount){
+    explicit ThreadPool(size_t threadCount) : stopFlag(false) {
         for (size_t i = 0; i < threadCount; ++i) {
             workers.emplace_back(&ThreadPool::workerThread, this);
             workers.back().detach();
@@ -23,8 +27,15 @@ public:
     ThreadPool(const ThreadPool&) = delete;
     ThreadPool& operator=(const ThreadPool&) = delete;
 
+    static std::thread::id GetTid() {
+        return std::this_thread::get_id();
+    }
+
+    /**
+     * submit: push a task into the thread_pool
+     */
     template <typename Func, typename... Args>
-    auto submit(Func&& func, Args&&... args) -> std::future<decltype(func(args...))>{
+    auto submit(Func&& func, Args&&... args) -> std::future<decltype(func(args...))> {
         using ReturnType = decltype(func(args...));
 
         auto task = std::make_shared<std::packaged_task<ReturnType()>>(
@@ -49,7 +60,6 @@ public:
             std::lock_guard<std::mutex> lock(queueMutex);
             stopFlag = true;
         }
-        //notify all thread exit
         condition.notify_all();
     }
 
@@ -72,11 +82,12 @@ private:
         }
     }
 
-    std::vector<std::thread> workers;               // work thread
-    std::queue<std::function<void()>> tasks;        // task pool
+    std::vector<std::thread> workers;
+    std::queue<std::function<void()>> tasks;
 
-    std::mutex queueMutex;                          // task pool lock
-    std::condition_variable condition; 
+    std::mutex queueMutex;
+    std::condition_variable condition;
     std::atomic<bool> stopFlag;
 };
+
 #endif // THREAD_POOL_HPP

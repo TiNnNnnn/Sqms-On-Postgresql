@@ -4,7 +4,7 @@
 #include "common/thread_pool.hpp"
 #include "storage/RedisPlanStatProvider.hpp"
 #include "discovery/query_index.hpp"
-
+#include <memory>
 
 extern "C"{
 #include "postgres.h"
@@ -40,15 +40,15 @@ private:
     void ShowPredTree(PredExpression* p_expr, int depth = 0);
     void PrintIndent(int depth);
 
-    PlanStatFormat();
+    PlanStatFormat(int psize = 10);
     ~PlanStatFormat();
 private:
-    ThreadPool* pool_;
+    std::shared_ptr<ThreadPool> pool_;
     size_t pool_size_ = 10;
     /* HistorySlowPlanStat is a protobuf format structrue,it will be encoding and stored in kv engine*/
     HistorySlowPlanStat hsps_;
     CanonicalStrategy cs_ = C_SAFE;
-    RedisSlowPlanStatProvider * storage_;
+    std::shared_ptr<RedisSlowPlanStatProvider> storage_;
     /** 
      * TODO: the name of HistorySlowPanStat and SlowPlanStat is simlar, we need rename 
      * one of them to keep readilty of codes

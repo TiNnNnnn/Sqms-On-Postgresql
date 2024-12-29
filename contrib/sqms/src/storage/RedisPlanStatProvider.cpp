@@ -30,6 +30,11 @@ RedisSlowPlanStatProvider::RedisSlowPlanStatProvider(const std::string& redis_ho
         redisAsyncSetDisconnectCallback(redisContext_, DisconnectCallback);
 }
 
+RedisSlowPlanStatProvider::~RedisSlowPlanStatProvider(){
+    free(redisContext_);
+    redisContext_ = nullptr;
+}
+
 std::string RedisSlowPlanStatProvider::getName(){
     return "redis";
 }

@@ -42,3 +42,8 @@ bool CostBasedExcavateStrategy::excavate(std::vector<HistorySlowPlanStat*>& list
 bool ExternalResourceExcavateStrategy::excavate(std::vector<HistorySlowPlanStat*>& list) const{
     return true;
 }
+
+bool NoProcessedExcavateStrategy::excavate(std::vector<HistorySlowPlanStat*>& list) const {
+    list.push_back(hsps_);
+    return true;
+}

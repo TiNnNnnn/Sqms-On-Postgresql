@@ -24,3 +24,14 @@ class ExternalResourceExcavateStrategy : public AbstractExcavateStrategy{
 public:
     bool excavate(std::vector<HistorySlowPlanStat*>& list) const override;
 };
+
+/*NoProcessedExcavateStrategy: Only For Debugging*/
+class NoProcessedExcavateStrategy : public AbstractExcavateStrategy{
+public:
+    NoProcessedExcavateStrategy(HistorySlowPlanStat* hsps){
+        hsps_ = hsps;
+    }
+    bool excavate(std::vector<HistorySlowPlanStat*>& list) const override;
+private:
+    HistorySlowPlanStat* hsps_;
+};
