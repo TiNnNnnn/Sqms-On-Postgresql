@@ -95,8 +95,8 @@ public:
         size_t msg_size = quals__get_packed_size(qual);
         uint8_t *buffer = (uint8_t*)malloc(msg_size);
         if (buffer == NULL) {
-            perror("Failed to allocate memory");
-            return;
+            perror("Failed to allocate memory for quals_wrap");
+            exit(-1);
         }
        quals__pack(qual,buffer);
        qual_ = quals__unpack(NULL, msg_size, buffer);
@@ -172,7 +172,7 @@ public:
     PredEquivlence(){}
     PredEquivlence(Quals* qual,bool only_left = true);
 
-    bool Insert(Quals* qual,bool only_left = true);
+    //bool Insert(Quals* qual,bool only_left = true);
     bool Insert(PredEquivlence* pe, bool check_can_merged = true);
 
     bool Delete(Quals* quals);

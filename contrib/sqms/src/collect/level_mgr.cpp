@@ -38,7 +38,8 @@ void LevelManager::ComputeLevelClass(const std::vector<HistorySlowPlanStat*>& li
 }
 
 void LevelManager::HandleNode(HistorySlowPlanStat* hsps){
-    switch(hsps->node_tag){
+	NodeTag node_tag = static_cast<NodeTag>(hsps->node_tag);
+    switch(node_tag){
         case T_Result:
 			break;
 		case T_ProjectSet:
@@ -61,11 +62,11 @@ void LevelManager::HandleNode(HistorySlowPlanStat* hsps){
             /*jion*/
 			if(hsps->join_cond_expr_tree){
 				EquivalenceClassesDecompase(hsps->join_cond_expr_tree);
-				ShowTotalPredClass();
 			}
 			if(hsps->join_filter_expr_tree){
-
+				EquivalenceClassesDecompase(hsps->join_filter_expr_tree);	
 			}
+			ShowTotalPredClass();
 		}break;
 		case T_SeqScan:
 
@@ -127,6 +128,7 @@ void LevelManager::HandleNode(HistorySlowPlanStat* hsps){
 		case T_Hash:
 			break;
 		default:
+			std::cerr<<"unknown node tag"<<std::endl;
 			break;  
     }
 }
@@ -144,19 +146,27 @@ void LevelManager::EquivalenceClassesDecompase(PredExpression* root){
 	if(!level_collector.size()){
 		/*no join_cond ,it means a full cartesian product*/
 	}else if(level_collector.size() == 1){
+		LevelPredEquivlencesList* final_lpes_list = new LevelPredEquivlencesList();
 		/*actually,maybe its the most common condition*/ 
         assert(level_collector[0].size()==1);
         assert(level_collector[0][0]->Type() == AbstractPredNodeType::QUALS);
         auto qual = static_cast<QualsWarp*>(level_collector[0][0])->GetQual();
 		LevelPredEquivlences * lpes = new LevelPredEquivlences();
-		if(strcmp(qual->op,"=")){
-			PredEquivlence* pe = new PredEquivlence();
+		if(!strcmp(qual->op,"=")){
+			PredEquivlence* pe = new PredEquivlence(qual,false);
 			lpes->Insert(pe);
+			final_lpes_list->Insert(lpes);
 		}else{
 			/**
-			 * except join_cond with op is "=", another operator can infer some infomation?
+			 * TODO: except join_cond with op is "=", another operator 
+			 * 		 can infer some infomation?
 			 */
 		}
+		if(total_equivlences_.size()){
+			final_lpes_list->Insert(total_equivlences_.back(),false);
+		}
+		total_equivlences_.push_back(final_lpes_list);
+
 	}else{
 		/* more then one level,it means here is more than one join_cond in current node ,they connect by and/or/not*/
 		LevelPredEquivlencesList* final_lpes_list;
@@ -440,7 +450,7 @@ PredEquivlence::PredEquivlence(Quals* qual,bool only_left){
 	if(qual->op){
 		set_.insert(qual->left);
 		PredEquivlenceRange* range = new PredEquivlenceRange(); 
-		if(qual->use_or){
+		if(strlen(qual->use_or)){
 			/* use_or = true, it means it a list predicate,such as A.a in {1,2,3,4} , B.b > ANY[1,2,3,4] */
 			assert(only_left);
 			/**
@@ -628,8 +638,7 @@ bool PredEquivlence::Copy(PredEquivlence* pe){
 }
 
 void PredEquivlence::ShowPredEquivlence(int depth){
-	PrintIndent(depth);
-	std::cout<<"pe name sets:[";
+	std::cout<<"name_sets: [";
 	int idx = 0;
 	for(auto iter = set_.begin();iter != set_.end();iter++){
 		if (idx) 
@@ -637,17 +646,17 @@ void PredEquivlence::ShowPredEquivlence(int depth){
 		std::cout<<*iter;
 		idx++;
 	}
-	std::cout<<"]"<<std::endl;
+	std::cout<<"] , ";
 	
 	idx = 0;
-	std::cout<<"pe range sets:[";
+	std::cout<<"range_sets:[";
 	for(const auto& range : ranges_){
 		if(idx)
 			std::cout<<",";
 		range->PrintPredEquivlenceRange(depth);
 		idx++;
 	}
-	std::cout<<"]"<<std::endl;
+	std::cout<<"]";
 }
 
 /**
@@ -784,7 +793,7 @@ void LevelPredEquivlences::ShowLevelPredEquivlences(int depth){
 	for(const auto& pe : level_pe_sets_){
 		if(idx)
 			std::cout<<",";
-		pe->ShowPredEquivlence(depth);
+		pe->ShowPredEquivlence(depth+1);
 		idx++;
 	}
 	std::cout<<"}\n";
@@ -795,7 +804,7 @@ void LevelPredEquivlences::ShowLevelPredEquivlences(int depth){
  */
 bool LevelPredEquivlencesList::Insert(LevelPredEquivlences* pe,bool only_left,bool is_or){
 	assert(pe);
-	if(!is_or){
+	if(!is_or || lpes_list_.empty()){
 		lpes_list_.push_back(pe);
 	}else{
 		for(auto& dst : lpes_list_){
@@ -846,8 +855,6 @@ bool LevelPredEquivlencesList::Insert(LevelPredEquivlencesList* lpes_list,bool i
 }
 
 void LevelPredEquivlencesList::ShowLevelPredEquivlencesList(int depth){
-	PrintIndent(depth);
-	std::cout<<"lpes list:"<<std::endl;
 	for(const auto& lpe: lpes_list_){
 		lpe->ShowLevelPredEquivlences(depth+1);
 	}	
@@ -896,10 +903,10 @@ void LevelManager::ExprLevelCollect(PredExpression * tree, std::vector<std::vect
 					node->AddChild(new_child);
 					new_child->SetParent(node);
 					wrap_tmp_levels.push_back(new_child);
-					tmp_levels.push_back(levels[i]);
+					tmp_levels.push_back(child);
 				}
 			}else if(levels[i]->expr_case == PRED_EXPRESSION__EXPR_QUAL){
-				/*no childs , nothing to do*/
+				/*no chils,nothing to do*/
 			}else{
 				std::cerr<<"unknow type of pred expression type"<<std::endl;
             	return;
@@ -919,14 +926,14 @@ void LevelManager::ExprLevelCollect(PredExpression * tree, std::vector<std::vect
 void LevelManager::ShowPredClass(int height,int depth){
 	assert(height>=0);
 	PrintIndent(depth);
-	std::cout << "level ["+ std::to_string(height) <<"] pred equivelnces"<<std::endl;
+	std::cout << "level<"+ std::to_string(height) <<">pred_equivelnces: "<<std::endl;
 	total_equivlences_[height]->ShowLevelPredEquivlencesList(depth+1);
-	PrintLine(20);
+	PrintLine(50);
 }
 
 void LevelManager::ShowTotalPredClass(int depth){
 	std::cout<<"Total Pred Class: "<<std::endl;
 	for(size_t i = 0; i< total_equivlences_.size();i++){
-		ShowPredClass(i,depth);
+		ShowPredClass(i,depth+1);
 	}
 }
