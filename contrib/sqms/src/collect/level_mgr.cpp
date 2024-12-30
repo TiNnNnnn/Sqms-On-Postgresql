@@ -24,7 +24,7 @@ void LevelManager::ComputeTotalClass(){
     }
     std::reverse(level_collector.begin(),level_collector.end());
 	
-	height_ = level_collector.size();
+	total_height_ = level_collector.size();
 
     for(auto &lc : level_collector){
         ComputeLevelClass(lc);
@@ -37,6 +37,7 @@ void LevelManager::ComputeLevelClass(const std::vector<HistorySlowPlanStat*>& li
     for(const auto& s : list){
         HandleNode(s);    
 	}
+	++cur_height_;
 }
 
 void LevelManager::HandleNode(HistorySlowPlanStat* hsps){
@@ -61,18 +62,11 @@ void LevelManager::HandleNode(HistorySlowPlanStat* hsps){
 		case T_NestLoop:
 		case T_MergeJoin:
 		case T_HashJoin:{
-            /*jion*/
-			if(hsps->join_cond_expr_tree){
-				EquivalenceClassesDecompase(hsps->join_cond_expr_tree);
-			}
-			if(hsps->join_filter_expr_tree){
-				EquivalenceClassesDecompase(hsps->join_filter_expr_tree);	
-			}
+			PredEquivalenceClassesDecompase(hsps->join_cond_expr_tree);
+			PredEquivalenceClassesDecompase(hsps->join_filter_expr_tree);
 		}break;
 		case T_SeqScan:
-			if(hsps->filter_tree){
-				EquivalenceClassesDecompase(hsps->filter_tree);
-			}
+			PredEquivalenceClassesDecompase(hsps->filter_tree);
 			break;
 		case T_SampleScan:
 			break;
@@ -111,6 +105,7 @@ void LevelManager::HandleNode(HistorySlowPlanStat* hsps){
 		case T_Material:
 			break;
 		case T_Sort:
+			PredEquivalenceClassesDecompase(hsps->filter_tree);
 			break;
 		case T_IncrementalSort:
 			break;
@@ -137,25 +132,47 @@ void LevelManager::HandleNode(HistorySlowPlanStat* hsps){
 }
 
 /**
- * EquivalenceClassesDecompase:calulate equivalance class shoule be
- * the first step of ComputeLevelClass,we caluate other level attr 
- * and class base on it's level equivalence calss 
+ * EquivalenceClassesDecompase:calulate equivalance class for predicates for
+ * each levels
  */
-void LevelManager::EquivalenceClassesDecompase(PredExpression* root){
-	assert(root);
+void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
+	
+	bool same_level_need_merged = true;
+	if(cur_height_ ==  total_equivlences_.size()){
+		/*
+		  if true,it means current level's predicates are still not processed,we 
+		  create a new final_lpes_list in total_equivlences_,even if the current
+		  pred_expression tree is nullptr;
+		*/
+		total_equivlences_.push_back(nullptr);
+		same_level_need_merged = false;
+	}
+
+	LevelPredEquivlencesList* final_lpes_list = nullptr;
+	if(!root){
+		final_lpes_list = new LevelPredEquivlencesList();
+		/*we should merge current level's pre lpes with this level*/
+		if(same_level_need_merged){
+			//final_lpes_list->Insert(total_equivlences_[cur_height_],false);
+			delete final_lpes_list;
+			return;
+		}
+		/*we should merge pre level's lpes with this level*/
+		if(cur_height_ >= 1){
+			final_lpes_list->Insert(total_equivlences_[cur_height_-1],false);
+		}
+		/*update toal_equivlences*/
+		total_equivlences_[cur_height_] = final_lpes_list;
+		return;
+	}
+
 	std::vector<std::vector<AbstractPredNode*>> level_collector;
 	ExprLevelCollect(root,level_collector);
 
-	if(!level_collector.size()){
-		/*no join_cond ,it means a full cartesian product*/
-		LevelPredEquivlencesList* final_lpes_list = new LevelPredEquivlencesList();
-		if(total_equivlences_.size()){
-			final_lpes_list->Insert(total_equivlences_.back(),false);
-		}
-		total_equivlences_.push_back(final_lpes_list);
-	}else if(level_collector.size() == 1){
-		LevelPredEquivlencesList* final_lpes_list = new LevelPredEquivlencesList();
+	assert(level_collector.size());	
+	if(level_collector.size() == 1){
 		/*actually,maybe its the most common condition*/ 
+		final_lpes_list = new LevelPredEquivlencesList();
         assert(level_collector[0].size()==1);
         assert(level_collector[0][0]->Type() == AbstractPredNodeType::QUALS);
         
@@ -166,14 +183,8 @@ void LevelManager::EquivalenceClassesDecompase(PredExpression* root){
 		
 		lpes->Insert(pe);
 		final_lpes_list->Insert(lpes);
-		
-		if(total_equivlences_.size()){
-			final_lpes_list->Insert(total_equivlences_.back(),false);
-		}
-		total_equivlences_.push_back(final_lpes_list);
 	}else{
 		/* more then one level,it means here is more than one join_cond in current node ,they connect by and/or/not*/
-		LevelPredEquivlencesList* final_lpes_list;
 		for(const auto& level : level_collector){
 			/**deep copy pre level pred_expr_equliclence into this level */
 			for(const auto& expr : level){
@@ -295,12 +306,17 @@ void LevelManager::EquivalenceClassesDecompase(PredExpression* root){
 				}
 			}
     	}
-		/*we should merge pre level's lpes with this level*/
-		if(total_equivlences_.size()){
-			final_lpes_list->Insert(total_equivlences_.back(),false);
-		}
-		total_equivlences_.push_back(final_lpes_list);
 	}
+	/*we should merge current level's pre lpes with this level*/
+	if(same_level_need_merged){
+		final_lpes_list->Insert(total_equivlences_[cur_height_],false);
+	}
+	/*we should merge pre level's lpes with this level*/
+	if(cur_height_ >= 1){
+		final_lpes_list->Insert(total_equivlences_[cur_height_-1],false);
+	}
+	/*update toal_equivlences*/
+	total_equivlences_[cur_height_] = final_lpes_list;
 }
 
 
@@ -731,11 +747,6 @@ bool PredEquivlence::Compare(PredEquivlence* pe){
 bool PredEquivlence::Copy(PredEquivlence* pe){
 	pe->SetPredSet(set_);
 	pe->SetRanges(ranges_);
-	// for(const auto& range : ranges_){
-	// 	PredEquivlenceRange* new_range = new PredEquivlenceRange();
-	// 	range->Copy(new_range);
-	// 	ranges_.insert(new_range);
-	// }
 	return true;
 }
 

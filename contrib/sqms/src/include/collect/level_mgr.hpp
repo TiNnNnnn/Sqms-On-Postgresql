@@ -281,18 +281,17 @@ private:
     void ComputeLevelClass(const std::vector<HistorySlowPlanStat*>& list);
     void HandleNode(HistorySlowPlanStat* hsps);
     
-    void EquivalenceClassesDecompase(PredExpression* root);
+    void PredEquivalenceClassesDecompase(PredExpression* root);
 
 private:
     void ExprLevelCollect(PredExpression * tree,std::vector<std::vector<AbstractPredNode*>>& level_collector);
 
 private:
-    HistorySlowPlanStat* hsps_; /*plan we need to process to sps_*/
-    SlowPlanStat * sps_; /*final output,sps will dircetly storaged*/
-    int height_; /*plan height*/
-
-    int cur_height_;
-    //std::vector<LevelPredEquivlences*> total_equivlences_;
+    HistorySlowPlanStat* hsps_ = nullptr; /*plan we need to process to sps_*/
+    SlowPlanStat * sps_ = nullptr; /*final output,sps will dircetly storaged*/
+    int total_height_ = 0; /*plan height*/
+    int cur_height_ = 0; /* from bottom to the top,begin height is 0 ... */
+    /* total equivlences for predicates */
     std::vector<LevelPredEquivlencesList*> total_equivlences_;
 };
 
