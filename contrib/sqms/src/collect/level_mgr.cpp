@@ -153,7 +153,7 @@ void LevelManager::EquivalenceClassesDecompase(PredExpression* root){
         auto qual = static_cast<QualsWarp*>(level_collector[0][0])->GetQual();
 		LevelPredEquivlences * lpes = new LevelPredEquivlences();
 		if(!strcmp(qual->op,"=")){
-			PredEquivlence* pe = new PredEquivlence(qual,false);
+			PredEquivlence* pe = new PredEquivlence(qual);
 			lpes->Insert(pe);
 			final_lpes_list->Insert(lpes);
 		}else{
@@ -179,7 +179,7 @@ void LevelManager::EquivalenceClassesDecompase(PredExpression* root){
 						case PRED_OPERATOR__PRED_OPERATOR_TYPE__AND:{
 							//LevelPredEquivlences * lpes = new LevelPredEquivlences();
 							LevelPredEquivlencesList* and_lpes_list = new LevelPredEquivlencesList();
-							for(int i=0;i<cur_op->ChildSize();i++){
+							for(size_t i=0;i<cur_op->ChildSize();i++){
 								auto type = cur_op->Child(0)->Type();
 								switch (type){
 									case AbstractPredNodeType::QUALS:{
@@ -229,14 +229,14 @@ void LevelManager::EquivalenceClassesDecompase(PredExpression* root){
 							//std::vector<LevelPredEquivlences*>* or_lpes_list = new std::vector<LevelPredEquivlences*>();
 							LevelPredEquivlencesList* or_lpes_list = new LevelPredEquivlencesList();
 							std::vector<AbstractPredNode*>or_op_list;
-							for(int i=0;i<cur_op->ChildSize();i++){
+							for(size_t i=0;i<cur_op->ChildSize();i++){
 								auto type = cur_op->Child(0)->Type();
 								switch (type){
 									case AbstractPredNodeType::QUALS:{
 										LevelPredEquivlences * lpes = new LevelPredEquivlences();
 										auto qual = static_cast<QualsWarp*>(cur_op->Child(i));
 										lpes->Insert(qual->GetQual(),false);
-										or_lpes_list->Insert(lpes,false,true);
+										or_lpes_list->Insert(lpes,true);
 									}break;
 									case AbstractPredNodeType::OPERATOR:{
 										switch (cur_op->GetOpType()){
@@ -280,7 +280,7 @@ void LevelManager::EquivalenceClassesDecompase(PredExpression* root){
 							/**
 							 * TODO: implement this 
 							 */
-							for(int i=0;i<cur_op->ChildSize();i++){
+							for(size_t i=0;i<cur_op->ChildSize();i++){
 
 							}
 						}break;
@@ -429,9 +429,9 @@ void PredEquivlenceRange::PrintPredEquivlenceRange(int depth){
 		}break;
 		case PType::LIST:{
 			output+="[";
-			for(int i=0;i<list_.size();i++){
+			for(size_t i=0;i<list_.size();i++){
 				output += list_[i];
-				if(i != int(list_.size()-1)) output +=",";
+				if(i != list_.size()-1) output +=",";
 			}
 			output+="]";
 		}break;
@@ -445,58 +445,171 @@ void PredEquivlenceRange::PrintPredEquivlenceRange(int depth){
 	}
 }
 
-PredEquivlence::PredEquivlence(Quals* qual,bool only_left){
+PredEquivlence::PredEquivlence(Quals* qual){
 	assert(qual);
-	if(qual->op){
-		set_.insert(qual->left);
-		PredEquivlenceRange* range = new PredEquivlenceRange(); 
-		if(strlen(qual->use_or)){
-			/* use_or = true, it means it a list predicate,such as A.a in {1,2,3,4} , B.b > ANY[1,2,3,4] */
-			assert(only_left);
+	PType type = QualType(qual);
+	PredEquivlenceRange* range = new PredEquivlenceRange(); 
+	switch(type){
+		case PType::JOIN_EQUAL:{
+			set_.insert(qual->left);
+			set_.insert(qual->right);
+		}break;
+		case PType::EQUAL:{
+			set_.insert(qual->left);
+			range->SetPredType(PType::EQUAL);
+			range->SetLowerLimit(qual->right);
+			range->SetUpperLimit(qual->right);
+		}break;
+		case PType::NOT_EQUAL:{
+			set_.insert(qual->left);
+			auto op = qual->op;
+			if(!strcmp(op,"!=") or !strcmp(op,"<>")){
+				range->SetPredType(PType::NOT_EQUAL);
+				range->SetLowerLimit(qual->right);
+				range->SetUpperLimit(qual->right);
+			}else if(!strcmp(op,"!~")){
+				range->SetPredType(PType::NOT_EQUAL);
+				/**
+				 * TODO: not implement: regular expression check
+				*/
+			}
+		}break;
+		case PType::RANGE:{
+			set_.insert(qual->left);
+			auto op = qual->op;
+			if(!strcmp(op,">")){
+				range->SetPredType(PType::RANGE);
+				range->SetLowerLimit(qual->right);
+				range->SetBoundaryConstraint(std::make_pair(false,true));
+			}else if(!strcmp(op,">=")){
+				range->SetPredType(PType::RANGE);
+				range->SetLowerLimit(qual->right);
+				range->SetBoundaryConstraint(std::make_pair(true,true));
+			}else if(!strcmp(op,"<")){
+				range->SetPredType(PType::RANGE);
+				range->SetUpperLimit(qual->right);
+				range->SetBoundaryConstraint(std::make_pair(true,false));
+			}else if(!strcmp(op,"<=")){
+				range->SetPredType(PType::RANGE);
+				range->SetUpperLimit(qual->right);
+				range->SetBoundaryConstraint(std::make_pair(false,false));
+			}else{
+				std::cerr<<"unkonw op type of range qual while init pred equivlence"<<std::endl;
+				exit(-1);
+			}
+		}break;
+		case PType::LIST:{
+			set_.insert(qual->left);
 			/**
 			 * TODO: not implement yet: we should convert str_list into true list
 			 */
+		}break;
+		case PType::SUBQUERY:{
+			/*nothing to do */
+		}break;
+		default:{
+			std::cerr<<"unkonw type of qual while init pred equivlence"<<std::endl;
+			exit(-1);
+		}
+	}
+}
+
+bool PredEquivlence::IsOnlyLeft(Quals* qual){
+	if(PType::JOIN_EQUAL == QualType(qual)){
+		return false;
+	}
+	return true;
+}
+
+/**
+ * PredEquivlence::QualType: 
+ * - Get qual PType
+ * - Normalized qual
+ */
+PType PredEquivlence::QualType(Quals* qual){
+	assert(qual);
+	if(strlen(qual->op)){
+		if(strlen(qual->use_or)){
+			return PType::LIST;
 		}else{
-			if(!only_left && !strcmp(qual->op,"=")){
-				set_.insert(qual->right);
-			}
-			/* predicate like A.a < 100,B.b > 10... */
-			auto op = qual->op;
-			if(only_left){
+			auto& op = qual->op;
+			auto left_type = NodeTag(qual->l_type);
+			auto right_type = NodeTag(qual->r_type);
+			if(PredVariable(left_type) && PredVariable(right_type)){
 				if(!strcmp(op,"=")){
-					range->SetPredType(PType::EQUAL);
-					range->SetLowerLimit(qual->right);
-					range->SetUpperLimit(qual->right);
+					return PType::JOIN_EQUAL;
 				}else if(!strcmp(op,">")){
-					range->SetPredType(PType::RANGE);
-					range->SetLowerLimit(qual->right);
-					range->SetBoundaryConstraint(std::make_pair(false,true));
+					/*not support*/
 				}else if(!strcmp(op,">=")){
-					range->SetPredType(PType::RANGE);
-					range->SetLowerLimit(qual->right);
-					range->SetBoundaryConstraint(std::make_pair(true,true));
+					/*not support*/
 				}else if(!strcmp(op,"<")){
-					range->SetPredType(PType::RANGE);
-					range->SetUpperLimit(qual->right);
-					range->SetBoundaryConstraint(std::make_pair(true,false));
+					/*not support*/
 				}else if(!strcmp(op,"<=")){
-					range->SetPredType(PType::RANGE);
-					range->SetUpperLimit(qual->right);
-					range->SetBoundaryConstraint(std::make_pair(false,false));
+					/*not support*/
 				}else if(!strcmp(op,"!=") or !strcmp(op,"<>")){
-					range->SetPredType(PType::NOT_EQUAL);
-					range->SetLowerLimit(qual->right);
-					range->SetUpperLimit(qual->right);
+					/*not support*/
 				}else if(!strcmp(op,"!~")){
-					range->SetPredType(PType::NOT_EQUAL);
-					/**
-					 * not implement: regular expression check
-					 */
+					/*not support*/
 				}
+			}else if(PredVariable(left_type) && !PredVariable(right_type)){
+				if(!strcmp(op,"=")){
+					return PType::EQUAL;
+				}else if(!strcmp(op,">")){
+					return PType::RANGE;
+				}else if(!strcmp(op,">=")){
+					return PType::RANGE;
+				}else if(!strcmp(op,"<")){
+					return PType::RANGE;
+				}else if(!strcmp(op,"<=")){
+					return PType::RANGE;
+				}else if(!strcmp(op,"!=") or !strcmp(op,"<>")){
+					return PType::NOT_EQUAL;
+				}else if(!strcmp(op,"!~")){
+					return PType::NOT_EQUAL;
+				}
+			}else if(!PredVariable(left_type) && PredVariable(right_type)){
+				/*we wish not appear this condition,but we try to process*/
+				std::swap(qual->left,qual->right);
+				std::swap(qual->l_type,qual->r_type);
+				auto& op = qual->op;
+				if(!strcmp(op,"=")){
+					return PType::EQUAL;
+				}else if(!strcmp(op,">")){
+					strcpy(op,"<");
+					return PType::RANGE;
+				}else if(!strcmp(op,">=")){
+					strcpy(op,"<=");
+					return PType::RANGE;
+				}else if(!strcmp(op,"<")){
+					strcpy(op,">");
+					return PType::RANGE;
+				}else if(!strcmp(op,"<=")){
+					strcpy(op,">=");
+					return PType::RANGE;
+				}else if(!strcmp(op,"!=") or !strcmp(op,"<>")){
+					return PType::NOT_EQUAL;
+				}else if(!strcmp(op,"!~")){
+					std::cerr<<"impossible left & right for !~ operator ! "<<std::endl;
+					exit(-1);
+				}
+			}else{
+				std::cerr<<"not support currnt type of quals"<<std::endl;
+				exit(-1);
 			}
 		}
 	}else if(qual->hash_sub_plan){
-		/*nothing to do*/
+		return PType::SUBQUERY;
+	}
+}
+
+bool PredEquivlence::PredVariable(NodeTag node_tag){
+	switch(node_tag){
+		case T_Const:{
+			return false;
+		}break;
+		default:{
+			return true;
+		}
 	}
 }
 
@@ -598,10 +711,10 @@ bool PredEquivlence::MergePredEquivlenceRanges(const std::vector<PredEquivlenceR
 	return true;
 }
 
-bool PredEquivlence::Serach(Quals* quals,bool only_left){
+bool PredEquivlence::Serach(Quals* quals){
 	assert(quals);
 	bool left = set_.find(quals->left) != set_.end();
-	if(only_left){
+	if(IsOnlyLeft(quals)){
 		return left;
 	}else{
 		bool right = set_.find(quals->right) != set_.end();
@@ -662,15 +775,15 @@ void PredEquivlence::ShowPredEquivlence(int depth){
 /**
  * LevelPredEquivlences::Insert
  */
-bool LevelPredEquivlences::Insert(Quals* quals,bool only_left,bool is_or){
+bool LevelPredEquivlences::Insert(Quals* quals,bool is_or){
 	assert(quals);
 	std::vector<PredEquivlence*>merge_pe_list;
-	if(Serach(quals,only_left,merge_pe_list)){
+	if(Serach(quals,merge_pe_list)){
 		if(!MergePredEquivlences(merge_pe_list)){
 			return false;
 		}
 	}else{
-		PredEquivlence* pe = new PredEquivlence(quals,only_left);
+		PredEquivlence* pe = new PredEquivlence(quals);
 		level_pe_sets_.insert(pe);
 	}
 	return true;
@@ -761,11 +874,11 @@ bool LevelPredEquivlences::Serach(PredEquivlence* pe, std::vector<PredEquivlence
 	return ret;
 }
 
-bool LevelPredEquivlences::Serach(Quals* quals,bool only_left,std::vector<PredEquivlence*>& pe_idx_list){
+bool LevelPredEquivlences::Serach(Quals* quals,std::vector<PredEquivlence*>& pe_idx_list){
 	assert(quals);
 	bool ret = false;
 	for(const auto& item : level_pe_sets_){
-		if(item->Serach(quals,only_left)){
+		if(item->Serach(quals)){
 			pe_idx_list.push_back(item);
 			ret = true;
 		}
@@ -802,7 +915,7 @@ void LevelPredEquivlences::ShowLevelPredEquivlences(int depth){
 /**
  * LevelPredEquivlencesList::Insert 
  */
-bool LevelPredEquivlencesList::Insert(LevelPredEquivlences* pe,bool only_left,bool is_or){
+bool LevelPredEquivlencesList::Insert(LevelPredEquivlences* pe,bool is_or){
 	assert(pe);
 	if(!is_or || lpes_list_.empty()){
 		lpes_list_.push_back(pe);

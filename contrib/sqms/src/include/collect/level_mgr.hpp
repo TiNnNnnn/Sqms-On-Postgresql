@@ -30,10 +30,15 @@ enum class AbstractPredNodeType{
 
 /*for pred without range, we just make const = lower_limit*/
 enum class PType{
-    NOT_EQUAL = 0,
+    /**/
+    JOIN_EQUAL = 0,
+    /**/
+    NOT_EQUAL,
     EQUAL,
     RANGE,
+    /**/
     LIST,
+    /**/
     SUBQUERY,
 };
 
@@ -170,14 +175,17 @@ class PredEquivlence {
     };
 public:
     PredEquivlence(){}
-    PredEquivlence(Quals* qual,bool only_left = true);
+    PredEquivlence(Quals* qual);
 
-    //bool Insert(Quals* qual,bool only_left = true);
+    static bool IsOnlyLeft(Quals* qual);
+    static PType QualType(Quals* qual);
+    static bool PredVariable(NodeTag node_tag);
+
     bool Insert(PredEquivlence* pe, bool check_can_merged = true);
 
     bool Delete(Quals* quals);
     
-    bool Serach(Quals* quals,bool only_left = true);
+    bool Serach(Quals* quals);
     bool Serach(PredEquivlence* pe);
     bool RangesSerach(PredEquivlenceRange* range,std::vector<PredEquivlenceRange*>& merge_pe_list);
 
@@ -200,7 +208,7 @@ private:
 
 class LevelPredEquivlences{
 public:
-    bool Insert(Quals* quals,bool only_left = true,bool is_or = false);
+    bool Insert(Quals* quals,bool is_or = false);
     bool Insert(PredEquivlence* pe);
     bool Insert(LevelPredEquivlences* pe);
 
@@ -208,7 +216,7 @@ public:
     bool UpdateRanges(Quals* quals);
     bool UpdateRanges(PredEquivlence* pe);
 
-    bool Serach(Quals* quals, bool only_left,std::vector<PredEquivlence*>& merge_pe_list);
+    bool Serach(Quals* quals,std::vector<PredEquivlence*>& merge_pe_list);
     bool Serach(PredEquivlence* pe, std::vector<PredEquivlence*>& merge_pe_list);
     
     bool Compare(PredEquivlence* range);
@@ -242,7 +250,7 @@ private:
 class LevelPredEquivlencesList{
 public:
     LevelPredEquivlencesList(){};
-    bool Insert(LevelPredEquivlences* lpes,bool only_left = true ,bool is_or = false);
+    bool Insert(LevelPredEquivlences* lpes,bool is_or = false);
     bool Insert(LevelPredEquivlencesList* lpes_list,bool is_or = false);
     size_t Size(){return lpes_list_.size();}
 

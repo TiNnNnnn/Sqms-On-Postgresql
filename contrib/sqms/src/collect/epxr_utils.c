@@ -5287,7 +5287,6 @@ get_rule_expr(Node *node, deparse_context *context,
 						expr_node->expr_case = PRED_EXPRESSION__EXPR_OP;
 						
 						if(stack_is_empty(context->expr_stack)){
-							//context->hsp->expr_root = expr_node;
 							set_expr_tree_root(context->hsp,expr_node);
 						}
 						stack_push(context->expr_stack,expr_node);
@@ -6475,6 +6474,7 @@ get_oper_expr(OpExpr *expr, deparse_context *context)
 		Node	   *arg1 = (Node *) linitial(args);
 		Node	   *arg2 = (Node *) lsecond(args);
 
+
 		int	pre_offset = context->buf->len;
 		char *op =  generate_operator_name(opno,exprType(arg1),exprType(arg2));
 		
@@ -6497,6 +6497,7 @@ get_oper_expr(OpExpr *expr, deparse_context *context)
 			trace_qual->left[current_offset - pre_offset] = '\0';
 
 			trace_qual->op = malloc(sizeof(op)+1);
+			trace_qual->l_type =  arg1->type;
 			strcpy(trace_qual->op,op);
 		}
 		appendStringInfo(buf, " %s ", op);
@@ -6509,6 +6510,7 @@ get_oper_expr(OpExpr *expr, deparse_context *context)
 			trace_qual->right = malloc(current_offset-pre_offset+1);
 			strncpy(trace_qual->right,context->buf->data+pre_offset,current_offset-pre_offset);
 			trace_qual->right[current_offset - pre_offset] = '\0';
+			trace_qual->r_type = arg2->type;
 
 			PredExpression* expr_node = (PredExpression*)malloc(sizeof(PredExpression));
 			pred_expression__init(expr_node);

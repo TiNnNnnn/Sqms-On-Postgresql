@@ -1675,7 +1675,7 @@ const ProtobufCMessageDescriptor pred_operator__descriptor =
   (ProtobufCMessageInit) pred_operator__init,
   NULL,NULL,NULL    /* reserved[123] */
 };
-static const ProtobufCFieldDescriptor quals__field_descriptors[7] =
+static const ProtobufCFieldDescriptor quals__field_descriptors[9] =
 {
   {
     "left",
@@ -1714,8 +1714,32 @@ static const ProtobufCFieldDescriptor quals__field_descriptors[7] =
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
   {
-    "format_type",
+    "l_type",
     4,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_INT64,
+    0,   /* quantifier_offset */
+    offsetof(Quals, l_type),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "r_type",
+    5,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_INT64,
+    0,   /* quantifier_offset */
+    offsetof(Quals, r_type),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "format_type",
+    6,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_STRING,
     0,   /* quantifier_offset */
@@ -1727,7 +1751,7 @@ static const ProtobufCFieldDescriptor quals__field_descriptors[7] =
   },
   {
     "use_or",
-    5,
+    7,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_STRING,
     0,   /* quantifier_offset */
@@ -1739,7 +1763,7 @@ static const ProtobufCFieldDescriptor quals__field_descriptors[7] =
   },
   {
     "hash_sub_plan",
-    6,
+    8,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_BOOL,
     0,   /* quantifier_offset */
@@ -1751,7 +1775,7 @@ static const ProtobufCFieldDescriptor quals__field_descriptors[7] =
   },
   {
     "sub_plan_name",
-    7,
+    9,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_STRING,
     0,   /* quantifier_offset */
@@ -1763,18 +1787,20 @@ static const ProtobufCFieldDescriptor quals__field_descriptors[7] =
   },
 };
 static const unsigned quals__field_indices_by_name[] = {
-  3,   /* field[3] = format_type */
-  5,   /* field[5] = hash_sub_plan */
+  5,   /* field[5] = format_type */
+  7,   /* field[7] = hash_sub_plan */
+  3,   /* field[3] = l_type */
   0,   /* field[0] = left */
   2,   /* field[2] = op */
+  4,   /* field[4] = r_type */
   1,   /* field[1] = right */
-  6,   /* field[6] = sub_plan_name */
-  4,   /* field[4] = use_or */
+  8,   /* field[8] = sub_plan_name */
+  6,   /* field[6] = use_or */
 };
 static const ProtobufCIntRange quals__number_ranges[1 + 1] =
 {
   { 1, 0 },
-  { 0, 7 }
+  { 0, 9 }
 };
 const ProtobufCMessageDescriptor quals__descriptor =
 {
@@ -1784,7 +1810,7 @@ const ProtobufCMessageDescriptor quals__descriptor =
   "Quals",
   "",
   sizeof(Quals),
-  7,
+  9,
   quals__field_descriptors,
   quals__field_indices_by_name,
   1,  quals__number_ranges,

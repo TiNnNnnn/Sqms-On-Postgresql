@@ -167,12 +167,14 @@ message Quals{
 	string left = 1;
 	string right = 2;
 	string op = 3;
+	int64 l_type = 4;
+	int64 r_type = 5;
 
 	/*T_ScalarArrayOpExpr*/
-	string format_type = 4;
-	string use_or = 5;
+	string format_type = 6;
+	string use_or = 7;
 
 	/*SubQuery*/
-	bool hash_sub_plan = 6;
-	string sub_plan_name = 7;
+	bool hash_sub_plan = 8;
+	string sub_plan_name = 9;
 }

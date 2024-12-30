@@ -317,6 +317,8 @@ struct  _Quals
   char *left;
   char *right;
   char *op;
+  int64_t l_type;
+  int64_t r_type;
   /*
    *T_ScalarArrayOpExpr
    */
@@ -330,7 +332,7 @@ struct  _Quals
 };
 #define QUALS__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&quals__descriptor) \
-    , (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string }
+    , (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, 0, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string }
 
 
 /* HistorySlowPlanStat methods */
