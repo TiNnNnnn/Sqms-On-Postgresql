@@ -282,12 +282,9 @@ private:
     void HandleNode(HistorySlowPlanStat* hsps);
     
     void EquivalenceClassesDecompase(PredExpression* root);
-    void RangeConstrainedDecompose(PredExpression * root);
 
 private:
     void ExprLevelCollect(PredExpression * tree,std::vector<std::vector<AbstractPredNode*>>& level_collector);
-
-    //void ConvertExpr(PredExpression * tree, LevelPredEquivlences* lpes_tree);
 
 private:
     HistorySlowPlanStat* hsps_; /*plan we need to process to sps_*/

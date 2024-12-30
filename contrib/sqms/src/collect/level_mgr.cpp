@@ -29,6 +29,8 @@ void LevelManager::ComputeTotalClass(){
     for(auto &lc : level_collector){
         ComputeLevelClass(lc);
     }
+
+	ShowTotalPredClass();
 }
 
 void LevelManager::ComputeLevelClass(const std::vector<HistorySlowPlanStat*>& list){
@@ -66,10 +68,11 @@ void LevelManager::HandleNode(HistorySlowPlanStat* hsps){
 			if(hsps->join_filter_expr_tree){
 				EquivalenceClassesDecompase(hsps->join_filter_expr_tree);	
 			}
-			ShowTotalPredClass();
 		}break;
 		case T_SeqScan:
-
+			if(hsps->filter_tree){
+				EquivalenceClassesDecompase(hsps->filter_tree);
+			}
 			break;
 		case T_SampleScan:
 			break;
@@ -145,28 +148,29 @@ void LevelManager::EquivalenceClassesDecompase(PredExpression* root){
 
 	if(!level_collector.size()){
 		/*no join_cond ,it means a full cartesian product*/
+		LevelPredEquivlencesList* final_lpes_list = new LevelPredEquivlencesList();
+		if(total_equivlences_.size()){
+			final_lpes_list->Insert(total_equivlences_.back(),false);
+		}
+		total_equivlences_.push_back(final_lpes_list);
 	}else if(level_collector.size() == 1){
 		LevelPredEquivlencesList* final_lpes_list = new LevelPredEquivlencesList();
 		/*actually,maybe its the most common condition*/ 
         assert(level_collector[0].size()==1);
         assert(level_collector[0][0]->Type() == AbstractPredNodeType::QUALS);
-        auto qual = static_cast<QualsWarp*>(level_collector[0][0])->GetQual();
+        
+		auto qual = static_cast<QualsWarp*>(level_collector[0][0])->GetQual();
+		PredEquivlence* pe = new PredEquivlence(qual);
+		
 		LevelPredEquivlences * lpes = new LevelPredEquivlences();
-		if(!strcmp(qual->op,"=")){
-			PredEquivlence* pe = new PredEquivlence(qual);
-			lpes->Insert(pe);
-			final_lpes_list->Insert(lpes);
-		}else{
-			/**
-			 * TODO: except join_cond with op is "=", another operator 
-			 * 		 can infer some infomation?
-			 */
-		}
+		
+		lpes->Insert(pe);
+		final_lpes_list->Insert(lpes);
+		
 		if(total_equivlences_.size()){
 			final_lpes_list->Insert(total_equivlences_.back(),false);
 		}
 		total_equivlences_.push_back(final_lpes_list);
-
 	}else{
 		/* more then one level,it means here is more than one join_cond in current node ,they connect by and/or/not*/
 		LevelPredEquivlencesList* final_lpes_list;
@@ -299,32 +303,6 @@ void LevelManager::EquivalenceClassesDecompase(PredExpression* root){
 	}
 }
 
-/**
- *  RangeConstrainedDecompose: merge expr form bottom to top
- *  we first get preds value on parent = 2, use a stack to merge, stop until
- *  the stack onlu has one/two element,then we get preds value on parent =1,repeated
- *  action above
- */
-void LevelManager::RangeConstrainedDecompose(PredExpression * root){
-    std::vector<std::vector<AbstractPredNode*>> level_collector;
-	ExprLevelCollect(root,level_collector);
-    /**
-     * TODO: we must ensure left is the predicate such as t.a and so on,may be 
-     * we need check here before insert it into pred_map;
-    */
-   	if(!level_collector.size()){
-
-	}else if(level_collector.size()==1){
-        /*if filter only has one predicate,then the expr root is qual*/
-        assert(level_collector[0].size()==1);
-        //assert(level_collector[0][0]->expr_case == PRED_EXPRESSION__EXPR_QUAL);
-        //auto qual = level_collector[0][0]->qual;
-    }else{
-		for(const auto& level : level_collector){
-
-		}
-	}
-}
 
 void PrintIndent(int depth) {
     for (int i = 0; i < depth; ++i) {
@@ -401,16 +379,17 @@ void PredEquivlenceRange::Copy(PredEquivlenceRange* new_range){
 }
 
 void PredEquivlenceRange::PrintPredEquivlenceRange(int depth){
-	PrintIndent(depth);
 	std::string output;
+	auto ll = lower_limit_ == LOWER_LIMIT?"-∞":lower_limit_;
+	auto ul = upper_limit_ == UPPER_LIMIT?"+∞":upper_limit_;
 	switch(type_){
 		case PType::EQUAL:{
 			output += "=";
-			output += lower_limit_;
+			output += ll;
 		}break;
 		case PType::NOT_EQUAL:{
 			output += "<>";
-			output += lower_limit_;
+			output += ll;
 		}break;
 		case PType::RANGE:{
 			if(boundary_constraint_.first){
@@ -418,9 +397,9 @@ void PredEquivlenceRange::PrintPredEquivlenceRange(int depth){
 			}else{
 				output+="(";
 			}
-			output += lower_limit_;
+			output += ll;
 			output += ",";
-			output += upper_limit_;
+			output += ul;
 			if(boundary_constraint_.second){
 				output+="]";
 			}else{
@@ -443,6 +422,7 @@ void PredEquivlenceRange::PrintPredEquivlenceRange(int depth){
 			exit(-1);
 		}
 	}
+	std::cout<<output;
 }
 
 PredEquivlence::PredEquivlence(Quals* qual){
@@ -459,6 +439,7 @@ PredEquivlence::PredEquivlence(Quals* qual){
 			range->SetPredType(PType::EQUAL);
 			range->SetLowerLimit(qual->right);
 			range->SetUpperLimit(qual->right);
+			ranges_.insert(range);
 		}break;
 		case PType::NOT_EQUAL:{
 			set_.insert(qual->left);
@@ -473,6 +454,7 @@ PredEquivlence::PredEquivlence(Quals* qual){
 				 * TODO: not implement: regular expression check
 				*/
 			}
+			ranges_.insert(range);
 		}break;
 		case PType::RANGE:{
 			set_.insert(qual->left);
@@ -497,12 +479,14 @@ PredEquivlence::PredEquivlence(Quals* qual){
 				std::cerr<<"unkonw op type of range qual while init pred equivlence"<<std::endl;
 				exit(-1);
 			}
+			ranges_.insert(range);
 		}break;
 		case PType::LIST:{
 			set_.insert(qual->left);
 			/**
 			 * TODO: not implement yet: we should convert str_list into true list
 			 */
+			ranges_.insert(range);
 		}break;
 		case PType::SUBQUERY:{
 			/*nothing to do */
@@ -745,8 +729,13 @@ bool PredEquivlence::Compare(PredEquivlence* pe){
 }
 
 bool PredEquivlence::Copy(PredEquivlence* pe){
-	pe->GetPredSet() = set_;
-	pe->GetRanges() = ranges_;
+	pe->SetPredSet(set_);
+	pe->SetRanges(ranges_);
+	// for(const auto& range : ranges_){
+	// 	PredEquivlenceRange* new_range = new PredEquivlenceRange();
+	// 	range->Copy(new_range);
+	// 	ranges_.insert(new_range);
+	// }
 	return true;
 }
 
@@ -1046,6 +1035,7 @@ void LevelManager::ShowPredClass(int height,int depth){
 
 void LevelManager::ShowTotalPredClass(int depth){
 	std::cout<<"Total Pred Class: "<<std::endl;
+	std::reverse(total_equivlences_.begin(),total_equivlences_.end());
 	for(size_t i = 0; i< total_equivlences_.size();i++){
 		ShowPredClass(i,depth+1);
 	}
