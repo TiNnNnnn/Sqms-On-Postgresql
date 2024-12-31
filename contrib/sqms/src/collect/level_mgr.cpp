@@ -132,11 +132,17 @@ void LevelManager::HandleNode(HistorySlowPlanStat* hsps){
 }
 
 /**
+ * AttrDecompase: caluate equivalance class for output columns for each levels 
+ */
+void LevelManager::AttrDecompase(HistorySlowPlanStat* hsps){
+	
+}
+
+/**
  * EquivalenceClassesDecompase:calulate equivalance class for predicates for
  * each levels
  */
 void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
-	
 	bool same_level_need_merged = true;
 	if(cur_height_ ==  total_equivlences_.size()){
 		/*
@@ -602,6 +608,9 @@ PType PredEquivlence::QualType(Quals* qual){
 	}
 }
 
+/**
+ * PredVariable: checek if the nodetag indicates a variable value
+ */
 bool PredEquivlence::PredVariable(NodeTag node_tag){
 	switch(node_tag){
 		case T_Const:{

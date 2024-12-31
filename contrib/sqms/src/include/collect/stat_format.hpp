@@ -12,7 +12,6 @@ extern "C"{
 #include "format.h"
 #include "format.pb-c.h"
 #include <postgres_ext.h>
-#include "canonical_strategy.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -47,7 +46,6 @@ private:
     size_t pool_size_ = 10;
     /* HistorySlowPlanStat is a protobuf format structrue,it will be encoding and stored in kv engine*/
     HistorySlowPlanStat hsps_;
-    CanonicalStrategy cs_ = C_SAFE;
     std::shared_ptr<RedisSlowPlanStatProvider> storage_;
     /** 
      * TODO: the name of HistorySlowPanStat and SlowPlanStat is simlar, we need rename 

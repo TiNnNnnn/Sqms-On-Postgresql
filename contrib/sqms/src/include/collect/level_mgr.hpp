@@ -9,7 +9,7 @@
 #include<assert.h>
 #include<memory>
 #include "common/bloom_filter/bloom_filter.hpp"
-
+#include "match_strategy.h"
 
 extern "C"{
     #include "postgres.h"
@@ -23,10 +23,10 @@ extern "C"{
 	#include "collect/format.pb-c.h"
 }
 
-enum class AbstractPredNodeType{
+typedef enum class AbstractPredNodeType{
     OPERATOR = 0,
     QUALS,
-};
+}AbstractPredNodeType;
 
 /*for pred without range, we just make const = lower_limit*/
 enum class PType{
@@ -265,13 +265,21 @@ private:
     std::vector<LevelPredEquivlences*> lpes_list_;
 };
 
+class LevelOutputList{
+public:
+    LevelOutputList(){};
+    
+private:
+    std::vector<std::string> output_extend_list_;
+};
+
 class LevelManager{
 public:
-    LevelManager(HistorySlowPlanStat* hsps, SlowPlanStat*sps)
-        :hsps_(hsps),sps_(sps)
+    LevelManager(HistorySlowPlanStat* hsps, SlowPlanStat*sps,MatchStrategy ms = C_DEFALUT)
+        :hsps_(hsps),sps_(sps),ms_(ms)
     {}
     
-    void ComputeTotalClass();
+    void ComputeTotalClass(); 
 
     void ShowPredClass(int height,int depth = 0);
     void ShowTotalPredClass(int depth = 0);
@@ -282,6 +290,7 @@ private:
     void HandleNode(HistorySlowPlanStat* hsps);
     
     void PredEquivalenceClassesDecompase(PredExpression* root);
+    void AttrDecompase(HistorySlowPlanStat* hsps);
 
 private:
     void ExprLevelCollect(PredExpression * tree,std::vector<std::vector<AbstractPredNode*>>& level_collector);
@@ -291,8 +300,10 @@ private:
     SlowPlanStat * sps_ = nullptr; /*final output,sps will dircetly storaged*/
     int total_height_ = 0; /*plan height*/
     int cur_height_ = 0; /* from bottom to the top,begin height is 0 ... */
+    MatchStrategy ms_;
     /* total equivlences for predicates */
     std::vector<LevelPredEquivlencesList*> total_equivlences_;
+    
 };
 
 
