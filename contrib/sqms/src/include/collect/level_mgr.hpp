@@ -187,6 +187,8 @@ public:
     
     bool Serach(Quals* quals);
     bool Serach(PredEquivlence* pe);
+    bool Serach(const std::string& attr);
+
     bool RangesSerach(PredEquivlenceRange* range,std::vector<PredEquivlenceRange*>& merge_pe_list);
 
     bool Compare(PredEquivlence* range);
@@ -216,8 +218,11 @@ public:
     bool UpdateRanges(Quals* quals);
     bool UpdateRanges(PredEquivlence* pe);
 
+    /*search for insert*/
     bool Serach(Quals* quals,std::vector<PredEquivlence*>& merge_pe_list);
     bool Serach(PredEquivlence* pe, std::vector<PredEquivlence*>& merge_pe_list);
+
+    bool Serach(const std::string& attr,PredEquivlence*& pe);
     
     bool Compare(PredEquivlence* range);
     bool Copy(LevelPredEquivlences* pe);
@@ -252,6 +257,7 @@ public:
     LevelPredEquivlencesList(){};
     bool Insert(LevelPredEquivlences* lpes,bool is_or = false);
     bool Insert(LevelPredEquivlencesList* lpes_list,bool is_or = false);
+
     size_t Size(){return lpes_list_.size();}
 
     std::vector<LevelPredEquivlences*>::iterator begin() { return lpes_list_.begin(); }
@@ -266,11 +272,15 @@ private:
 };
 
 class LevelOutputList{
+    typedef std::unordered_set<std::string> USET;
+    typedef std::unordered_map<std::string, PredEquivlence*> UMAP;
 public:
     LevelOutputList(){};
-    
+    void CollectEquivlences(LevelPredEquivlencesList* lpes_list,HistorySlowPlanStat* hsps);
+    void ShowLevelOutputList();
 private:
-    std::vector<std::string> output_extend_list_;
+    std::vector<UMAP> output2pe_list_;
+    std::vector<USET> output_extend_list_;
 };
 
 class LevelManager{
@@ -287,14 +297,15 @@ public:
 private:
 
     void ComputeLevelClass(const std::vector<HistorySlowPlanStat*>& list);
+    void HandleEquivleces(HistorySlowPlanStat* hsps);
     void HandleNode(HistorySlowPlanStat* hsps);
     
     void PredEquivalenceClassesDecompase(PredExpression* root);
-    void AttrDecompase(HistorySlowPlanStat* hsps);
+    void OutputDecompase(HistorySlowPlanStat* hsps);
 
 private:
     void ExprLevelCollect(PredExpression * tree,std::vector<std::vector<AbstractPredNode*>>& level_collector);
-
+    
 private:
     HistorySlowPlanStat* hsps_ = nullptr; /*plan we need to process to sps_*/
     SlowPlanStat * sps_ = nullptr; /*final output,sps will dircetly storaged*/
@@ -303,7 +314,8 @@ private:
     MatchStrategy ms_;
     /* total equivlences for predicates */
     std::vector<LevelPredEquivlencesList*> total_equivlences_;
-    
+    /* total equivlences for outputs */
+    std::vector<LevelOutputList*> total_outputs_;
 };
 
 

@@ -34,10 +34,21 @@ void LevelManager::ComputeTotalClass(){
 }
 
 void LevelManager::ComputeLevelClass(const std::vector<HistorySlowPlanStat*>& list){
-    for(const auto& s : list){
-        HandleNode(s);    
+    /*calulate equivlences first*/
+	for(const auto& s : list){
+        HandleEquivleces(s);   
+	}
+	/*calulate other attrs based on equivlences*/
+	for(const auto& s : list){
+		HandleNode(s);
 	}
 	++cur_height_;
+}
+
+void LevelManager::HandleEquivleces(HistorySlowPlanStat* hsps){
+	PredEquivalenceClassesDecompase(hsps->join_cond_expr_tree);
+	PredEquivalenceClassesDecompase(hsps->join_filter_expr_tree);
+	PredEquivalenceClassesDecompase(hsps->filter_tree);
 }
 
 void LevelManager::HandleNode(HistorySlowPlanStat* hsps){
@@ -62,11 +73,8 @@ void LevelManager::HandleNode(HistorySlowPlanStat* hsps){
 		case T_NestLoop:
 		case T_MergeJoin:
 		case T_HashJoin:{
-			PredEquivalenceClassesDecompase(hsps->join_cond_expr_tree);
-			PredEquivalenceClassesDecompase(hsps->join_filter_expr_tree);
 		}break;
 		case T_SeqScan:
-			PredEquivalenceClassesDecompase(hsps->filter_tree);
 			break;
 		case T_SampleScan:
 			break;
@@ -134,8 +142,43 @@ void LevelManager::HandleNode(HistorySlowPlanStat* hsps){
 /**
  * AttrDecompase: caluate equivalance class for output columns for each levels 
  */
-void LevelManager::AttrDecompase(HistorySlowPlanStat* hsps){
+void LevelManager::OutputDecompase(HistorySlowPlanStat* hsps){
+	if(hsps->n_output == 0){
+		std::cerr<<"output is empty"<<std::endl;
+		exit(-1);
+	}
+	auto& lpes_list =  total_equivlences_[cur_height_];
+	bool same_level_need_merged = true;
+	if(cur_height_ == total_outputs_.size()){
+		total_outputs_.push_back(nullptr);
+		same_level_need_merged = false;
+	}
 	
+	LevelOutputList* final_lo_list = new LevelOutputList();
+	final_lo_list->CollectEquivlences(lpes_list,hsps);
+
+	total_outputs_[cur_height_] = final_lo_list;
+}
+
+void LevelOutputList::CollectEquivlences(LevelPredEquivlencesList* lpes_list,HistorySlowPlanStat* hsps){
+	int lpes_idx = 0;
+	for(const auto& e: *lpes_list){
+		for(size_t i=0;i<hsps->n_output;i++){
+			std::string attr(hsps->output[i]);
+			PredEquivlence* pe = nullptr;
+			if(e->Serach(attr,pe)){
+				assert(pe);
+				output2pe_list_[lpes_idx][attr] = pe;
+				const auto& set = pe->GetPredSet();
+				for(const auto& s : set){
+					output_extend_list_[lpes_idx].insert(s);	
+				}
+			}else{
+				output2pe_list_[lpes_idx][attr] = nullptr;
+				output_extend_list_[lpes_idx].insert(attr);
+			}
+		}
+	}
 }
 
 /**
@@ -745,6 +788,10 @@ bool PredEquivlence::Serach(PredEquivlence* pe){
 	return false;
 }
 
+bool PredEquivlence::Serach(const std::string& attr){
+ 	return  set_.find(attr) != set_.end();
+}
+
 /**
  * PredEquivlence::Compare: use while check if is the slow subqueries
  * TODO: not implement
@@ -895,6 +942,16 @@ bool LevelPredEquivlences::Serach(Quals* quals,std::vector<PredEquivlence*>& pe_
 	return ret;
 }
 
+bool LevelPredEquivlences::Serach(const std::string& attr,PredEquivlence*& pe){
+	for(const auto& item : level_pe_sets_){
+		if(item->Serach(attr)){
+			pe = item;
+			return true;
+		}
+	}
+	return false;
+}
+
 /**
  * LevelPredEquivlences::Copy
  */
@@ -975,6 +1032,7 @@ bool LevelPredEquivlencesList::Insert(LevelPredEquivlencesList* lpes_list,bool i
 	}
 	return true;
 }
+
 
 void LevelPredEquivlencesList::ShowLevelPredEquivlencesList(int depth){
 	for(const auto& lpe: lpes_list_){
