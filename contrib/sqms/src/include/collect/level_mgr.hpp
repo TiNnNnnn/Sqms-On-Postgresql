@@ -284,11 +284,13 @@ public:
 
     const std::vector<UMAP>& GetOutput2PeList(){return output2pe_list_;}
     const std::vector<USET>& GetOutputExtendList(){return output_extend_list_;}
-    
+
 private:
     std::vector<UMAP> output2pe_list_;
     std::vector<USET> output_extend_list_;
 };
+
+
 
 class LevelSortList{
 
@@ -299,11 +301,17 @@ private:
 };
 
 class LevelAggList{
+    typedef std::unordered_set<std::string> USET;
+    typedef std::unordered_map<std::string, PredEquivlence*> UMAP;
 public:
     LevelAggList(){}
-
+    void Insert(LevelPredEquivlencesList* lpes_list,HistorySlowPlanStat* hsps);
+    void Insert(LevelAggList* lo_list);
+    void ShowLevelAggList(int depth = 0);
 private:
 
+    std::vector<UMAP> groupby_keys2pe_list_;
+    std::vector<USET> groupby_keys_extend_list_;
 };
 
 class LevelManager{
@@ -330,7 +338,8 @@ private:
 
 private:
     void ExprLevelCollect(PredExpression * tree,std::vector<std::vector<AbstractPredNode*>>& level_collector);
-    
+    bool GetPreProcessed(){return pre_processed_;}
+    void SetPreProcessed(bool b){pre_processed_ = b;}
 private:
     HistorySlowPlanStat* hsps_ = nullptr; /*plan we need to process to sps_*/
     SlowPlanStat * sps_ = nullptr; /*final output,sps will dircetly storaged*/
@@ -341,6 +350,8 @@ private:
     std::vector<LevelPredEquivlencesList*> total_equivlences_;
     /* total equivlences for outputs */
     std::vector<LevelOutputList*> total_outputs_;
+
+    bool pre_processed_;
 };
 
 

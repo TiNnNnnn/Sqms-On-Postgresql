@@ -46,6 +46,7 @@ void LevelManager::ComputeLevelClass(const std::vector<HistorySlowPlanStat*>& li
 }
 
 void LevelManager::HandleEquivleces(HistorySlowPlanStat* hsps){
+	SetPreProcessed(false);
 	PredEquivalenceClassesDecompase(hsps->join_cond_expr_tree);
 	PredEquivalenceClassesDecompase(hsps->join_filter_expr_tree);
 	PredEquivalenceClassesDecompase(hsps->filter_tree);
@@ -75,6 +76,9 @@ void LevelManager::HandleNode(HistorySlowPlanStat* hsps){
 		case T_NestLoop:
 		case T_MergeJoin:
 		case T_HashJoin:{
+			if(hsps->join_type == ""){
+
+			}
 		}break;
 		case T_SeqScan:
 			break;
@@ -276,10 +280,11 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
 			return;
 		}
 		/*we should merge pre level's lpes with this level*/
-		if(cur_height_ >= 1){
+		if(cur_height_ >= 1 && !GetPreProcessed()){
 			final_lpes_list->Insert(total_equivlences_[cur_height_-1],false);
+			SetPreProcessed(true);
+			
 		}
-		/*update toal_equivlences*/
 		total_equivlences_[cur_height_] = final_lpes_list;
 		return;
 	}
@@ -430,8 +435,9 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
 		final_lpes_list->Insert(total_equivlences_[cur_height_],false);
 	}
 	/*we should merge pre level's lpes with this level*/
-	if(cur_height_ >= 1){
+	if(cur_height_ >= 1 && !GetPreProcessed()){
 		final_lpes_list->Insert(total_equivlences_[cur_height_-1],false);
+		SetPreProcessed(true);
 	}
 	/*update toal_equivlences*/
 	total_equivlences_[cur_height_] = final_lpes_list;
@@ -538,7 +544,7 @@ void PredEquivlenceRange::PrintPredEquivlenceRange(int depth){
 			output+="SUBQUERY";
 		}break;
 		default:{
-			std::cerr<<"unknow type of pe_range"<<std::endl;
+			std::cerr<<"unknow type of pe_range: "<<int(type_)<<std::endl;
 			exit(-1);
 		}
 	}
@@ -740,10 +746,12 @@ bool PredEquivlence::Insert(PredEquivlence* pe, bool check_can_merged){
 	for(const auto& r : pe->GetRanges()){
 		std::vector<PredEquivlenceRange*> merge_range_list;
 		if(RangesSerach(r,merge_range_list)){
+			/*merge ranges */
 			if(!MergePredEquivlenceRanges(merge_range_list)){
 				return false;
 			}
 		}else{
+			/*add a new range*/
 			PredEquivlenceRange* range = new PredEquivlenceRange();
 			r->Copy(range);
 			ranges_.insert(r);
@@ -814,6 +822,7 @@ bool PredEquivlence::MergePredEquivlenceRanges(const std::vector<PredEquivlenceR
 		ranges_.erase(r);
 		++idx;
 	}
+	new_range->SetPredType(PType::RANGE);
 	ranges_.insert(new_range);
 	return true;
 }
@@ -1052,7 +1061,7 @@ void LevelPredEquivlences::ShowLevelPredEquivlences(int depth){
  */
 bool LevelPredEquivlencesList::Insert(LevelPredEquivlences* pe,bool is_or){
 	assert(pe);
-	if(!is_or || lpes_list_.empty()){
+	if(is_or || lpes_list_.empty()){
 		lpes_list_.push_back(pe);
 	}else{
 		for(auto& dst : lpes_list_){
