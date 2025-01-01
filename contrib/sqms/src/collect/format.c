@@ -1794,6 +1794,7 @@ show_plan_tlist(PlanState *planstate, List *ancestors, ExplainState *es, History
 		result = lappend(result,expr);
 		hsp->output[i] = malloc(strlen(expr)+1);
 		memcpy(hsp->output[i],expr,strlen(expr));
+		hsp->output[i][strlen(expr)] = '\0';
 		++i;
 	}
 	FormatPropertyList("Output", result, es);

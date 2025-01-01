@@ -194,7 +194,9 @@ public:
     bool Compare(PredEquivlence* range);
 
     bool Copy(PredEquivlence* pe);
-    void ShowPredEquivlence(int ident = 0);
+
+    void ShowPredEquivlence(int depth = 0);
+    void ShowPredEquivlenceSets(int depth = 0);
 
     std::set<std::string>& GetPredSet(){return set_;}
     void SetPredSet(std::set<std::string> set){set_ = set;}
@@ -276,11 +278,32 @@ class LevelOutputList{
     typedef std::unordered_map<std::string, PredEquivlence*> UMAP;
 public:
     LevelOutputList(){};
-    void CollectEquivlences(LevelPredEquivlencesList* lpes_list,HistorySlowPlanStat* hsps);
-    void ShowLevelOutputList();
+    void Insert(LevelPredEquivlencesList* lpes_list,HistorySlowPlanStat* hsps);
+    void Insert(LevelOutputList* lo_list);
+    void ShowLevelOutputList(int depth = 0);
+
+    const std::vector<UMAP>& GetOutput2PeList(){return output2pe_list_;}
+    const std::vector<USET>& GetOutputExtendList(){return output_extend_list_;}
+    
 private:
     std::vector<UMAP> output2pe_list_;
     std::vector<USET> output_extend_list_;
+};
+
+class LevelSortList{
+
+public:
+    LevelSortList(){}
+private:
+    
+};
+
+class LevelAggList{
+public:
+    LevelAggList(){}
+
+private:
+
 };
 
 class LevelManager{
@@ -298,7 +321,9 @@ private:
 
     void ComputeLevelClass(const std::vector<HistorySlowPlanStat*>& list);
     void HandleEquivleces(HistorySlowPlanStat* hsps);
+
     void HandleNode(HistorySlowPlanStat* hsps);
+    //void HandleLevelNodes(const std::vector<HistorySlowPlanStat*>& list);
     
     void PredEquivalenceClassesDecompase(PredExpression* root);
     void OutputDecompase(HistorySlowPlanStat* hsps);
