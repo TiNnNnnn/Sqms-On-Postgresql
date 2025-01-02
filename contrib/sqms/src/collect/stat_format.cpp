@@ -61,7 +61,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd){
          * build fast filter tree, here need ensure thread safe,moreover,we
          * need rebuild it after db restarting
         */
-
+        
 
         /**
          * TODO: 11-23 storage the slow sub query

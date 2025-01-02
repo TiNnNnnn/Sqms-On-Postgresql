@@ -185,6 +185,16 @@ void LevelOutputList::Insert(LevelPredEquivlencesList* lpes_list,HistorySlowPlan
 	int lpes_idx = 0;
 	output2pe_list_.resize(lpes_list->Size());
 	output_extend_list_.resize(lpes_list->Size());
+
+	if(!lpes_list->Size()){
+		for(size_t i=0;i<hsps->n_output;i++){
+			std::string attr(hsps->output[i]);
+			output2pe_list_[0].insert(std::make_pair(attr,nullptr));
+			output_extend_list_[0].insert(attr);
+		}
+		return;
+	}
+
 	for(const auto& e: *lpes_list){
 		for(size_t i=0;i<hsps->n_output;i++){
 			std::string attr(hsps->output[i]);
@@ -201,6 +211,7 @@ void LevelOutputList::Insert(LevelPredEquivlencesList* lpes_list,HistorySlowPlan
 				output_extend_list_[lpes_idx].insert(attr);
 			}
 		}
+		lpes_idx++;
 	}
 }
 
@@ -252,6 +263,67 @@ void LevelOutputList::ShowLevelOutputList(int depth){
 		i++;
 	}
 	std::cout<<"\n";
+}
+
+void LevelManager::GroupKeyDecompase(HistorySlowPlanStat* hsps){
+	LevelAggList* final_la_list = nullptr;
+	
+	bool same_level_need_merged = true;
+	if(cur_height_ == total_outputs_.size()){
+		total_outputs_.push_back(nullptr);	
+		same_level_need_merged = false;
+	}
+
+	if(strcmp(hsps->group_sort_qlabel,"Group Key")){
+		final_la_list = new LevelAggList();
+		if(same_level_need_merged){
+			delete final_la_list;
+			return;
+		}
+		if(cur_height_ >= 1){
+			final_la_list->Insert(total_aggs_[cur_height_-1],false);
+		}
+		total_aggs_[cur_height_] = final_la_list;
+		return;
+	}
+
+	auto& lpes_list =  total_equivlences_[cur_height_];
+
+	final_la_list->Insert(lpes_list,hsps);
+
+
+	if(same_level_need_merged){
+		final_la_list->Insert(total_aggs_.back());
+	}
+	if(cur_height_ >= 1){
+		final_la_list->Insert(total_aggs_[cur_height_-1],false);
+	}
+	total_aggs_[cur_height_] = final_la_list;
+}
+
+void LevelAggList::Insert(LevelPredEquivlencesList* lpes_list,HistorySlowPlanStat* hsps){
+	assert(lpes_list);
+}
+
+void LevelAggList::Copy(LevelAggList* la_list){
+
+}
+
+void LevelAggList::Insert(LevelAggList* la_list,bool is_or){
+	assert(la_list);
+	if(is_or){
+		assert(is_or);
+	}else{
+		if(!Size()){
+			/*current level don't has any aggs,we just copy the pre level*/
+			la_list->Copy(this);
+		}else{
+		}
+	}
+}
+
+void LevelAggList::ShowLevelAggList(int depth){
+
 }
 
 /**

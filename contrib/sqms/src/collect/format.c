@@ -2151,6 +2151,8 @@ show_sort_group_keys(PlanState *planstate, const char *qlabel,
 
 		gs_key->key = malloc(strlen(exprstr)+1);
 		memcpy(gs_key->key,exprstr,strlen(exprstr));
+		gs_key->key[strlen(exprstr)] = '\0';
+
 		gs_key->sort_operators = (sortOperators != NULL);
 
 		if (sortOperators != NULL)

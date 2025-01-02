@@ -6,6 +6,7 @@
 #include<unordered_set>
 #include<unordered_map>
 #include<set>
+#include<map>
 #include<assert.h>
 #include<memory>
 #include "common/bloom_filter/bloom_filter.hpp"
@@ -273,6 +274,9 @@ private:
     std::vector<LevelPredEquivlences*> lpes_list_;
 };
 
+/**
+ * LevelOutput 
+ */
 class LevelOutputList{
     typedef std::unordered_set<std::string> USET;
     typedef std::unordered_map<std::string, PredEquivlence*> UMAP;
@@ -292,6 +296,10 @@ private:
 
 
 
+
+/**
+ * LevelSortList
+ */
 class LevelSortList{
 
 public:
@@ -300,18 +308,46 @@ private:
     
 };
 
+
+class NodeAgg{
+public:
+
+private:
+    std::set<std::string> output2pe_;
+    std::map<std::string, PredEquivlence*>extends_;
+};
+
+/**
+ * LevelAggList
+ */
 class LevelAggList{
     typedef std::unordered_set<std::string> USET;
     typedef std::unordered_map<std::string, PredEquivlence*> UMAP;
 public:
     LevelAggList(){}
     void Insert(LevelPredEquivlencesList* lpes_list,HistorySlowPlanStat* hsps);
-    void Insert(LevelAggList* lo_list);
+    void Insert(LevelAggList* la_list,bool is_or = false);
     void ShowLevelAggList(int depth = 0);
+
+    int Size(){return level_agg_list_.size();}
+
+    void Copy(LevelAggList* lal);
+
+    std::vector<NodeAgg*>::iterator begin() { return level_agg_list_.begin(); }
+    std::vector<NodeAgg*>::iterator end() { return level_agg_list_.end(); }
+    std::vector<NodeAgg*>::const_iterator begin() const { return level_agg_list_.cbegin(); }
+    std::vector<NodeAgg*>::const_iterator end() const { return level_agg_list_.cend();}
+
+private:
+    std::vector<NodeAgg*> level_agg_list_;
+};
+
+
+class LevelTblList{
 private:
 
-    std::vector<UMAP> groupby_keys2pe_list_;
-    std::vector<USET> groupby_keys_extend_list_;
+public:
+
 };
 
 class LevelManager{
@@ -335,6 +371,7 @@ private:
     
     void PredEquivalenceClassesDecompase(PredExpression* root);
     void OutputDecompase(HistorySlowPlanStat* hsps);
+    void GroupKeyDecompase(HistorySlowPlanStat* hsps);
 
 private:
     void ExprLevelCollect(PredExpression * tree,std::vector<std::vector<AbstractPredNode*>>& level_collector);
@@ -350,6 +387,8 @@ private:
     std::vector<LevelPredEquivlencesList*> total_equivlences_;
     /* total equivlences for outputs */
     std::vector<LevelOutputList*> total_outputs_;
+    /* total equivlences for agg keys */
+    std::vector<LevelAggList*>total_aggs_;
 
     bool pre_processed_;
 };

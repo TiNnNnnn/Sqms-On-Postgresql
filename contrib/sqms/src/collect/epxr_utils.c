@@ -3688,6 +3688,7 @@ get_variable(Var *var, int levelsup, bool istoplevel, deparse_context *context)
 	AttrNumber	varattno;
 	deparse_columns *colinfo;
 	char	   *refname;
+	char       *objectname;
 	char	   *attname;
 
 	/* Find appropriate nesting depth */
@@ -3698,6 +3699,7 @@ get_variable(Var *var, int levelsup, bool istoplevel, deparse_context *context)
 	
 	dpns = (deparse_namespace *) list_nth(context->namespaces,
 										  netlevelsup);
+	
 
 	/*
 	 * If we have a syntactic referent for the Var, and we're working from a
@@ -3772,6 +3774,7 @@ get_variable(Var *var, int levelsup, bool istoplevel, deparse_context *context)
 
 		rte = rt_fetch(varno, dpns->rtable);
 		refname = (char *) list_nth(dpns->rtable_names, varno - 1);
+		objectname = get_rel_name(rte->relid);
 		colinfo = deparse_columns_fetch(varno, dpns);
 		attnum = varattno;
 	}
@@ -3879,17 +3882,20 @@ get_variable(Var *var, int levelsup, bool istoplevel, deparse_context *context)
 		if (attname == NULL)
 			attname = "?dropped?column?";
 	}
-	else
+	else 
 	{
 		/* System column - name is fixed, get it from the catalog */
 		attname = get_rte_attribute_name(rte, attnum);
 	}
 
+	context->varprefix = true;
 	if (refname && (context->varprefix || attname == NULL))
 	{
-		appendStringInfoString(buf, quote_identifier(refname));
+		//appendStringInfoString(buf, quote_identifier(refname));
+		appendStringInfoString(buf,quote_identifier(objectname));
 		appendStringInfoChar(buf, '.');
 	}
+
 	if (attname)
 		appendStringInfoString(buf, quote_identifier(attname));
 	else
