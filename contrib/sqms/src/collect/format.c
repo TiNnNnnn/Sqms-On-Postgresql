@@ -994,7 +994,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		case T_NestLoop:
 		case T_MergeJoin:
 		case T_HashJoin:
-			{
+			{ 
 				const char *jointype;
 
 				switch (((Join *) plan)->jointype)
@@ -2124,7 +2124,7 @@ show_sort_group_keys(PlanState *planstate, const char *qlabel,
 									   ancestors,hsp);
 	useprefix = (list_length(es->rtable) > 1 || es->verbose);
 
-	hsp->qlabel = qlabel;
+	hsp->group_sort_qlabel = qlabel;
 	hsp->group_sort_keys = (GroupSortKey **)malloc(nkeys * sizeof(GroupSortKey *));
 	hsp->n_group_sort_keys = nkeys;
 

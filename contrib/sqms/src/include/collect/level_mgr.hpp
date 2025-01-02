@@ -43,6 +43,22 @@ enum class PType{
     SUBQUERY,
 };
 
+enum class PreProcessLabel{
+    PREDICATE = 0,
+    SORT,
+    AGG,
+    TABLE,
+    OUTPUT,
+};
+
+constexpr std::array<PreProcessLabel, 5> p_labels = {
+    PreProcessLabel::PREDICATE,
+    PreProcessLabel::SORT,
+    PreProcessLabel::AGG,
+    PreProcessLabel::TABLE,
+    PreProcessLabel::OUTPUT
+};
+
 class AbstractPredNode{
 public:
     
@@ -294,9 +310,6 @@ private:
     std::vector<USET> output_extend_list_;
 };
 
-
-
-
 /**
  * LevelSortList
  */
@@ -308,13 +321,29 @@ private:
     
 };
 
-
-class NodeAgg{
+/**
+ * NodeAgg
+ */
+class AggEquivlence{
 public:
-
+    void Init(HistorySlowPlanStat* hsps,LevelPredEquivlences* lpes = nullptr);
+    void ShowAggEquivlence(int depth = 0);
 private:
-    std::set<std::string> output2pe_;
-    std::map<std::string, PredEquivlence*>extends_;
+    std::map<std::string, PredEquivlence*>key2pe_;
+    std::set<std::string> extends_;
+    /*agg true level*/
+    int agg_level_;
+};
+/**
+ * LevelAggEquivlnces
+ */
+class LevelAggEquivlences{
+public:
+    void Insert(AggEquivlence* ae);
+    void Insert(LevelAggEquivlences* level_ae);
+    void ShowLevelAggEquivlence(int depth = 0);
+private:
+    std::vector<AggEquivlence*> level_agg_sets_;
 };
 
 /**
@@ -324,30 +353,35 @@ class LevelAggList{
     typedef std::unordered_set<std::string> USET;
     typedef std::unordered_map<std::string, PredEquivlence*> UMAP;
 public:
-    LevelAggList(){}
-    void Insert(LevelPredEquivlencesList* lpes_list,HistorySlowPlanStat* hsps);
-    void Insert(LevelAggList* la_list,bool is_or = false);
+    LevelAggList(LevelPredEquivlencesList* lpes_list)
+        : lpes_list_(lpes_list)
+    {}
+    void Insert(HistorySlowPlanStat* hsps);
+    void Insert(LevelAggList* la_list);
     void ShowLevelAggList(int depth = 0);
 
     int Size(){return level_agg_list_.size();}
-
     void Copy(LevelAggList* lal);
 
-    std::vector<NodeAgg*>::iterator begin() { return level_agg_list_.begin(); }
-    std::vector<NodeAgg*>::iterator end() { return level_agg_list_.end(); }
-    std::vector<NodeAgg*>::const_iterator begin() const { return level_agg_list_.cbegin(); }
-    std::vector<NodeAgg*>::const_iterator end() const { return level_agg_list_.cend();}
+    const std::vector<LevelAggEquivlences*>& GetLevelAggList(){return level_agg_list_;}
 
 private:
-    std::vector<NodeAgg*> level_agg_list_;
+    std::vector<LevelAggEquivlences*> level_agg_list_;
+    LevelPredEquivlencesList* lpes_list_ = nullptr;
 };
 
-
+/**
+ * LevelTblList:
+ * TODO: we need pay attention to the order of the table?
+ */
 class LevelTblList{
-private:
-
 public:
-
+    void Insert(const std::string& tbl_name){tbl_set_.insert(tbl_name);}
+    void Insert(LevelTblList* lt_list);
+    void ShowLevelTblList(int depth = 0);
+    const std::set<std::string>& GetTblSet(){return tbl_set_;}
+private:
+    std::set<std::string> tbl_set_;
 };
 
 class LevelManager{
@@ -370,13 +404,14 @@ private:
     //void HandleLevelNodes(const std::vector<HistorySlowPlanStat*>& list);
     
     void PredEquivalenceClassesDecompase(PredExpression* root);
+    void TblDecompase(HistorySlowPlanStat* hsps);
     void OutputDecompase(HistorySlowPlanStat* hsps);
     void GroupKeyDecompase(HistorySlowPlanStat* hsps);
-
 private:
     void ExprLevelCollect(PredExpression * tree,std::vector<std::vector<AbstractPredNode*>>& level_collector);
-    bool GetPreProcessed(){return pre_processed_;}
-    void SetPreProcessed(bool b){pre_processed_ = b;}
+    bool GetPreProcessed(PreProcessLabel label){return pre_processed_map_[label];}
+    void SetPreProcessed(PreProcessLabel label,bool b){pre_processed_map_[label] = b;}
+    void ReSetAllPreProcessd();
 private:
     HistorySlowPlanStat* hsps_ = nullptr; /*plan we need to process to sps_*/
     SlowPlanStat * sps_ = nullptr; /*final output,sps will dircetly storaged*/
@@ -389,8 +424,10 @@ private:
     std::vector<LevelOutputList*> total_outputs_;
     /* total equivlences for agg keys */
     std::vector<LevelAggList*>total_aggs_;
+    /* total sets for tables */
+    std::vector<LevelTblList*>total_tbls_;
 
-    bool pre_processed_;
+    std::unordered_map<PreProcessLabel, bool> pre_processed_map_;
 };
 
 
