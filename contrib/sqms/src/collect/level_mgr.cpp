@@ -2,10 +2,11 @@
 #include <algorithm>
 
 /**
- * 
+ * LevelManager::Format
  */
 bool LevelManager::Format(){
 	ComputeTotalClass();
+	return true;
 }
 
 /**
@@ -46,12 +47,18 @@ void LevelManager::ComputeLevelClass(const std::vector<HistorySlowPlanStat*>& li
     /*calulate equivlences first*/
 	ReSetAllPreProcessd();
 	for(const auto& s : list){
-        HandleEquivleces(s);   
+		cur_hsps_ = s;
+		NodeCollector* new_node_collector =  new NodeCollector();
+		nodes_collector_map_[s] = new_node_collector;
+
+        HandleEquivleces(s);
 	}
 	/*calulate other attrs based on equivlences*/
 	for(const auto& s : list){
+		cur_hsps_ = s;
 	 	HandleNode(s);
 	}
+
 	++cur_height_;
 }
 
@@ -531,24 +538,30 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
 	}
 
 	LevelPredEquivlencesList* final_lpes_list = nullptr;
+	LevelPredEquivlencesList* node_final_lpes_list = nullptr;
 	if(!root){
-		final_lpes_list = new LevelPredEquivlencesList();
 		/*we should merge current level's pre lpes with this level*/
 		if(same_level_need_merged){
-			//final_lpes_list->Insert(total_equivlences_[cur_height_],false);
-			delete final_lpes_list;
 			return;
 		}
+		final_lpes_list = new LevelPredEquivlencesList();
+		node_final_lpes_list = new LevelPredEquivlencesList();
 		/*we should merge pre level's lpes with this level*/
 		if(cur_height_ >= 1 && !GetPreProcessed(PreProcessLabel::PREDICATE)){
 			final_lpes_list->Insert(total_equivlences_[cur_height_-1],false);
 			SetPreProcessed(PreProcessLabel::PREDICATE,true);
-			
+
+			for(int i = 0;i<cur_hsps_->n_childs; ++i){
+				auto child_eq = nodes_collector_map_[cur_hsps_->childs[i]]->node_equivlences_;
+				if(!child_eq)continue;
+				node_final_lpes_list->Insert(child_eq);
+			}
 		}
 		total_equivlences_[cur_height_] = final_lpes_list;
+		nodes_collector_map_[cur_hsps_]->node_equivlences_ = node_final_lpes_list;
 		return;
 	}
-
+	
 	std::vector<std::vector<AbstractPredNode*>> level_collector;
 	ExprLevelCollect(root,level_collector);
 
@@ -563,9 +576,9 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
 		PredEquivlence* pe = new PredEquivlence(qual);
 		
 		LevelPredEquivlences * lpes = new LevelPredEquivlences();
-		
 		lpes->Insert(pe);
 		final_lpes_list->Insert(lpes);
+
 	}else{
 		/* more then one level,it means here is more than one join_cond in current node ,they connect by and/or/not*/
 		for(const auto& level : level_collector){
@@ -690,17 +703,29 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
 			}
     	}
 	}
+
+	node_final_lpes_list = new LevelPredEquivlencesList();
+	final_lpes_list->Copy(node_final_lpes_list);
+
 	/*we should merge current level's pre lpes with this level*/
 	if(same_level_need_merged){
 		final_lpes_list->Insert(total_equivlences_[cur_height_],false);
+		node_final_lpes_list->Insert(nodes_collector_map_[cur_hsps_]->node_equivlences_);
 	}
 	/*we should merge pre level's lpes with this level*/
 	if(cur_height_ >= 1 && !GetPreProcessed(PreProcessLabel::PREDICATE)){
 		final_lpes_list->Insert(total_equivlences_[cur_height_-1],false);
 		SetPreProcessed(PreProcessLabel::PREDICATE,true);
+
+		for(int i = 0;i<cur_hsps_->n_childs; ++i){
+			auto child_eq = nodes_collector_map_[cur_hsps_->childs[i]]->node_equivlences_;
+			if(!child_eq)continue;
+			node_final_lpes_list->Insert(child_eq);
+		}
 	}
 	/*update toal_equivlences*/
 	total_equivlences_[cur_height_] = final_lpes_list;
+	nodes_collector_map_[cur_hsps_]->node_equivlences_ = node_final_lpes_list;
 }
 
 /**
@@ -1381,6 +1406,15 @@ bool LevelPredEquivlencesList::Insert(LevelPredEquivlencesList* lpes_list,bool i
 	
 	}
 	return true;
+}
+
+
+void LevelPredEquivlencesList::Copy(LevelPredEquivlencesList* new_lpes_list){
+	for(const auto& lpes : lpes_list_){
+		LevelPredEquivlences* new_lpes =  new LevelPredEquivlences();
+		lpes->Copy(new_lpes);
+		new_lpes_list->Insert(new_lpes,true);
+	}
 }
 
 

@@ -1,8 +1,8 @@
 #include "collect/stat_format.hpp"
-#include "collect/level_mgr.hpp"
 #include <cstdlib>
 #include <vector>
 #include <functional>
+#include "collect/node_mgr.hpp"
 
 static std::hash<std::string> hash_fn;
 
@@ -20,12 +20,12 @@ PlanStatFormat::PlanStatFormat(int psize)
 }
 
 bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd){
-   
     Preprocessing(qd);
     if(!&hsps_){
         std::cout<<"hsps is nullptr"<<std::endl;
         return -1;
     }
+
     size_t msg_size = history_slow_plan_stat__get_packed_size(&hsps_);
     uint8_t *buffer = (uint8_t*)malloc(msg_size);
     if (buffer == NULL) {
@@ -34,7 +34,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd){
     }
     history_slow_plan_stat__pack(&hsps_,buffer);
     
-    pool_->submit([msg_size,buffer]() -> bool {
+    pool_->submit([msg_size,buffer,this]() -> bool {
 
         ExcavateContext *context = new ExcavateContext();
         std::cout<<"Thread: "<<ThreadPool::GetTid()<<" Begin Working..."<<std::endl;
@@ -46,7 +46,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd){
         if(!hsps){
             std::cerr<<"history_slow_plan_stat__unpack failed in thered: "<<ThreadPool::GetTid()<<std::endl;
         }
-        
+
         /*execute core slow query execavate strategy*/
         context->setStrategy(std::make_shared<NoProcessedExcavateStrategy>(hsps));
         std::vector<HistorySlowPlanStat*> list;
@@ -56,11 +56,18 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd){
         for(const auto& p : list){
             /*format strategy 1*/
             SlowPlanStat *sps= new SlowPlanStat();
-            pf_context->SetStrategy(std::make_shared<LevelManager>(p,sps));
+            auto level_mgr = std::make_shared<LevelManager>(p,sps);
+            pf_context->SetStrategy(level_mgr);
             pf_context->executeStrategy();
 
+            auto node_collect_map = level_mgr->GetNodeCollector();
+            if(debug){
+                ShowAllNodeCollect(hsps,node_collect_map);
+            }
+
             /*format strategt 2*/
-            
+            pf_context->SetStrategy(std::make_shared<NodeManager>(p,level_mgr));
+            pf_context->executeStrategy();
         }
 
         /**
@@ -121,13 +128,32 @@ void PlanStatFormat::ShowAllHspsTree(HistorySlowPlanStat* hsps,int h_depth){
     if(!hsps)return;
     PrintIndent(h_depth);
     std::cout << "["<<hsps->node_type<<"]:"<<std::endl;
-    //PrintIndent(h_depth+1);
     ShowAllPredTree(hsps,h_depth+1);
     
     for(size_t i=0;i<hsps->n_childs;i++){
         ShowAllHspsTree(hsps->childs[i],h_depth+1);
     }
+}
 
+void PlanStatFormat::ShowAllNodeCollect(HistorySlowPlanStat* hsps,std::unordered_map<HistorySlowPlanStat*, NodeCollector*> map,int h_depth){
+    if(!hsps)return;
+    PrintIndent(h_depth);
+    std::cout << "["<<hsps->node_type<<"]:"<<std::endl;
+    
+    auto& node_collector = map.at(hsps);
+    assert(node_collector);
+
+    ShowNodeCollect(node_collector,h_depth+1);
+    
+    for(size_t i=0;i<hsps->n_childs;i++){
+        ShowAllNodeCollect(hsps->childs[i],map,h_depth+1);
+    }
+}
+
+void PlanStatFormat::ShowNodeCollect(NodeCollector *nc ,int depth){
+    if(nc->node_equivlences_){
+        nc->node_equivlences_->ShowLevelPredEquivlencesList(depth);
+    }
 }
 
 void PlanStatFormat::ShowAllPredTree(HistorySlowPlanStat* hsps,int depth){

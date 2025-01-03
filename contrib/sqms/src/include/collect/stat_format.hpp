@@ -21,6 +21,7 @@ extern "C"{
  * TODO: the name of HistorySlowPanStat and SlowPlanStat is simlar, we need rename 
  * one of them to keep readilty of codes
 */
+class NodeCollector;
 class AbstractFormatStrategy;
 class PlanFormatContext;
 class PlanStatFormat{
@@ -42,6 +43,10 @@ private:
     /* debug tools */
     void ShowAllHspsTree(HistorySlowPlanStat* hsps,int hdepth = 0);
     void ShowAllPredTree(HistorySlowPlanStat* hsps,int depth = 0);
+    
+    void ShowAllNodeCollect(HistorySlowPlanStat* hsps,std::unordered_map<HistorySlowPlanStat*, NodeCollector*> map,int h_depth = 0);
+    void ShowNodeCollect(NodeCollector *nc ,int depth = 0);
+    
     void ShowPredTree(PredExpression* p_expr, int depth = 0);
     void PrintIndent(int depth);
 
@@ -69,17 +74,18 @@ public:
  */
 class PlanFormatContext{
 public:
+    /*set plan format strategy*/
     void SetStrategy(std::shared_ptr<AbstractFormatStrategy> strategy) {
         strategy_ = strategy;
     }
-
+    /*execute plan format Strategy*/
     void executeStrategy() const {
         if (strategy_) {
             strategy_->Format();
         } else {
             std::cerr << "No excavate strategy set!" << std::endl;
         }
-    }    
+    } 
 private:
     std::shared_ptr<AbstractFormatStrategy> strategy_;
 };

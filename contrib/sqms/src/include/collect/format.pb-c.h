@@ -18,13 +18,13 @@ PROTOBUF_C__BEGIN_DECLS
 typedef struct _HistorySlowPlanStat HistorySlowPlanStat;
 typedef struct _GroupSortKey GroupSortKey;
 typedef struct _GroupKeys GroupKeys;
-typedef struct _EquivlenceClass EquivlenceClass;
-typedef struct _Range Range;
-typedef struct _SlowPlanLevelStat SlowPlanLevelStat;
-typedef struct _SlowPlanStat SlowPlanStat;
 typedef struct _PredExpression PredExpression;
 typedef struct _PredOperator PredOperator;
 typedef struct _Quals Quals;
+typedef struct _ProtoPredEquivlence ProtoPredEquivlence;
+typedef struct _Range Range;
+typedef struct _SlowPlanLevelStat SlowPlanLevelStat;
+typedef struct _SlowPlanStat SlowPlanStat;
 
 
 /* --- enums --- */
@@ -203,78 +203,6 @@ struct  _GroupKeys
     , (char *)protobuf_c_empty_string, 0,NULL }
 
 
-struct  _EquivlenceClass
-{
-  ProtobufCMessage base;
-  char *qual;
-  size_t n_ranges;
-  Range **ranges;
-};
-#define EQUIVLENCE_CLASS__INIT \
- { PROTOBUF_C_MESSAGE_INIT (&equivlence_class__descriptor) \
-    , (char *)protobuf_c_empty_string, 0,NULL }
-
-
-struct  _Range
-{
-  ProtobufCMessage base;
-  double num_lower_limit;
-  double num_upper_limit;
-  char *str_lower_limit;
-  char *str_upper_limit;
-};
-#define RANGE__INIT \
- { PROTOBUF_C_MESSAGE_INIT (&range__descriptor) \
-    , 0, 0, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string }
-
-
-/*
- *plan stat in single level
- */
-struct  _SlowPlanLevelStat
-{
-  ProtobufCMessage base;
-  /*
-   *join,filter
-   */
-  size_t n_ec_list;
-  EquivlenceClass **ec_list;
-  size_t n_output_col_set;
-  char **output_col_set;
-  /*
-   *Agg
-   */
-  /*
-   *Limit
-   */
-  size_t n_group_by_set;
-  char **group_by_set;
-  /*
-   *Sort
-   */
-  size_t n_sort_key_set;
-  char **sort_key_set;
-  protobuf_c_boolean stop;
-};
-#define SLOW_PLAN_LEVEL_STAT__INIT \
- { PROTOBUF_C_MESSAGE_INIT (&slow_plan_level_stat__descriptor) \
-    , 0,NULL, 0,NULL, 0,NULL, 0,NULL, 0 }
-
-
-struct  _SlowPlanStat
-{
-  ProtobufCMessage base;
-  /*
-   *size of stats is qual with slow plan's level num
-   */
-  size_t n_stats;
-  SlowPlanLevelStat **stats;
-};
-#define SLOW_PLAN_STAT__INIT \
- { PROTOBUF_C_MESSAGE_INIT (&slow_plan_stat__descriptor) \
-    , 0,NULL }
-
-
 typedef enum {
   PRED_EXPRESSION__EXPR__NOT_SET = 0,
   PRED_EXPRESSION__EXPR_OP = 1,
@@ -335,6 +263,80 @@ struct  _Quals
     , (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, 0, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string }
 
 
+/*
+ *TODO: reserved protobuf structure,no used currently
+ */
+struct  _ProtoPredEquivlence
+{
+  ProtobufCMessage base;
+  size_t n_sets;
+  char **sets;
+  size_t n_ranges;
+  Range **ranges;
+};
+#define PROTO_PRED_EQUIVLENCE__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&proto_pred_equivlence__descriptor) \
+    , 0,NULL, 0,NULL }
+
+
+struct  _Range
+{
+  ProtobufCMessage base;
+  char *str_lower_limit;
+  char *str_upper_limit;
+};
+#define RANGE__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&range__descriptor) \
+    , (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string }
+
+
+/*
+ *plan stat in single level
+ */
+struct  _SlowPlanLevelStat
+{
+  ProtobufCMessage base;
+  /*
+   *join,filter
+   */
+  size_t n_pe_list;
+  ProtoPredEquivlence **pe_list;
+  size_t n_output_col_set;
+  char **output_col_set;
+  /*
+   *Agg
+   */
+  /*
+   *Limit
+   */
+  size_t n_group_by_set;
+  char **group_by_set;
+  /*
+   *Sort
+   */
+  size_t n_sort_key_set;
+  char **sort_key_set;
+  protobuf_c_boolean stop;
+};
+#define SLOW_PLAN_LEVEL_STAT__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&slow_plan_level_stat__descriptor) \
+    , 0,NULL, 0,NULL, 0,NULL, 0,NULL, 0 }
+
+
+struct  _SlowPlanStat
+{
+  ProtobufCMessage base;
+  /*
+   *size of stats is qual with slow plan's level num
+   */
+  size_t n_stats;
+  SlowPlanLevelStat **stats;
+};
+#define SLOW_PLAN_STAT__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&slow_plan_stat__descriptor) \
+    , 0,NULL }
+
+
 /* HistorySlowPlanStat methods */
 void   history_slow_plan_stat__init
                      (HistorySlowPlanStat         *message);
@@ -391,82 +393,6 @@ GroupKeys *
                       const uint8_t       *data);
 void   group_keys__free_unpacked
                      (GroupKeys *message,
-                      ProtobufCAllocator *allocator);
-/* EquivlenceClass methods */
-void   equivlence_class__init
-                     (EquivlenceClass         *message);
-size_t equivlence_class__get_packed_size
-                     (const EquivlenceClass   *message);
-size_t equivlence_class__pack
-                     (const EquivlenceClass   *message,
-                      uint8_t             *out);
-size_t equivlence_class__pack_to_buffer
-                     (const EquivlenceClass   *message,
-                      ProtobufCBuffer     *buffer);
-EquivlenceClass *
-       equivlence_class__unpack
-                     (ProtobufCAllocator  *allocator,
-                      size_t               len,
-                      const uint8_t       *data);
-void   equivlence_class__free_unpacked
-                     (EquivlenceClass *message,
-                      ProtobufCAllocator *allocator);
-/* Range methods */
-void   range__init
-                     (Range         *message);
-size_t range__get_packed_size
-                     (const Range   *message);
-size_t range__pack
-                     (const Range   *message,
-                      uint8_t             *out);
-size_t range__pack_to_buffer
-                     (const Range   *message,
-                      ProtobufCBuffer     *buffer);
-Range *
-       range__unpack
-                     (ProtobufCAllocator  *allocator,
-                      size_t               len,
-                      const uint8_t       *data);
-void   range__free_unpacked
-                     (Range *message,
-                      ProtobufCAllocator *allocator);
-/* SlowPlanLevelStat methods */
-void   slow_plan_level_stat__init
-                     (SlowPlanLevelStat         *message);
-size_t slow_plan_level_stat__get_packed_size
-                     (const SlowPlanLevelStat   *message);
-size_t slow_plan_level_stat__pack
-                     (const SlowPlanLevelStat   *message,
-                      uint8_t             *out);
-size_t slow_plan_level_stat__pack_to_buffer
-                     (const SlowPlanLevelStat   *message,
-                      ProtobufCBuffer     *buffer);
-SlowPlanLevelStat *
-       slow_plan_level_stat__unpack
-                     (ProtobufCAllocator  *allocator,
-                      size_t               len,
-                      const uint8_t       *data);
-void   slow_plan_level_stat__free_unpacked
-                     (SlowPlanLevelStat *message,
-                      ProtobufCAllocator *allocator);
-/* SlowPlanStat methods */
-void   slow_plan_stat__init
-                     (SlowPlanStat         *message);
-size_t slow_plan_stat__get_packed_size
-                     (const SlowPlanStat   *message);
-size_t slow_plan_stat__pack
-                     (const SlowPlanStat   *message,
-                      uint8_t             *out);
-size_t slow_plan_stat__pack_to_buffer
-                     (const SlowPlanStat   *message,
-                      ProtobufCBuffer     *buffer);
-SlowPlanStat *
-       slow_plan_stat__unpack
-                     (ProtobufCAllocator  *allocator,
-                      size_t               len,
-                      const uint8_t       *data);
-void   slow_plan_stat__free_unpacked
-                     (SlowPlanStat *message,
                       ProtobufCAllocator *allocator);
 /* PredExpression methods */
 void   pred_expression__init
@@ -525,6 +451,82 @@ Quals *
 void   quals__free_unpacked
                      (Quals *message,
                       ProtobufCAllocator *allocator);
+/* ProtoPredEquivlence methods */
+void   proto_pred_equivlence__init
+                     (ProtoPredEquivlence         *message);
+size_t proto_pred_equivlence__get_packed_size
+                     (const ProtoPredEquivlence   *message);
+size_t proto_pred_equivlence__pack
+                     (const ProtoPredEquivlence   *message,
+                      uint8_t             *out);
+size_t proto_pred_equivlence__pack_to_buffer
+                     (const ProtoPredEquivlence   *message,
+                      ProtobufCBuffer     *buffer);
+ProtoPredEquivlence *
+       proto_pred_equivlence__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data);
+void   proto_pred_equivlence__free_unpacked
+                     (ProtoPredEquivlence *message,
+                      ProtobufCAllocator *allocator);
+/* Range methods */
+void   range__init
+                     (Range         *message);
+size_t range__get_packed_size
+                     (const Range   *message);
+size_t range__pack
+                     (const Range   *message,
+                      uint8_t             *out);
+size_t range__pack_to_buffer
+                     (const Range   *message,
+                      ProtobufCBuffer     *buffer);
+Range *
+       range__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data);
+void   range__free_unpacked
+                     (Range *message,
+                      ProtobufCAllocator *allocator);
+/* SlowPlanLevelStat methods */
+void   slow_plan_level_stat__init
+                     (SlowPlanLevelStat         *message);
+size_t slow_plan_level_stat__get_packed_size
+                     (const SlowPlanLevelStat   *message);
+size_t slow_plan_level_stat__pack
+                     (const SlowPlanLevelStat   *message,
+                      uint8_t             *out);
+size_t slow_plan_level_stat__pack_to_buffer
+                     (const SlowPlanLevelStat   *message,
+                      ProtobufCBuffer     *buffer);
+SlowPlanLevelStat *
+       slow_plan_level_stat__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data);
+void   slow_plan_level_stat__free_unpacked
+                     (SlowPlanLevelStat *message,
+                      ProtobufCAllocator *allocator);
+/* SlowPlanStat methods */
+void   slow_plan_stat__init
+                     (SlowPlanStat         *message);
+size_t slow_plan_stat__get_packed_size
+                     (const SlowPlanStat   *message);
+size_t slow_plan_stat__pack
+                     (const SlowPlanStat   *message,
+                      uint8_t             *out);
+size_t slow_plan_stat__pack_to_buffer
+                     (const SlowPlanStat   *message,
+                      ProtobufCBuffer     *buffer);
+SlowPlanStat *
+       slow_plan_stat__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data);
+void   slow_plan_stat__free_unpacked
+                     (SlowPlanStat *message,
+                      ProtobufCAllocator *allocator);
 /* --- per-message closures --- */
 
 typedef void (*HistorySlowPlanStat_Closure)
@@ -536,8 +538,17 @@ typedef void (*GroupSortKey_Closure)
 typedef void (*GroupKeys_Closure)
                  (const GroupKeys *message,
                   void *closure_data);
-typedef void (*EquivlenceClass_Closure)
-                 (const EquivlenceClass *message,
+typedef void (*PredExpression_Closure)
+                 (const PredExpression *message,
+                  void *closure_data);
+typedef void (*PredOperator_Closure)
+                 (const PredOperator *message,
+                  void *closure_data);
+typedef void (*Quals_Closure)
+                 (const Quals *message,
+                  void *closure_data);
+typedef void (*ProtoPredEquivlence_Closure)
+                 (const ProtoPredEquivlence *message,
                   void *closure_data);
 typedef void (*Range_Closure)
                  (const Range *message,
@@ -547,15 +558,6 @@ typedef void (*SlowPlanLevelStat_Closure)
                   void *closure_data);
 typedef void (*SlowPlanStat_Closure)
                  (const SlowPlanStat *message,
-                  void *closure_data);
-typedef void (*PredExpression_Closure)
-                 (const PredExpression *message,
-                  void *closure_data);
-typedef void (*PredOperator_Closure)
-                 (const PredOperator *message,
-                  void *closure_data);
-typedef void (*Quals_Closure)
-                 (const Quals *message,
                   void *closure_data);
 
 /* --- services --- */
@@ -567,14 +569,14 @@ extern const ProtobufCEnumDescriptor    pred_type_tag__descriptor;
 extern const ProtobufCMessageDescriptor history_slow_plan_stat__descriptor;
 extern const ProtobufCMessageDescriptor group_sort_key__descriptor;
 extern const ProtobufCMessageDescriptor group_keys__descriptor;
-extern const ProtobufCMessageDescriptor equivlence_class__descriptor;
-extern const ProtobufCMessageDescriptor range__descriptor;
-extern const ProtobufCMessageDescriptor slow_plan_level_stat__descriptor;
-extern const ProtobufCMessageDescriptor slow_plan_stat__descriptor;
 extern const ProtobufCMessageDescriptor pred_expression__descriptor;
 extern const ProtobufCMessageDescriptor pred_operator__descriptor;
 extern const ProtobufCEnumDescriptor    pred_operator__pred_operator_type__descriptor;
 extern const ProtobufCMessageDescriptor quals__descriptor;
+extern const ProtobufCMessageDescriptor proto_pred_equivlence__descriptor;
+extern const ProtobufCMessageDescriptor range__descriptor;
+extern const ProtobufCMessageDescriptor slow_plan_level_stat__descriptor;
+extern const ProtobufCMessageDescriptor slow_plan_stat__descriptor;
 
 PROTOBUF_C__END_DECLS
 

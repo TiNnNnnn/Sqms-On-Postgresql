@@ -12,6 +12,7 @@
 #include "common/bloom_filter/bloom_filter.hpp"
 #include "match_strategy.h"
 #include "stat_format.hpp"
+#include "level_mgr.hpp"
 
 extern "C"{
     #include "postgres.h"
@@ -29,5 +30,16 @@ extern "C"{
  * NodeManager
  */
 class NodeManager : public AbstractFormatStrategy{
-    
+public:
+    NodeManager(HistorySlowPlanStat* hsps,std::shared_ptr<LevelManager> level_mgr)
+        : hsps_(hsps),level_mgr_(level_mgr){}
+    virtual bool Format() override;
+
+private:
+    void ComputeTotalNodes();
+
+private:
+    int branch_num_;
+    HistorySlowPlanStat* hsps_ = nullptr;
+    std::shared_ptr<LevelManager> level_mgr_ = nullptr;  
 };

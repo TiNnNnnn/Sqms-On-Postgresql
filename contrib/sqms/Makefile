@@ -15,7 +15,8 @@ OBJS = \
     src/discovery/discovery.o \
     src/excavate/ExcavateProvider.o \
     src/storage/RedisPlanStatProvider.o \
-    src/collect/level_mgr.o
+    src/collect/level_mgr.o \
+    src/collect/node_mgr.o 
 
 #src/discovery/levels.o\ 
 

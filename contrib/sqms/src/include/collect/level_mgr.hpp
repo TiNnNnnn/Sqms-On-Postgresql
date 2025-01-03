@@ -278,6 +278,7 @@ public:
     bool Insert(LevelPredEquivlences* lpes,bool is_or = false);
     bool Insert(LevelPredEquivlencesList* lpes_list,bool is_or = false);
 
+    void Copy(LevelPredEquivlencesList* new_lpes_list);
     size_t Size(){return lpes_list_.size();}
 
     std::vector<LevelPredEquivlences*>::iterator begin() { return lpes_list_.begin(); }
@@ -309,17 +310,6 @@ public:
 private:
     std::vector<UMAP> output2pe_list_;
     std::vector<USET> output_extend_list_;
-};
-
-/**
- * LevelSortList
- */
-class LevelSortList{
-
-public:
-    LevelSortList(){}
-private:
-    
 };
 
 /**
@@ -375,6 +365,7 @@ private:
     LevelPredEquivlencesList* lpes_list_ = nullptr;
 };
 
+
 /**
  * LevelTblList:
  * TODO: we need pay attention to the order of the table?
@@ -389,6 +380,26 @@ private:
     std::set<std::string> tbl_set_;
 };
 
+/**
+ * NodeCollector: supplementary information for hsps node
+ */
+class NodeCollector{
+public:
+    /* total equivlences for predicates */
+    LevelPredEquivlencesList* node_equivlences_ = nullptr;
+    /* total equivlences for outputs */
+    LevelOutputList* node_outputs_ = nullptr;
+    /* total equivlences for agg keys */
+    LevelAggAndSortList* node_aggs_ = nullptr;
+    /* total equivlences for sort keys */
+    LevelAggAndSortList* node_sorts_ = nullptr;
+    /* total sets for tables */
+    LevelTblList* node_tbls_ = nullptr;
+};
+
+/**
+ * LevelManager
+ */
 class LevelManager : public AbstractFormatStrategy{
 public:
     LevelManager(HistorySlowPlanStat* hsps, SlowPlanStat*sps,MatchStrategy ms = C_DEFALUT)
@@ -396,9 +407,10 @@ public:
     {}
 
     virtual bool Format() override;
+
+    std::unordered_map<HistorySlowPlanStat*, NodeCollector*>& GetNodeCollector(){return nodes_collector_map_;}
     
     void ComputeTotalClass(); 
-
     void ShowPredClass(int height,int depth = 0);
     void ShowTotalPredClass(int depth = 0);
 
@@ -421,10 +433,13 @@ private:
     void ReSetAllPreProcessd();
 private:
     HistorySlowPlanStat* hsps_ = nullptr; /*plan we need to process to sps_*/
+    HistorySlowPlanStat* cur_hsps_ = nullptr;
+
     SlowPlanStat * sps_ = nullptr; /*final output,sps will dircetly storaged*/
     int total_height_ = 0; /*plan height*/
     int cur_height_ = 0; /* from bottom to the top,begin height is 0 ... */
     MatchStrategy ms_;
+    
     /* total equivlences for predicates */
     std::vector<LevelPredEquivlencesList*> total_equivlences_;
     /* total equivlences for outputs */
@@ -435,8 +450,11 @@ private:
     std::vector<LevelAggAndSortList*>total_sorts_;
     /* total sets for tables */
     std::vector<LevelTblList*>total_tbls_;
-
+    /* pre lvevl processed check map */
     std::unordered_map<PreProcessLabel, bool> pre_processed_map_;
+
+    std::unordered_map<HistorySlowPlanStat*, NodeCollector*> nodes_collector_map_;
 };
+
 
 
