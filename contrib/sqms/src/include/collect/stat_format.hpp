@@ -17,6 +17,12 @@ extern "C"{
 #include <string.h>
 };
 
+/** 
+ * TODO: the name of HistorySlowPanStat and SlowPlanStat is simlar, we need rename 
+ * one of them to keep readilty of codes
+*/
+class AbstractFormatStrategy;
+class PlanFormatContext;
 class PlanStatFormat{
     typedef const char *(*explain_get_index_name_hook_type) (Oid indexId);
 public:
@@ -47,9 +53,35 @@ private:
     /* HistorySlowPlanStat is a protobuf format structrue,it will be encoding and stored in kv engine*/
     HistorySlowPlanStat hsps_;
     std::shared_ptr<RedisSlowPlanStatProvider> storage_;
-    /** 
-     * TODO: the name of HistorySlowPanStat and SlowPlanStat is simlar, we need rename 
-     * one of them to keep readilty of codes
-    */
 };
+
+/**
+ * AbstractFormatStrategy
+ */
+class AbstractFormatStrategy {
+public:
+    virtual ~AbstractFormatStrategy() = default;
+    virtual bool Format() = 0;
+};
+
+/**
+ * PlanFormatContext
+ */
+class PlanFormatContext{
+public:
+    void SetStrategy(std::shared_ptr<AbstractFormatStrategy> strategy) {
+        strategy_ = strategy;
+    }
+
+    void executeStrategy() const {
+        if (strategy_) {
+            strategy_->Format();
+        } else {
+            std::cerr << "No excavate strategy set!" << std::endl;
+        }
+    }    
+private:
+    std::shared_ptr<AbstractFormatStrategy> strategy_;
+};
+
 

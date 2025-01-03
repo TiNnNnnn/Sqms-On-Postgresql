@@ -1,5 +1,13 @@
 #include "collect/level_mgr.hpp"
 #include <algorithm>
+
+/**
+ * 
+ */
+bool LevelManager::Format(){
+	ComputeTotalClass();
+}
+
 /**
  * ComputeEquivlenceClass: calulate the equivelence class and its containment for
  * each level for plan
@@ -30,7 +38,8 @@ void LevelManager::ComputeTotalClass(){
         ComputeLevelClass(lc);
     }
 
-	ShowTotalPredClass();
+	if(debug)
+		ShowTotalPredClass();
 }
 
 void LevelManager::ComputeLevelClass(const std::vector<HistorySlowPlanStat*>& list){
@@ -478,9 +487,7 @@ void LevelAggAndSortList::Insert(LevelAggAndSortList* la_list){
 	}
 }
 
-void LevelAggAndSortList::Copy(LevelAggAndSortList* la_list){
-
-}
+void LevelAggAndSortList::Copy(LevelAggAndSortList* la_list){}
 
 
 void LevelAggAndSortList::ShowLevelAggAndSortList(int depth){

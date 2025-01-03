@@ -11,6 +11,7 @@
 #include<memory>
 #include "common/bloom_filter/bloom_filter.hpp"
 #include "match_strategy.h"
+#include "stat_format.hpp"
 
 extern "C"{
     #include "postgres.h"
@@ -388,11 +389,13 @@ private:
     std::set<std::string> tbl_set_;
 };
 
-class LevelManager{
+class LevelManager : public AbstractFormatStrategy{
 public:
     LevelManager(HistorySlowPlanStat* hsps, SlowPlanStat*sps,MatchStrategy ms = C_DEFALUT)
         :hsps_(hsps),sps_(sps),ms_(ms)
     {}
+
+    virtual bool Format() override;
     
     void ComputeTotalClass(); 
 
@@ -405,7 +408,6 @@ private:
     void HandleEquivleces(HistorySlowPlanStat* hsps);
 
     void HandleNode(HistorySlowPlanStat* hsps);
-    //void HandleLevelNodes(const std::vector<HistorySlowPlanStat*>& list);
     
     void PredEquivalenceClassesDecompase(PredExpression* root);
     void TblDecompase(HistorySlowPlanStat* hsps);

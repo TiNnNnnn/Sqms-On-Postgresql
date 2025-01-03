@@ -46,15 +46,21 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd){
         if(!hsps){
             std::cerr<<"history_slow_plan_stat__unpack failed in thered: "<<ThreadPool::GetTid()<<std::endl;
         }
+        
         /*execute core slow query execavate strategy*/
         context->setStrategy(std::make_shared<NoProcessedExcavateStrategy>(hsps));
         std::vector<HistorySlowPlanStat*> list;
         context->executeStrategy(list);
         
+        PlanFormatContext* pf_context = new PlanFormatContext();
         for(const auto& p : list){
+            /*format strategy 1*/
             SlowPlanStat *sps= new SlowPlanStat();
-            LevelManager* lm =  new LevelManager(p,sps);
-            lm->ComputeTotalClass();
+            pf_context->SetStrategy(std::make_shared<LevelManager>(p,sps));
+            pf_context->executeStrategy();
+
+            /*format strategt 2*/
+            
         }
 
         /**
