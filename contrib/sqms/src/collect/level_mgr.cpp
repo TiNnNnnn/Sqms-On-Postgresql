@@ -58,6 +58,7 @@ void LevelManager::HandleNode(HistorySlowPlanStat* hsps){
 	TblDecompase(hsps);
 	OutputDecompase(hsps);
 	GroupKeyDecompase(hsps);
+	SortKeyDecompase(hsps);
     switch(node_tag){
         case T_Result:
 			break;
@@ -303,8 +304,45 @@ void LevelOutputList::ShowLevelOutputList(int depth){
 	std::cout<<"\n";
 }
 
+void LevelManager::SortKeyDecompase(HistorySlowPlanStat* hsps){
+	LevelAggAndSortList* final_ls_list = nullptr;
+	assert(total_equivlences_[cur_height_]);
+
+	bool same_level_need_merged = true;
+	if(cur_height_ == total_sorts_.size()){
+		total_sorts_.push_back(nullptr);	
+		same_level_need_merged = false;
+	}
+
+	bool qlabel = strcmp(hsps->group_sort_qlabel,"Sort Key");
+	if(qlabel){
+		if(same_level_need_merged){
+			return;
+		}
+		final_ls_list = new LevelAggAndSortList(total_equivlences_[cur_height_]);
+		if(cur_height_ >= 1 && GetPreProcessed(PreProcessLabel::SORT)){
+			final_ls_list->Insert(total_sorts_[cur_height_-1]);
+			SetPreProcessed(PreProcessLabel::SORT,true);
+		}
+		total_sorts_[cur_height_] = final_ls_list;
+	}else{
+		final_ls_list = new LevelAggAndSortList(total_equivlences_[cur_height_]);
+		final_ls_list->Insert(hsps,"Sort Key");
+
+		if(same_level_need_merged){
+			final_ls_list->Insert(total_sorts_.back());
+		}
+		if(cur_height_ >= 1 && GetPreProcessed(PreProcessLabel::SORT)){
+			final_ls_list->Insert(total_sorts_[cur_height_-1]);
+			SetPreProcessed(PreProcessLabel::SORT,true);
+		}
+		total_sorts_[cur_height_] = final_ls_list;		
+	}	
+
+}
+
 void LevelManager::GroupKeyDecompase(HistorySlowPlanStat* hsps){
-	LevelAggList* final_la_list = nullptr;
+	LevelAggAndSortList* final_la_list = nullptr;
 	assert(total_equivlences_[cur_height_]);
 
 	bool same_level_need_merged = true;
@@ -317,15 +355,15 @@ void LevelManager::GroupKeyDecompase(HistorySlowPlanStat* hsps){
 		if(same_level_need_merged){
 			return;
 		}
-		final_la_list = new LevelAggList(total_equivlences_[cur_height_]);
+		final_la_list = new LevelAggAndSortList(total_equivlences_[cur_height_]);
 		if(cur_height_ >= 1 && GetPreProcessed(PreProcessLabel::AGG)){
 			final_la_list->Insert(total_aggs_[cur_height_-1]);
 			SetPreProcessed(PreProcessLabel::AGG,true);
 		}
 		total_aggs_[cur_height_] = final_la_list;
 	}else if(!strcmp(hsps->group_sort_qlabel,"Group Key")){
-		final_la_list = new LevelAggList(total_equivlences_[cur_height_]);
-		final_la_list->Insert(hsps);
+		final_la_list = new LevelAggAndSortList(total_equivlences_[cur_height_]);
+		final_la_list->Insert(hsps,"Group Key");
 
 		if(same_level_need_merged){
 			final_la_list->Insert(total_aggs_.back());
@@ -338,7 +376,7 @@ void LevelManager::GroupKeyDecompase(HistorySlowPlanStat* hsps){
 	}
 }
 
-void AggEquivlence::Init(HistorySlowPlanStat* hsps,LevelPredEquivlences* lpes){
+void AggAndSortEquivlence::Init(HistorySlowPlanStat* hsps,LevelPredEquivlences* lpes){
 	if(!lpes){
 		for(size_t i=0;i<hsps->n_group_sort_keys;i++){
 			std::string key(hsps->group_sort_keys[i]->key);
@@ -365,8 +403,9 @@ void AggEquivlence::Init(HistorySlowPlanStat* hsps,LevelPredEquivlences* lpes){
 	}
 }
 
-void AggEquivlence::ShowAggEquivlence(int depth){
-	std::cout<<"aggs: (";
+void AggAndSortEquivlence::ShowAggEquivlence(int depth){
+
+	std::cout<<tag_<<":(";
 	int j = 0;
 	for(const auto& e : key2pe_){
 		if(j) std::cout<<",";
@@ -388,17 +427,17 @@ void AggEquivlence::ShowAggEquivlence(int depth){
 	std::cout<<")";
 }
 
-void LevelAggEquivlences::Insert(AggEquivlence* ae){
+void LevelAggAndSortEquivlences::Insert(AggAndSortEquivlence* ae){
 	level_agg_sets_.push_back(ae);
 }
 
-void LevelAggEquivlences::Insert(LevelAggEquivlences* level_ae){
+void LevelAggAndSortEquivlences::Insert(LevelAggAndSortEquivlences* level_ae){
 	for(const auto& ae : level_ae->level_agg_sets_){
 		level_agg_sets_.push_back(ae);
 	}
 }
 
-void LevelAggEquivlences::ShowLevelAggEquivlence(int depth){
+void LevelAggAndSortEquivlences::ShowLevelAggEquivlence(int depth){
 	PrintIndent(depth);
 	std::cout<<"{";
 	int idx = 0;
@@ -410,27 +449,27 @@ void LevelAggEquivlences::ShowLevelAggEquivlence(int depth){
 	std::cout<<"}\n";
 }
 
-void LevelAggList::Insert(HistorySlowPlanStat* hsps){
+void LevelAggAndSortList::Insert(HistorySlowPlanStat* hsps,std::string label){
 	assert(lpes_list_);
+	
 	if(!lpes_list_->Size()){
-		AggEquivlence* new_agg = new AggEquivlence();
+		AggAndSortEquivlence* new_agg = new AggAndSortEquivlence(label);
 		new_agg->Init(hsps,nullptr);
-		LevelAggEquivlences* new_ae_list = new LevelAggEquivlences();
+		LevelAggAndSortEquivlences* new_ae_list = new LevelAggAndSortEquivlences();
 		new_ae_list->Insert(new_agg);
 		level_agg_list_.push_back(new_ae_list);
 	}else{
-		std::cout<<"lpes_size: "<<lpes_list_->Size()<<std::endl;
 		for(const auto& lpes: *lpes_list_){			
-			AggEquivlence* new_agg = new AggEquivlence();
+			AggAndSortEquivlence* new_agg = new AggAndSortEquivlence(label);
 			new_agg->Init(hsps,lpes);
-			LevelAggEquivlences* new_ae_list = new LevelAggEquivlences();
+			LevelAggAndSortEquivlences* new_ae_list = new LevelAggAndSortEquivlences();
 			new_ae_list->Insert(new_agg);
 			level_agg_list_.push_back(new_ae_list);
 		}
 	}
 }
 
-void LevelAggList::Insert(LevelAggList* la_list){
+void LevelAggAndSortList::Insert(LevelAggAndSortList* la_list){
 	assert(la_list);
 	for(const auto& dst_lae: level_agg_list_){
 		for(const auto& src_lae : la_list->GetLevelAggList()){
@@ -439,12 +478,12 @@ void LevelAggList::Insert(LevelAggList* la_list){
 	}
 }
 
-void LevelAggList::Copy(LevelAggList* la_list){
+void LevelAggAndSortList::Copy(LevelAggAndSortList* la_list){
 
 }
 
 
-void LevelAggList::ShowLevelAggList(int depth){
+void LevelAggAndSortList::ShowLevelAggAndSortList(int depth){
 	for(const auto& lae: level_agg_list_){
 		lae->ShowLevelAggEquivlence(depth+1);
 	}	
@@ -1331,8 +1370,6 @@ bool LevelPredEquivlencesList::Insert(LevelPredEquivlencesList* lpes_list,bool i
 			/**
 			 * TODO: merge, best metod isn't merge lpes here, instead, we wish merge before each Insert 
 			 */
-
-
 		}
 	
 	}
@@ -1409,7 +1446,6 @@ void LevelManager::ExprLevelCollect(PredExpression * tree, std::vector<std::vect
     std::reverse(level_collector.begin(),level_collector.end());
 }
 
-
 void LevelManager::ReSetAllPreProcessd(){
 	for (const auto& label : p_labels) {
 		pre_processed_map_[label] = false;
@@ -1433,7 +1469,11 @@ void LevelManager::ShowPredClass(int height,int depth){
 
 	PrintIndent(depth);
 	std::cout<<"groupby keys: "<<std::endl;
-	total_aggs_[height]->ShowLevelAggList(depth+1);
+	total_aggs_[height]->ShowLevelAggAndSortList(depth+1);
+
+	PrintIndent(depth);
+	std::cout<<"sort keys: "<<std::endl;
+	total_sorts_[height]->ShowLevelAggAndSortList(depth+1);
 
 	PrintLine(50);
 }
@@ -1442,8 +1482,9 @@ void LevelManager::ShowTotalPredClass(int depth){
 	std::cout<<"Total Pred Class: "<<std::endl;
 	std::reverse(total_equivlences_.begin(),total_equivlences_.end());
 	std::reverse(total_outputs_.begin(),total_outputs_.end());
-	std::reverse(total_outputs_.begin(),total_outputs_.end());
 	std::reverse(total_aggs_.begin(),total_aggs_.end());
+	std::reverse(total_sorts_.begin(),total_sorts_.end()); 
+
 	for(size_t i = 0; i< total_equivlences_.size();i++){
 		ShowPredClass(i,depth+1);
 	}

@@ -324,8 +324,11 @@ private:
 /**
  * NodeAgg
  */
-class AggEquivlence{
+class AggAndSortEquivlence{
 public:
+    AggAndSortEquivlence(std::string tag)
+        :tag_(tag)
+    {}
     void Init(HistorySlowPlanStat* hsps,LevelPredEquivlences* lpes = nullptr);
     void ShowAggEquivlence(int depth = 0);
 private:
@@ -333,40 +336,41 @@ private:
     std::set<std::string> extends_;
     /*agg true level*/
     int agg_level_;
+    std::string tag_;
 };
 /**
  * LevelAggEquivlnces
  */
-class LevelAggEquivlences{
+class LevelAggAndSortEquivlences{
 public:
-    void Insert(AggEquivlence* ae);
-    void Insert(LevelAggEquivlences* level_ae);
+    void Insert(AggAndSortEquivlence* ae);
+    void Insert(LevelAggAndSortEquivlences* level_ae);
     void ShowLevelAggEquivlence(int depth = 0);
 private:
-    std::vector<AggEquivlence*> level_agg_sets_;
+    std::vector<AggAndSortEquivlence*> level_agg_sets_;
 };
 
 /**
  * LevelAggList
  */
-class LevelAggList{
+class LevelAggAndSortList{
     typedef std::unordered_set<std::string> USET;
     typedef std::unordered_map<std::string, PredEquivlence*> UMAP;
 public:
-    LevelAggList(LevelPredEquivlencesList* lpes_list)
+    LevelAggAndSortList(LevelPredEquivlencesList* lpes_list)
         : lpes_list_(lpes_list)
     {}
-    void Insert(HistorySlowPlanStat* hsps);
-    void Insert(LevelAggList* la_list);
-    void ShowLevelAggList(int depth = 0);
+    void Insert(HistorySlowPlanStat* hsps, std::string label);
+    void Insert(LevelAggAndSortList* la_list);
+    void ShowLevelAggAndSortList(int depth = 0);
 
     int Size(){return level_agg_list_.size();}
-    void Copy(LevelAggList* lal);
+    void Copy(LevelAggAndSortList* lal);
 
-    const std::vector<LevelAggEquivlences*>& GetLevelAggList(){return level_agg_list_;}
+    const std::vector<LevelAggAndSortEquivlences*>& GetLevelAggList(){return level_agg_list_;}
 
 private:
-    std::vector<LevelAggEquivlences*> level_agg_list_;
+    std::vector<LevelAggAndSortEquivlences*> level_agg_list_;
     LevelPredEquivlencesList* lpes_list_ = nullptr;
 };
 
@@ -407,6 +411,7 @@ private:
     void TblDecompase(HistorySlowPlanStat* hsps);
     void OutputDecompase(HistorySlowPlanStat* hsps);
     void GroupKeyDecompase(HistorySlowPlanStat* hsps);
+    void SortKeyDecompase(HistorySlowPlanStat* hsps);
 private:
     void ExprLevelCollect(PredExpression * tree,std::vector<std::vector<AbstractPredNode*>>& level_collector);
     bool GetPreProcessed(PreProcessLabel label){return pre_processed_map_[label];}
@@ -423,7 +428,9 @@ private:
     /* total equivlences for outputs */
     std::vector<LevelOutputList*> total_outputs_;
     /* total equivlences for agg keys */
-    std::vector<LevelAggList*>total_aggs_;
+    std::vector<LevelAggAndSortList*>total_aggs_;
+    /* total equivlences for sort keys */
+    std::vector<LevelAggAndSortList*>total_sorts_;
     /* total sets for tables */
     std::vector<LevelTblList*>total_tbls_;
 
