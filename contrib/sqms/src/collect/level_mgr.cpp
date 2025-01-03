@@ -58,7 +58,6 @@ void LevelManager::ComputeLevelClass(const std::vector<HistorySlowPlanStat*>& li
 		cur_hsps_ = s;
 	 	HandleNode(s);
 	}
-
 	++cur_height_;
 }
 
@@ -180,19 +179,33 @@ void PrintLine(int len){
  * TblDecompase: collect all tables for each levels
  */
 void LevelManager::TblDecompase(HistorySlowPlanStat* hsps){
-	LevelTblList* final_tb_list = new LevelTblList();
+	LevelTblList* final_tb_list = nullptr;
+	LevelTblList* node_final_tbl_list = nullptr;
+
 	bool same_level_need_merged = true;
-	if(cur_height_ == total_outputs_.size()){
+	if(cur_height_ == (int)total_outputs_.size()){
 		total_tbls_.push_back(nullptr);	
 		same_level_need_merged = false;
 	}
 
+	/*relation name is nullptr, it indecate is not a leaf node of plan*/
 	if(!strlen(hsps->object_name)){
+		
+		node_final_tbl_list = new LevelTblList();
+		if(cur_height_ >= 1){
+			for(size_t i =0;i<cur_hsps_->n_childs;i++){
+				auto child_tbls = nodes_collector_map_[cur_hsps_->childs[i]]->node_tbls_;
+				if(!child_tbls)
+					continue;
+				node_final_tbl_list->Insert(child_tbls);	
+			}
+		}
+		nodes_collector_map_[cur_hsps_]->node_tbls_ = node_final_tbl_list;
+
 		if(same_level_need_merged){
-			delete(final_tb_list);
 			return;
 		}
-
+		final_tb_list = new LevelTblList();
 		if(cur_height_ >= 1){
 			final_tb_list->Insert(total_tbls_[cur_height_-1]);
 		}
@@ -200,14 +213,30 @@ void LevelManager::TblDecompase(HistorySlowPlanStat* hsps){
 		return;
 	}
 
+	final_tb_list = new LevelTblList();
+	node_final_tbl_list = new LevelTblList();
+
 	final_tb_list->Insert(hsps->object_name);
+	node_final_tbl_list->Insert(hsps->object_name);
+	
 	if(same_level_need_merged){
 		final_tb_list->Insert(total_tbls_[cur_height_]);
+		//node_final_tbl_list->Insert(nodes_collector_map_[cur_hsps_]->node_tbls_);
 	}
+	
 	if(cur_height_ >=1){
 		final_tb_list->Insert(total_tbls_[cur_height_-1]);
+
+		for(size_t i =0;i<cur_hsps_->n_childs;i++){
+			auto child_tbls = nodes_collector_map_[cur_hsps_->childs[i]]->node_tbls_;
+			if(!child_tbls)
+				continue;
+			node_final_tbl_list->Insert(child_tbls);	
+		}		
 	}
+
 	total_tbls_[cur_height_] = final_tb_list;
+	nodes_collector_map_[cur_hsps_]->node_tbls_ = node_final_tbl_list;
 }
 
 /**
@@ -220,7 +249,7 @@ void LevelManager::OutputDecompase(HistorySlowPlanStat* hsps){
 	}
 	LevelOutputList* final_lo_list = new LevelOutputList();
 	bool same_level_need_merged = true;
-	if(cur_height_ == total_outputs_.size()){
+	if(cur_height_ == (int)total_outputs_.size()){
 		total_outputs_.push_back(nullptr);	
 		same_level_need_merged = false;
 	}
@@ -272,7 +301,7 @@ void LevelOutputList::Insert(LevelPredEquivlencesList* lpes_list,HistorySlowPlan
 
 void LevelOutputList::Insert(LevelOutputList* lo_list){
 	assert(lo_list);
-	for(int i = 0;i < output2pe_list_.size();i++){
+	for(size_t i = 0;i < output2pe_list_.size();i++){
 		auto& dst_map = output2pe_list_[i];
 		auto src_map = lo_list->output2pe_list_[i];
 		for(const auto& src_attr: src_map){
@@ -325,7 +354,7 @@ void LevelManager::SortKeyDecompase(HistorySlowPlanStat* hsps){
 	assert(total_equivlences_[cur_height_]);
 
 	bool same_level_need_merged = true;
-	if(cur_height_ == total_sorts_.size()){
+	if(cur_height_ == (int)total_sorts_.size()){
 		total_sorts_.push_back(nullptr);	
 		same_level_need_merged = false;
 	}
@@ -362,7 +391,7 @@ void LevelManager::GroupKeyDecompase(HistorySlowPlanStat* hsps){
 	assert(total_equivlences_[cur_height_]);
 
 	bool same_level_need_merged = true;
-	if(cur_height_ == total_aggs_.size()){
+	if(cur_height_ == (int)total_aggs_.size()){
 		total_aggs_.push_back(nullptr);	
 		same_level_need_merged = false;
 	}
@@ -527,7 +556,7 @@ void LevelTblList::ShowLevelTblList(int depth){
  */
 void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
 	bool same_level_need_merged = true;
-	if(cur_height_ ==  total_equivlences_.size()){
+	if(cur_height_ ==  (int)total_equivlences_.size()){
 		/*
 		  if true,it means current level's predicates are still not processed,we 
 		  create a new final_lpes_list in total_equivlences_,even if the current
@@ -540,25 +569,30 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
 	LevelPredEquivlencesList* final_lpes_list = nullptr;
 	LevelPredEquivlencesList* node_final_lpes_list = nullptr;
 	if(!root){
+		node_final_lpes_list = new LevelPredEquivlencesList();
+		if(cur_height_ >= 1){
+			for(size_t i = 0;i<cur_hsps_->n_childs; ++i){
+				auto child_eq = nodes_collector_map_[cur_hsps_->childs[i]]->node_equivlences_;
+				if(!child_eq)
+					continue;
+				node_final_lpes_list->Insert(child_eq);
+			}
+		}
+		if(node_final_lpes_list->Size() && !nodes_collector_map_[cur_hsps_]->node_equivlences_)
+			nodes_collector_map_[cur_hsps_]->node_equivlences_ = node_final_lpes_list;
+
 		/*we should merge current level's pre lpes with this level*/
 		if(same_level_need_merged){
 			return;
 		}
 		final_lpes_list = new LevelPredEquivlencesList();
-		node_final_lpes_list = new LevelPredEquivlencesList();
 		/*we should merge pre level's lpes with this level*/
 		if(cur_height_ >= 1 && !GetPreProcessed(PreProcessLabel::PREDICATE)){
 			final_lpes_list->Insert(total_equivlences_[cur_height_-1],false);
 			SetPreProcessed(PreProcessLabel::PREDICATE,true);
-
-			for(int i = 0;i<cur_hsps_->n_childs; ++i){
-				auto child_eq = nodes_collector_map_[cur_hsps_->childs[i]]->node_equivlences_;
-				if(!child_eq)continue;
-				node_final_lpes_list->Insert(child_eq);
-			}
 		}
 		total_equivlences_[cur_height_] = final_lpes_list;
-		nodes_collector_map_[cur_hsps_]->node_equivlences_ = node_final_lpes_list;
+		
 		return;
 	}
 	
@@ -710,14 +744,18 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
 	/*we should merge current level's pre lpes with this level*/
 	if(same_level_need_merged){
 		final_lpes_list->Insert(total_equivlences_[cur_height_],false);
-		node_final_lpes_list->Insert(nodes_collector_map_[cur_hsps_]->node_equivlences_);
+		if(nodes_collector_map_[cur_hsps_]->node_equivlences_)
+			node_final_lpes_list->Insert(nodes_collector_map_[cur_hsps_]->node_equivlences_);
 	}
 	/*we should merge pre level's lpes with this level*/
 	if(cur_height_ >= 1 && !GetPreProcessed(PreProcessLabel::PREDICATE)){
-		final_lpes_list->Insert(total_equivlences_[cur_height_-1],false);
-		SetPreProcessed(PreProcessLabel::PREDICATE,true);
 
-		for(int i = 0;i<cur_hsps_->n_childs; ++i){
+		if(!GetPreProcessed(PreProcessLabel::PREDICATE)){
+			final_lpes_list->Insert(total_equivlences_[cur_height_-1],false);
+			SetPreProcessed(PreProcessLabel::PREDICATE,true);
+		}
+
+		for(size_t i = 0;i<cur_hsps_->n_childs; ++i){
 			auto child_eq = nodes_collector_map_[cur_hsps_->childs[i]]->node_equivlences_;
 			if(!child_eq)continue;
 			node_final_lpes_list->Insert(child_eq);
@@ -1032,6 +1070,7 @@ bool PredEquivlence::Insert(PredEquivlence* pe, bool check_can_merged){
 		std::vector<PredEquivlenceRange*> merge_range_list;
 		if(RangesSerach(r,merge_range_list)){
 			/*merge ranges */
+			merge_range_list.push_back(r);
 			if(!MergePredEquivlenceRanges(merge_range_list)){
 				return false;
 			}
@@ -1088,16 +1127,16 @@ bool PredEquivlence::MergePredEquivlenceRanges(const std::vector<PredEquivlenceR
 			right = merge_range_list[0]->GetUpperBoundaryConstraint();
 		}else{
 
-			if((r->UpperLimit() > upper_bound && upper_bound != UPPER_LIMIT)||
-			   (r->UpperLimit() == UPPER_LIMIT)||
+			if((r->UpperLimit() < upper_bound && r->UpperLimit() != UPPER_LIMIT && upper_bound != UPPER_LIMIT)||
+			   (upper_bound == UPPER_LIMIT)||
 			   (r->UpperLimit() == upper_bound && r->GetUpperBoundaryConstraint() && !right)
 			){
 				upper_bound = r->UpperLimit();
 				right = r->GetUpperBoundaryConstraint();
 			}
 			
-			if((r->LowerLimit() < lower_bound && lower_bound != LOWER_LIMIT)||
-			   (r->LowerLimit() == LOWER_LIMIT)||
+			if((r->LowerLimit() > lower_bound && r->LowerLimit() != LOWER_LIMIT &&  lower_bound != LOWER_LIMIT)||
+			   (lower_bound  == LOWER_LIMIT)||
 			   (r->LowerLimit() == lower_bound && r->GetLowerBoundaryConstraint() && !left)
 			){
 				lower_bound = r->LowerLimit();
@@ -1108,6 +1147,8 @@ bool PredEquivlence::MergePredEquivlenceRanges(const std::vector<PredEquivlenceR
 		++idx;
 	}
 	new_range->SetPredType(PType::RANGE);
+	new_range->SetLowerLimit(lower_bound);
+	new_range->SetUpperLimit(upper_bound);
 	ranges_.insert(new_range);
 	return true;
 }
@@ -1525,6 +1566,7 @@ void LevelManager::ShowTotalPredClass(int depth){
 	std::reverse(total_outputs_.begin(),total_outputs_.end());
 	std::reverse(total_aggs_.begin(),total_aggs_.end());
 	std::reverse(total_sorts_.begin(),total_sorts_.end()); 
+	std::reverse(total_tbls_.begin(),total_tbls_.end());
 
 	for(size_t i = 0; i< total_equivlences_.size();i++){
 		ShowPredClass(i,depth+1);

@@ -154,6 +154,11 @@ void PlanStatFormat::ShowNodeCollect(NodeCollector *nc ,int depth){
     if(nc->node_equivlences_){
         nc->node_equivlences_->ShowLevelPredEquivlencesList(depth);
     }
+    if(nc->node_tbls_){
+        PrintIndent(depth+1);
+        std::cout<<"tables: ";
+        nc->node_tbls_->ShowLevelTblList(depth);
+    }
 }
 
 void PlanStatFormat::ShowAllPredTree(HistorySlowPlanStat* hsps,int depth){

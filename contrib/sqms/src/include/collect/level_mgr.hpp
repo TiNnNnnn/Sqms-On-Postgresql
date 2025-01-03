@@ -72,6 +72,7 @@ public:
 
     AbstractPredNodeType type_;
 };
+
 class LevelPredEquivlences;
 class LevelPredEquivlencesList;
 class PredOperatorWrap: public AbstractPredNode{
