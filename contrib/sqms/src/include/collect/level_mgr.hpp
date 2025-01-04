@@ -300,7 +300,6 @@ class LevelOutputList{
     typedef std::unordered_set<std::string> USET;
     typedef std::unordered_map<std::string, PredEquivlence*> UMAP;
 public:
-    LevelOutputList(){};
     void Insert(LevelPredEquivlencesList* lpes_list,HistorySlowPlanStat* hsps);
     void Insert(LevelOutputList* lo_list);
     void ShowLevelOutputList(int depth = 0);
@@ -308,6 +307,11 @@ public:
     const std::vector<UMAP>& GetOutput2PeList(){return output2pe_list_;}
     const std::vector<USET>& GetOutputExtendList(){return output_extend_list_;}
 
+    void ReSizeOutput2PeList(size_t sz){output2pe_list_.resize(sz);}
+    void ReSizeOutputExtendList(size_t sz){output_extend_list_.resize(sz);}
+
+    UMAP& GetOutput2PeListItem(int pos){return output2pe_list_[pos];}
+    USET& GetOutputExtendListItem(int pos){return output_extend_list_[pos];}
 private:
     std::vector<UMAP> output2pe_list_;
     std::vector<USET> output_extend_list_;
@@ -435,6 +439,7 @@ private:
 private:
     HistorySlowPlanStat* hsps_ = nullptr; /*plan we need to process to sps_*/
     HistorySlowPlanStat* cur_hsps_ = nullptr;
+    bool first_pred_check_ = false;
 
     SlowPlanStat * sps_ = nullptr; /*final output,sps will dircetly storaged*/
     int total_height_ = 0; /*plan height*/

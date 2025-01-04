@@ -154,10 +154,27 @@ void PlanStatFormat::ShowNodeCollect(NodeCollector *nc ,int depth){
     if(nc->node_equivlences_){
         nc->node_equivlences_->ShowLevelPredEquivlencesList(depth);
     }
+    
     if(nc->node_tbls_){
         PrintIndent(depth+1);
         std::cout<<"tables: ";
         nc->node_tbls_->ShowLevelTblList(depth);
+    }
+
+    if(nc->node_outputs_){
+        nc->node_outputs_->ShowLevelOutputList(depth+1);
+    }
+
+    if(nc->node_aggs_){
+        PrintIndent(depth+1);
+        std::cout<<"groupby keys:";
+        nc->node_aggs_->ShowLevelAggAndSortList(depth-1);
+    }
+
+    if(nc->node_sorts_){
+        PrintIndent(depth+1);
+        std::cout<<"sort keys:";
+        nc->node_sorts_->ShowLevelAggAndSortList(depth-1);
     }
 }
 
