@@ -27,6 +27,17 @@ extern "C"{
 }
 
 /**
+ * NodeStat
+ */
+class NodeStat{
+public:
+    
+private:
+    size_t output_;
+    std::unordered_set<size_t>input_map_;
+};
+
+/**
  * NodeManager
  */
 class NodeManager : public AbstractFormatStrategy{
@@ -37,6 +48,7 @@ public:
 
 private:
     void ComputeTotalNodes();
+
 
 private:
     int branch_num_;

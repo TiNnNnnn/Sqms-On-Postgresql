@@ -3,3 +3,7 @@
 bool NodeManager::Format(){
     return true;
 }
+
+void NodeManager::ComputeTotalNodes(){
+    
+}

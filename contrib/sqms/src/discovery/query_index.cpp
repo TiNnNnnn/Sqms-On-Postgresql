@@ -5,11 +5,24 @@ HistoryQueryLevelTree::HistoryQueryLevelTree(){
     /* rebuild the history query level tree */
 }
 
-bool HistoryQueryLevelTree::Search(){
+bool HistoryQueryLevelTree::Insert(LevelManager* level_mgr,int l){
+    
+    return true;
+}
+bool HistoryQueryLevelTree::Remove(LevelManager* level_mgr,int l){
+    return true;
+}
+bool HistoryQueryLevelTree::Search(LevelManager* level_mgr,int l){
+    return true;
+}
 
-    for(size_t h = 0; h < height_; h++){
-        
-    }
+bool HistoryQueryLevelTree::Insert(NodeCollector* node_collector){
+    return true;
+}
+bool HistoryQueryLevelTree::Remove(NodeCollector* node_collector){
+    return true;
+}
+bool HistoryQueryLevelTree::Search(NodeCollector* node_collector){
     return true;
 }
 
@@ -25,3 +38,4 @@ bool HistoryQueryIndexNode::RemoveSet(HistorySlowPlanStat* hsps){
 bool HistoryQueryIndexNode::SearchSet(HistorySlowPlanStat* hsps){
 
 } 
+
