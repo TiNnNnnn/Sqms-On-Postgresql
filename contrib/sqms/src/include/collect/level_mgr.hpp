@@ -327,6 +327,8 @@ public:
     {}
     void Init(HistorySlowPlanStat* hsps,LevelPredEquivlences* lpes = nullptr);
     void ShowAggEquivlence(int depth = 0);
+    const std::map<std::string, PredEquivlence*>& GetKey2Pe(){return key2pe_;}
+    const std::set<std::string>& GetExtends(){return extends_;}
 private:
     std::map<std::string, PredEquivlence*>key2pe_;
     std::set<std::string> extends_;
@@ -334,6 +336,7 @@ private:
     int agg_level_;
     std::string tag_;
 };
+
 /**
  * LevelAggEquivlnces
  */
@@ -342,6 +345,7 @@ public:
     void Insert(AggAndSortEquivlence* ae);
     void Insert(LevelAggAndSortEquivlences* level_ae);
     void ShowLevelAggEquivlence(int depth = 0);
+    const std::vector<AggAndSortEquivlence*>& GetLevelAggSets(){return level_agg_sets_;}
 private:
     std::vector<AggAndSortEquivlence*> level_agg_sets_;
 };
@@ -412,15 +416,20 @@ public:
     {}
 
     bool Format();
-
-    std::unordered_map<HistorySlowPlanStat*, NodeCollector*>& GetNodeCollector(){return nodes_collector_map_;}
-    
     void ComputeTotalClass(); 
     void ShowPredClass(int height,int depth = 0);
     void ShowTotalPredClass(int depth = 0);
 
-private:
+    /*for index*/
+    HistorySlowPlanStat* GetHsps(){return hsps_;}
+    const std::vector<LevelPredEquivlencesList*>& GetTotalEquivlences(){return total_equivlences_;}
+    const std::vector<LevelOutputList*>& GetTotalOutput(){return total_outputs_;}
+    const std::vector<LevelTblList*>& GetTotalTables(){return total_tbls_;}
+    const std::vector<LevelAggAndSortList*>& GetTotalAggs(){return total_aggs_;}
+    const std::vector<LevelAggAndSortList*>& GetTotalSorts(){return total_sorts_;}
+    std::unordered_map<HistorySlowPlanStat*, NodeCollector*>& GetNodeCollector(){return nodes_collector_map_;}
 
+private:
     void ComputeLevelClass(const std::vector<HistorySlowPlanStat*>& list);
     void HandleEquivleces(HistorySlowPlanStat* hsps);
 
@@ -431,6 +440,7 @@ private:
     void OutputDecompase(HistorySlowPlanStat* hsps);
     void GroupKeyDecompase(HistorySlowPlanStat* hsps);
     void SortKeyDecompase(HistorySlowPlanStat* hsps);
+
 private:
     void ExprLevelCollect(PredExpression * tree,std::vector<std::vector<AbstractPredNode*>>& level_collector);
     bool GetPreProcessed(PreProcessLabel label){return pre_processed_map_[label];}

@@ -17,7 +17,7 @@ OBJS = \
     src/storage/RedisPlanStatProvider.o \
     src/collect/level_mgr.o \
     src/collect/node_mgr.o \
-    src/discovery/levels.o \
+    src/discovery/query_index_node.o \
     src/discovery/query_index.o \
 
 #src/discovery/levels.o\ 

@@ -15,7 +15,7 @@ extern "C" {
 }
 
 /**
- * a temp implemetaion of postingList,it will be replaced by another one 
+ * TODO: a temp implemetaion of postingList,it will be replaced by another one 
  */
 typedef std::vector<std::string> SET;
 static std::string EncodingSets(const SET&sets){
@@ -33,6 +33,14 @@ struct SetHasher {
     std::size_t operator()(const SET& sets) const {
         std::string encoding = EncodingSets(sets);
         return std::hash<std::string>{}(encoding);
+    }
+
+    std::size_t hash(const SET& sets) const {
+        return operator()(sets);
+    }
+
+    bool equal(const SET& lhs, const SET& rhs) const {
+        return lhs == rhs;
     }
 };
 
@@ -64,33 +72,15 @@ public:
         return bit_set_;
     }
 private:
-    // 判断list_set是否是set的子集
+    /*check if <list_set> is the subset of <set> */
     bool IsSubset(const SET &list_set, const SET &set) {
         for (const auto& item : list_set) {
             if (std::find(set.begin(), set.end(), item) == set.end()) {
-                return false;  // 找不到元素，说明不是子集
+                return false;
             }
         }
         return true;
     }
-    
-    static std::string EncodingSets(const SET&sets){
-        std::string encoding;
-        for(size_t i=0;i<sets.size();i++){
-            if(i!=0){
-                encoding+=",";
-            }
-            encoding+= sets[i];
-        }
-        return encoding;
-    }
-
-    struct SetHasher {
-    std::size_t operator()(const SET& sets) const {
-            std::string encoding = EncodingSets(sets);
-            return std::hash<std::string>{}(encoding);
-        }
-    };
 
 private:
     std::unordered_set<SET,SetHasher> list_;
@@ -101,7 +91,7 @@ template<typename PostingList>
 class InvertedIndex{
     typedef std::vector<std::string> SET;
 public:
-
+    /*insert a set into inverted index*/
     void Insert(const SET& set){
         std::unique_lock<std::shared_mutex> lock(rw_mutex_);
         for(auto item : set){
@@ -115,6 +105,7 @@ public:
         }
     }
 
+    /*erase a set from inverted index*/
     void Erase(const SET&set){
         std::unique_lock<std::shared_mutex> lock(rw_mutex_);
         if(sets2id_.find(set) == sets2id_.end())return;
@@ -124,6 +115,15 @@ public:
         items_cnt_ = inverted_map_.size();
     }
 
+    /**serach a set whether in inverted index or not */
+    bool Serach(const SET& set){
+        std::unique_lock<std::shared_mutex> lock(rw_mutex_);
+        if(sets2id_.find(set) == sets2id_.end())
+            return false;
+        return true;
+    }
+
+    /*find superset of <set>*/
     std::unordered_set<SET,SetHasher> SuperSets(const SET&set){
         std::shared_lock<std::shared_mutex> lock(rw_mutex_);
         std::unordered_set<SET,SetHasher> set_list;
@@ -140,6 +140,7 @@ public:
         return set_list;
     }
 
+    /*find subsets of <set>*/
     std::unordered_set<SET,SetHasher> SubSets(const SET&set){
         std::shared_lock<std::shared_mutex> lock(rw_mutex_);
         std::unordered_set<SET,SetHasher> set_list;
@@ -153,6 +154,7 @@ public:
     }
 private:
     std::unordered_map<std::string, PostingList> inverted_map_;
+
     /* item in set,such as A,B,C,D....*/
     /* set such as {A,B},{A,B,C},{B,C,D,E} to their id*/
     std::unordered_map<std::vector<std::string>,int,SetHasher> sets2id_; 
