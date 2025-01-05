@@ -1,6 +1,7 @@
 #pragma once 
 #include "inverted_index.hpp"
 #include "collect/level_mgr.hpp"
+#include "levels.hpp"
 #include "collect/format.pb-c.h"
 
 class HistoryQueryIndexNode{
@@ -17,10 +18,14 @@ private:
     bool RemoveSet(HistorySlowPlanStat* hsps);
     bool SearchSet(HistorySlowPlanStat* hsps);
 private: 
-    /*set2node*/
-    std::unordered_map<SET,std::shared_ptr<HistoryQueryIndexNode>,SetHasher>childs_;
-    /*inverted_idx storage all sets in the node*/
-    std::shared_ptr<InvertedIndex<PostingList>> inverted_idx_;
+    // /*set2node*/
+    // std::unordered_map<SET,std::shared_ptr<HistoryQueryIndexNode>,SetHasher>childs_;
+    // /*inverted_idx storage all sets in the node*/
+    // std::shared_ptr<InvertedIndex<PostingList>> inverted_idx_;
+
+    /*use context to operate node*/
+    LevelStrategyContext* level_strategy_context_;
+
     /*current node level*/
     size_t level_;
 };

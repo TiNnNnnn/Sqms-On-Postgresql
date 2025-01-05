@@ -27,15 +27,24 @@ bool HistoryQueryLevelTree::Search(NodeCollector* node_collector){
 }
 
 
-bool HistoryQueryIndexNode::InsertSet(HistorySlowPlanStat* hsps){
+/**
+ * HistoryQueryIndexNode
+ */
+HistoryQueryIndexNode::HistoryQueryIndexNode(int l)
+    :level_(l),level_strategy_context_(new LevelStrategyContext()){
+    level_strategy_context_->SetStrategy(l);
+}
 
+bool HistoryQueryIndexNode::InsertSet(HistorySlowPlanStat* hsps){
+    //level_strategy_context_->Insert()
+    return true;
 }
 
 bool HistoryQueryIndexNode::RemoveSet(HistorySlowPlanStat* hsps){
-
+    return true;
 }
 
 bool HistoryQueryIndexNode::SearchSet(HistorySlowPlanStat* hsps){
-
+    return true;
 } 
 

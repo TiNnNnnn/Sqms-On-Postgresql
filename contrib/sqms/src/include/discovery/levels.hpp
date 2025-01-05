@@ -5,50 +5,27 @@
 #include <iostream>
 #include "collect/format.pb-c.h"
 #include "inverted_index.hpp"
+#include "tbb/concurrent_hash_map.h"
 
+class HistoryQueryIndexNode;
 class LevelStrategy{
 public:
-    virtual ~LevelStrategy() = default;
-    virtual std::vector<std::string> findChildren(HistorySlowPlanStat* hsps) = 0;
+    virtual std::vector<std::string> findChildren() = 0;
     virtual std::string Name() = 0;
-};
-class LevelOneStrategy;
-class LevelTwoStrategy;
-class LevelStrategyContext{
-    void executeStrategy(int l, HistorySlowPlanStat* hsps,std::shared_ptr<InvertedIndex<PostingList>> inverted_idx){
-        // switch(l){
-        //     case 1 :{
-        //         strategy_ =  std::make_shared<LevelOneStrategy>(hsps,inverted_idx);
-        //     }break;
-        //     case 2 :{
-        //         strategy_ =  std::make_shared<LevelOneStrategy>(hsps,inverted_idx);
-        //     }break;
-        // }
-        // if (strategy_) {
-        //     strategy_->findChildren(hsps);
-        // } else {
-        //     std::cerr << "No level strategy set!" << std::endl;
-        // }
-    }
-private:
-    std::shared_ptr<LevelStrategy> strategy_;
 };
 
 class LevelOneStrategy : public LevelStrategy{
 public:
-    LevelOneStrategy(HistorySlowPlanStat* hsps,std::shared_ptr<InvertedIndex<PostingList>> inverted_idx)
-        :hsps_(hsps),inverted_idx_(inverted_idx){}
     std::string Name(){return "PlanHashStrategy";}
+
     std::vector<std::string> findChildren();
 private:
     HistorySlowPlanStat* hsps_;
-    std::shared_ptr<InvertedIndex<PostingList>> inverted_idx_;
+    tbb::concurrent_hash_map<std::vector<std::string>,HistoryQueryIndexNode*> set_map_;
 };
 
 class LevelTwoStrategy : public LevelStrategy{
 public:
-    LevelTwoStrategy(HistorySlowPlanStat* hsps,std::shared_ptr<InvertedIndex<PostingList>> inverted_idx)
-        :hsps_(hsps),inverted_idx_(inverted_idx){}
     std::string Name(){return "PlanEqulPredsStrategy";}
     std::vector<std::string> findChildren();
 private:
@@ -58,11 +35,40 @@ private:
 
 class LevelThreeStrategy : public LevelStrategy{
 public:
-    LevelThreeStrategy(HistorySlowPlanStat* hsps,std::shared_ptr<InvertedIndex<PostingList>> inverted_idx)
-        :hsps_(hsps),inverted_idx_(inverted_idx){}
     std::string Name(){return "PlanRangePredsStrategy";}
     std::vector<std::string> findChildren();
 private:
     HistorySlowPlanStat* hsps_;
     std::shared_ptr<InvertedIndex<PostingList>> inverted_idx_;
+};
+
+/**
+ * LevelStrategyContext
+ */
+class LevelStrategyContext{
+public:
+    void SetStrategy(int l){
+        switch(l){
+            case 1 :{
+                strategy_ =  std::make_shared<LevelOneStrategy>();
+            }break;
+            case 2 :{
+                strategy_ =  std::make_shared<LevelTwoStrategy>();
+            }break;
+            case 3 :{
+                strategy_ = std::make_shared<LevelThreeStrategy>();
+            }break;
+            default :{
+                std::cerr<<"unknon level strategy"<<std::endl;
+                exit(-1);
+            }
+        }
+    }
+
+    void Insert();
+    void Remove();
+    void Search();
+
+private:
+    std::shared_ptr<LevelStrategy> strategy_;
 };

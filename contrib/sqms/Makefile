@@ -16,14 +16,16 @@ OBJS = \
     src/excavate/ExcavateProvider.o \
     src/storage/RedisPlanStatProvider.o \
     src/collect/level_mgr.o \
-    src/collect/node_mgr.o 
+    src/collect/node_mgr.o \
+    src/discovery/levels.o \
+    src/discovery/query_index.o \
 
 #src/discovery/levels.o\ 
 
 
-SHLIB_LINK_INTERNAL = $(libpq) -lstdc++ -lprotobuf -lprotobuf-c -L/usr/local/lib -lhiredis -luv
+SHLIB_LINK_INTERNAL = $(libpq) -lstdc++ -lprotobuf -lprotobuf-c -L/usr/local/lib -lhiredis -luv 
 CFLAGS += -std=c11 -I/home/yyk/postgresql-13.10/contrib/sqms/src/include -I/usr/local/include 
-PG_CPPFLAGS = -std=c++17 -fPIC -I$(libpq_srcdir) -lstdc++  -I/home/yyk/postgresql-13.10/contrib/sqms/src/include
+PG_CPPFLAGS = -std=c++17 -fPIC -I$(libpq_srcdir) -lstdc++ -ltbb -I/home/yyk/postgresql-13.10/contrib/sqms/src/include
 
 # pg extend config 
 EXTENSION = sqms

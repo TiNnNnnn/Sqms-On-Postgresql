@@ -411,7 +411,7 @@ public:
         :hsps_(hsps),sps_(sps),ms_(ms)
     {}
 
-    virtual bool Format() override;
+    bool Format();
 
     std::unordered_map<HistorySlowPlanStat*, NodeCollector*>& GetNodeCollector(){return nodes_collector_map_;}
     

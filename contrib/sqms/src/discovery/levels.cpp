@@ -8,14 +8,6 @@
  * we just use hash to compare,with time going,we will 
  */
 std::vector<std::string> LevelOneStrategy::findChildren(){
-    // std::unordered_set<std::string>unique_set;
-    // std::vector<std::string> node_type_set;
-    // for(size_t i = 0; i < hsps_->n_sub_node_type_set;i++){
-    //     unique_set.insert(std::string(hsps_->sub_node_type_set[i]));
-    // }
-    // std::sort(unique_set.begin(),unique_set.end());
-    // for(auto e : unique_set)
-    //     node_type_set.push_back(e);
     return std::vector<std::string>();
 }
 

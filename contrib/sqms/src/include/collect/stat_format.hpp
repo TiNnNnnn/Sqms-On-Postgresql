@@ -3,7 +3,6 @@
 #include "excavate/ExcavateContext.hpp"
 #include "common/thread_pool.hpp"
 #include "storage/RedisPlanStatProvider.hpp"
-#include "discovery/query_index.hpp"
 #include <memory>
 
 extern "C"{
