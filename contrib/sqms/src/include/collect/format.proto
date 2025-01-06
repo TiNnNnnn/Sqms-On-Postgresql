@@ -79,7 +79,8 @@ message HistorySlowPlanStat{
 	PredExpression index_cond_expr_tree = 51;
 	PredExpression order_by_expr_tree = 52;
 
-	
+	/*Auxiliary parameters*/
+	int32 child_idx = 53;
 }
 
 enum PredTypeTag{

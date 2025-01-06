@@ -69,7 +69,10 @@ bool LevelTwoStrategy::Insert(LevelManager* level_mgr){
 
     std::vector<std::vector<std::string>> all_agg_vecs;
     for(const auto& la_eq : top_aggs->GetLevelAggList()){
-        /*transforer set type to vector type to insert into inverted_idx*/
+        /**
+         * transforer set type to vector type to insert into inverted_idx
+         * TODO: 01-06 how to reduce about agg or sort node more then one in one plan 
+         */
         std::vector<std::string> agg_vec;
         for(const auto& agg : la_eq->GetLevelAggSets()){
             auto agg_extends = agg->GetExtends();
@@ -129,16 +132,69 @@ bool LevelTwoStrategy::Insert(LevelManager* level_mgr){
  * LevelTwoStrategy::Serach
  */
 bool LevelTwoStrategy::Serach(LevelManager* level_mgr){
+    assert(level_mgr);
+    assert(level_mgr->GetTotalAggs().size());
 
+    auto top_aggs = level_mgr->GetTotalAggs()[0];
+    /**
+     * item in levelagglist is or relation
+     * TODO: here may be can use multi thread or coroutines
+     **/
+    for(const auto& la_eq : top_aggs->GetLevelAggList()){
+        std::vector<std::string> agg_vec;
+        for(const auto& agg : la_eq->GetLevelAggSets()){
+            auto agg_extends = agg->GetExtends();
+            for(const auto& expr : agg_extends){
+                agg_vec.push_back(expr);
+            }
+        }
+
+        auto match_sets = inverted_idx_->SubSets(agg_vec);
+        for(const auto& set:  match_sets){
+            tbb::concurrent_hash_map<SET,std::shared_ptr<HistoryQueryIndexNode>,SetHasher>::const_accessor acc;
+            child_map_.find(acc,agg_vec);
+            assert(acc->second);
+            if(acc->second->Search(level_mgr)){
+                return true;
+            }
+        }
+    }
     return false;
 }
+
 /**
  * LevelTwoStrategy::Remove
  */
 bool LevelTwoStrategy::Remove(LevelManager* level_mgr){
+    assert(level_mgr);
     return false;
-}  
+}
 
+/**
+ * LevelThreeStrategy::Insert
+ */
+bool LevelThreeStrategy::Insert(LevelManager* level_mgr){
+    assert(level_mgr);
+
+    return false;
+}
+
+/**
+ * LevelThreeStrategy::Serach
+ */
+bool LevelThreeStrategy::Serach(LevelManager* level_mgr){
+    assert(level_mgr);
+
+    return false;
+}
+
+/**
+ * LevelThreeStrategy::Remove
+ */
+bool LevelThreeStrategy::Remove(LevelManager* level_mgr){
+    assert(level_mgr);
+    return false;
+}
 
 /**
  * LevelTwoStrategy: check the qual constraint condition,such as "t1.a = t2.b"

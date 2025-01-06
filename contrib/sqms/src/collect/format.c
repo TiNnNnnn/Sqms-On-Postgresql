@@ -1578,27 +1578,27 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		FormatOpenGroup("Plans", "Plans", false, ces);
 		/* Pass current Plan as head of ancestors list for children */
 		ancestors = lcons(plan, ancestors);
+
+		size_t child_size = 0;
 		if(outerPlanState(planstate) && innerPlanState(planstate)){
-			hsp.childs = (HistorySlowPlanStat**)malloc(sizeof(HistorySlowPlanStat*)*2);
-			hsp.n_childs = 2;
-		}else if(planstate->subPlan){
-			size_t sub_size = list_length(planstate->subPlan);
-			hsp.childs = (HistorySlowPlanStat**)malloc(sizeof(HistorySlowPlanStat*)*sub_size);
-			hsp.n_childs = sub_size;
-		}else if(planstate->initPlan){
-			size_t sub_size = list_length(planstate->initPlan);
-			hsp.childs = (HistorySlowPlanStat**)malloc(sizeof(HistorySlowPlanStat*)*list_length(planstate->initPlan));
-			hsp.n_childs =sub_size;
-		}else{
-			hsp.childs = (HistorySlowPlanStat**)malloc(sizeof(HistorySlowPlanStat*));
-			hsp.n_childs = 1;
+			child_size+=2;
 		}
+		if(planstate->subPlan){
+			size_t sub_size = list_length(planstate->subPlan);
+			child_size+=sub_size;
+		}
+		if(planstate->initPlan){
+			size_t sub_size = list_length(planstate->initPlan);
+			hsp.n_childs =sub_size;
+		}
+		child_size = child_size == 0 ? 1 : child_size;
+		hsp.childs = (HistorySlowPlanStat**)malloc(sizeof(HistorySlowPlanStat*));
+		hsp.n_childs = child_size;
 	}
 
+	hsp.child_idx = 0;
 	RecureState rs = NewRecureState();
-	
 	rs.node_type_set_ = lappend_int(rs.node_type_set_,(void*)nodeTag(plan));
-	//hsp.childs = (HistorySlowPlanStat**)malloc(sizeof(HistorySlowPlanStat*)*2);
 	/* initPlan-s */
 	if (planstate->initPlan){
         RecureState ret = ExplainSubPlans(planstate->initPlan, ancestors, "InitPlan", total_es,total_ces,&hsp);
@@ -1619,7 +1619,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		HistorySlowPlanStat* child = malloc(sizeof(HistorySlowPlanStat));
 		history_slow_plan_stat__init(child);
 		*child = ret.hps_;
-		hsp.childs[0] = child;
+		hsp.childs[hsp.child_idx++] = child;
     }
 	/* righttree */
 	if (innerPlanState(planstate)){
@@ -1635,7 +1635,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		HistorySlowPlanStat* child = malloc(sizeof(HistorySlowPlanStat));
 		history_slow_plan_stat__init(child);
 		*child = ret.hps_;
-		hsp.childs[1] = child;
+		hsp.childs[hsp.child_idx++] = child;
     }
 	/**
 	 * TODO: we need update here
@@ -3426,7 +3426,6 @@ ExplainSubPlans(List *plans, List *ancestors,
 {
 	ListCell   *lst;
 	RecureState rs = NewRecureState();
-	size_t idx = 0;	
 	// if(strcmp(relationship,"SubPlan")){
 	// 	rs.node_type_set_ = lappend(rs.node_type_set_,T_SubPlan);
 	// }else if(strcmp(relationship,"InitPlan")){
@@ -3467,9 +3466,10 @@ ExplainSubPlans(List *plans, List *ancestors,
 		HistorySlowPlanStat* child = (HistorySlowPlanStat*)malloc(sizeof(HistorySlowPlanStat));
 		history_slow_plan_stat__init(child);
 		*child = ret.hps_;
-		hsp->childs[idx] = child;
-		idx++;
+		hsp->childs[hsp->child_idx] = child;
+		++hsp->child_idx;
 	}
+
 	return rs;
 }
 

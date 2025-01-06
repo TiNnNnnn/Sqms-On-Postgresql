@@ -25,7 +25,6 @@ public:
     bool Insert(LevelManager* level_mgr);
     bool Remove(LevelManager* level_mgr);
     bool Search(LevelManager* level_mgr);
-private:
 private: 
     // /*set2node*/
     // std::unordered_map<SET,std::shared_ptr<HistoryQueryIndexNode>,SetHasher>childs_;
@@ -34,7 +33,6 @@ private:
 
     /*use context to operate node*/
     LevelStrategyContext* level_strategy_context_;
-
     /*current node level*/
     size_t level_;
 };
@@ -83,6 +81,9 @@ private:
 class LevelThreeStrategy : public LevelStrategy{
 public:
     std::string Name(){return "PlanRangePredsStrategy";}
+    bool Insert(LevelManager* level_mgr);
+    bool Serach(LevelManager* level_mgr);
+    bool Remove(LevelManager* level_mgr);
     std::vector<std::string> findChildren();
 private:
     std::shared_ptr<InvertedIndex<PostingList>> inverted_idx_;
