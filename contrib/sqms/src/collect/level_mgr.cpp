@@ -446,7 +446,6 @@ void LevelManager::GroupKeyDecompase(HistorySlowPlanStat* hsps){
 				node_final_la_list->Insert(child_aggs);
 			}
 		}
-		
 		if(node_final_la_list->Size() && !nodes_collector_map_[cur_hsps_]->node_aggs_){
 			nodes_collector_map_[cur_hsps_]->node_aggs_ = node_final_la_list;
 		}
@@ -455,7 +454,7 @@ void LevelManager::GroupKeyDecompase(HistorySlowPlanStat* hsps){
 			return;
 		}
 		final_la_list = new LevelAggAndSortList(total_equivlences_[cur_height_]);
-		if(cur_height_ >= 1 && GetPreProcessed(PreProcessLabel::AGG)){
+		if(cur_height_ >= 1 && !GetPreProcessed(PreProcessLabel::AGG)){
 			final_la_list->Insert(total_aggs_[cur_height_-1]);
 			SetPreProcessed(PreProcessLabel::AGG,true);
 		}
@@ -471,9 +470,11 @@ void LevelManager::GroupKeyDecompase(HistorySlowPlanStat* hsps){
 		if(same_level_need_merged){
 			final_la_list->Insert(total_aggs_.back());
 		}
-		if(cur_height_ >= 1 && GetPreProcessed(PreProcessLabel::AGG)){
-			final_la_list->Insert(total_aggs_[cur_height_-1]);
-			SetPreProcessed(PreProcessLabel::AGG,true);
+		if(cur_height_ >= 1){
+			if(!GetPreProcessed(PreProcessLabel::AGG)){
+				final_la_list->Insert(total_aggs_[cur_height_-1]);
+				SetPreProcessed(PreProcessLabel::AGG,true);
+			}
 
 			for(size_t i=0;i<cur_hsps_->n_childs;i++){
 				auto child_aggs = nodes_collector_map_[cur_hsps_->childs[i]]->node_aggs_;
@@ -582,6 +583,16 @@ void LevelAggAndSortList::Insert(HistorySlowPlanStat* hsps,std::string label){
 
 void LevelAggAndSortList::Insert(LevelAggAndSortList* la_list){
 	assert(la_list);
+
+	if(level_agg_list_.empty()){
+		LevelAggAndSortEquivlences *new_dst_lae = new LevelAggAndSortEquivlences();
+		for(const auto& src_lae : la_list->GetLevelAggList()){
+			new_dst_lae->Insert(src_lae);
+		}
+		level_agg_list_.push_back(new_dst_lae);
+		return;
+	}
+
 	for(const auto& dst_lae: level_agg_list_){
 		for(const auto& src_lae : la_list->GetLevelAggList()){
 			dst_lae->Insert(src_lae);
