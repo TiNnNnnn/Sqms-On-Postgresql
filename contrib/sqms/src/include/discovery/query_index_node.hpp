@@ -7,7 +7,7 @@
 #include "inverted_index.hpp"
 #include <shared_mutex>
 #include "collect/level_mgr.hpp"
-#include <tbb/concurrent_hash_map.h>
+#include "tbb/concurrent_hash_map.h"
 #include <list>
 
 class LevelStrategyContext;
@@ -15,7 +15,9 @@ class HistoryQueryIndexNode{
     typedef std::vector<std::string> SET;
 public:
     HistoryQueryIndexNode(int l,int total_height);
-    ~HistoryQueryIndexNode();
+    ~HistoryQueryIndexNode(){
+        delete(level_strategy_context_);
+    };
     
     std::shared_ptr<HistoryQueryIndexNode> Child(size_t l,HistorySlowPlanStat* hsps);
     size_t Level(){return level_;}

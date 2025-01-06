@@ -17,8 +17,6 @@ int	stat_log_level = LOG;
 //bool stat_nested_statements = false;
 //double stat_sample_rate = 1;
 
-const size_t bit_map_size = 100;
-
 const char* redis_host = "127.0.0.1";
 int redis_port = 99999;
 long totalFetchTimeoutMillis = 1000;

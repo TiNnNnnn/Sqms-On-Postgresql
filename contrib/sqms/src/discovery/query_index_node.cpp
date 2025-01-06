@@ -157,3 +157,13 @@ std::vector<std::string> LevelThreeStrategy::findChildren(){
 size_t LevelStrategy::FindNextInsertLevel(LevelManager* level_mgr, size_t cur_level){
     return cur_level+1;
 }
+
+void LevelStrategyContext::Insert(LevelManager* level_mgr){
+
+}
+void LevelStrategyContext::Remove(LevelManager* level_mgr){
+
+}
+void LevelStrategyContext::Search(LevelManager* level_mgr){
+
+}

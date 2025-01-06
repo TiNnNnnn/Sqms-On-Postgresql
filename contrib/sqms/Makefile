@@ -23,9 +23,9 @@ OBJS = \
 #src/discovery/levels.o\ 
 
 
-SHLIB_LINK_INTERNAL = $(libpq) -lstdc++ -lprotobuf -lprotobuf-c -L/usr/local/lib -lhiredis -luv 
-CFLAGS += -std=c11 -I/home/yyk/postgresql-13.10/contrib/sqms/src/include -I/usr/local/include 
-PG_CPPFLAGS = -std=c++17 -fPIC -I$(libpq_srcdir) -lstdc++ -ltbb -I/home/yyk/postgresql-13.10/contrib/sqms/src/include
+SHLIB_LINK_INTERNAL = $(libpq) -lstdc++ -lprotobuf -lprotobuf-c -L/usr/local/lib -lhiredis -luv -lstdc++ -L/usr/lib/x86_64-linux-gnu -ltbb 
+CFLAGS += -std=c11 -I/home/yyk/Sqms-On-Postgresql/contrib/sqms/src/include -I/usr/local/include 
+PG_CPPFLAGS = -std=c++17 -fPIC -I$(libpq_srcdir) -I/home/yyk/Sqms-On-Postgresql/contrib/sqms/src/include 
 
 # pg extend config 
 EXTENSION = sqms
@@ -46,8 +46,8 @@ include $(PGXS)
 #support make clean
 .PHONY:clean
 clean:
-	rm -rf /home/yyk/postgresql-13.10/contrib/sqms/*.o *.so
-	rm -rf /home/yyk/postgresql-13.10/contrib/sqms/src/collect/*.o *.so
-	rm -rf /home/yyk/postgresql-13.10/contrib/sqms/src/discovery/*.o *.so
-	rm -rf /home/yyk/postgresql-13.10/contrib/sqms/src/excavate/*.o *.so
-	rm -rf /home/yyk/postgresql-13.10/contrib/sqms/src/storage/*.o *.so
+	rm -rf /home/yyk/Sqms-On-Postgresql/contrib/sqms/*.o *.so
+	rm -rf /home/yyk/Sqms-On-Postgresql/contrib/sqms/src/collect/*.o *.so
+	rm -rf /home/yyk/Sqms-On-Postgresql/contrib/sqms/src/discovery/*.o *.so
+	rm -rf /home/yyk/Sqms-On-Postgresql/contrib/sqms/src/excavate/*.o *.so
+	rm -rf /home/yyk/Sqms-On-Postgresql/contrib/sqms/src/storage/*.o *.so
