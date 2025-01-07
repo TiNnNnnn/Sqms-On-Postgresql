@@ -1578,25 +1578,34 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		FormatOpenGroup("Plans", "Plans", false, ces);
 		/* Pass current Plan as head of ancestors list for children */
 		ancestors = lcons(plan, ancestors);
-
+		/**
+		 * we should storage subplans and common child plans in separate spaces
+		 */
 		size_t child_size = 0;
 		if(outerPlanState(planstate) && innerPlanState(planstate)){
-			child_size+=2;
+			child_size = 2;
+		}else if(outerPlanState(planstate) || innerPlanState(planstate)){
+			child_size = 1;
 		}
+		hsp.childs = (HistorySlowPlanStat**)malloc(sizeof(HistorySlowPlanStat*)*child_size);
+		hsp.n_childs = child_size;
+		
+		size_t sub_plan_size = 0;
 		if(planstate->subPlan){
 			size_t sub_size = list_length(planstate->subPlan);
-			child_size+=sub_size;
+			sub_plan_size+=sub_size;
 		}
 		if(planstate->initPlan){
 			size_t sub_size = list_length(planstate->initPlan);
-			hsp.n_childs =sub_size;
+			sub_plan_size+=sub_size;
 		}
-		child_size = child_size == 0 ? 1 : child_size;
-		hsp.childs = (HistorySlowPlanStat**)malloc(sizeof(HistorySlowPlanStat*));
-		hsp.n_childs = child_size;
+		hsp.subplans =(HistorySlowPlanStat**)malloc(sizeof(HistorySlowPlanStat*)*sub_plan_size);
+		hsp.n_subplans = sub_plan_size;
 	}
 
 	hsp.child_idx = 0;
+	hsp.subplan_idx = 0;
+
 	RecureState rs = NewRecureState();
 	rs.node_type_set_ = lappend_int(rs.node_type_set_,(void*)nodeTag(plan));
 	/* initPlan-s */
@@ -3466,10 +3475,9 @@ ExplainSubPlans(List *plans, List *ancestors,
 		HistorySlowPlanStat* child = (HistorySlowPlanStat*)malloc(sizeof(HistorySlowPlanStat));
 		history_slow_plan_stat__init(child);
 		*child = ret.hps_;
-		hsp->childs[hsp->child_idx] = child;
-		++hsp->child_idx;
+		hsp->subplans[hsp->subplan_idx] = child;
+		++hsp->subplan_idx;
 	}
-
 	return rs;
 }
 

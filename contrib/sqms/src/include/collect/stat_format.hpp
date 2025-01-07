@@ -47,6 +47,7 @@ private:
     void ShowNodeCollect(NodeCollector *nc ,int depth = 0);
     
     void ShowPredTree(PredExpression* p_expr, int depth = 0);
+    void ShowSubPlansTree(HistorySlowPlanStat* hsps,int depth = 0);
     void PrintIndent(int depth);
 
     PlanStatFormat(int psize = 10);

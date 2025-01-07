@@ -457,7 +457,7 @@ void   slow_plan_stat__free_unpacked
   assert(message->base.descriptor == &slow_plan_stat__descriptor);
   protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
 }
-static const ProtobufCFieldDescriptor history_slow_plan_stat__field_descriptors[51] =
+static const ProtobufCFieldDescriptor history_slow_plan_stat__field_descriptors[53] =
 {
   {
     "custom_plan_provider",
@@ -1071,6 +1071,30 @@ static const ProtobufCFieldDescriptor history_slow_plan_stat__field_descriptors[
     0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
+  {
+    "subplan_idx",
+    54,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_INT32,
+    0,   /* quantifier_offset */
+    offsetof(HistorySlowPlanStat, subplan_idx),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "subplans",
+    55,
+    PROTOBUF_C_LABEL_REPEATED,
+    PROTOBUF_C_TYPE_MESSAGE,
+    offsetof(HistorySlowPlanStat, n_subplans),
+    offsetof(HistorySlowPlanStat, subplans),
+    &history_slow_plan_stat__descriptor,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
 };
 static const unsigned history_slow_plan_stat__field_indices_by_name[] = {
   2,   /* field[2] = actual_nloops */
@@ -1122,6 +1146,8 @@ static const unsigned history_slow_plan_stat__field_indices_by_name[] = {
   27,   /* field[27] = sub_cost */
   30,   /* field[30] = sub_node_type_set */
   10,   /* field[10] = sub_plan_name */
+  51,   /* field[51] = subplan_idx */
+  52,   /* field[52] = subplans */
   46,   /* field[46] = tid_cond_expr_tree */
   23,   /* field[23] = total_cost */
 };
@@ -1129,7 +1155,7 @@ static const ProtobufCIntRange history_slow_plan_stat__number_ranges[2 + 1] =
 {
   { 1, 0 },
   { 4, 1 },
-  { 0, 51 }
+  { 0, 53 }
 };
 const ProtobufCMessageDescriptor history_slow_plan_stat__descriptor =
 {
@@ -1139,7 +1165,7 @@ const ProtobufCMessageDescriptor history_slow_plan_stat__descriptor =
   "HistorySlowPlanStat",
   "",
   sizeof(HistorySlowPlanStat),
-  51,
+  53,
   history_slow_plan_stat__field_descriptors,
   history_slow_plan_stat__field_indices_by_name,
   2,  history_slow_plan_stat__number_ranges,

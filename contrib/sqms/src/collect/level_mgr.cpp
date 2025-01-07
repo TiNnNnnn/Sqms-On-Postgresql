@@ -1030,8 +1030,6 @@ PredEquivlence::PredEquivlence(Quals* qual){
 			ranges_.insert(range);
 		}break;
 		case PType::SUBQUERY:{
-			/*nothing to do */
-			//set_.insert(qual->sub_plan_name);
 			set_.insert(qual->left);
 		}break;
 		default:{
@@ -1040,7 +1038,7 @@ PredEquivlence::PredEquivlence(Quals* qual){
 		}
 	}
 }
-
+ 
 bool PredEquivlence::IsOnlyLeft(Quals* qual){
 	if(PType::JOIN_EQUAL == QualType(qual)){
 		return false;

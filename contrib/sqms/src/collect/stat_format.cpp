@@ -128,7 +128,9 @@ void PlanStatFormat::ShowAllHspsTree(HistorySlowPlanStat* hsps,int h_depth){
     if(!hsps)return;
     PrintIndent(h_depth);
     std::cout << "["<<hsps->node_type<<"]:"<<std::endl;
+
     ShowAllPredTree(hsps,h_depth+1);
+    ShowSubPlansTree(hsps,h_depth);
     
     for(size_t i=0;i<hsps->n_childs;i++){
         ShowAllHspsTree(hsps->childs[i],h_depth+1);
@@ -219,6 +221,16 @@ void PlanStatFormat::ShowAllPredTree(HistorySlowPlanStat* hsps,int depth){
         PrintIndent(depth);
         std::cout<<"<join_cond:true>"<<std::endl;
         //ShowPredTree(hsps->order_by_expr_tree);
+    }
+}
+
+void PlanStatFormat::ShowSubPlansTree(HistorySlowPlanStat* hsps,int depth){
+    auto subplans = hsps->subplans;
+    for(size_t i=0;i<hsps->n_subplans;i++){
+        PrintIndent(depth+1);
+        auto plan = hsps->subplans[i];
+        std::cout<<plan->sub_plan_name<<":"<<std::endl;
+        ShowAllHspsTree(plan,depth+2);
     }
 }
 
