@@ -684,11 +684,17 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
         assert(level_collector[0][0]->Type() == AbstractPredNodeType::QUALS);
         
 		auto qual = static_cast<QualsWarp*>(level_collector[0][0])->GetQual();
-		PredEquivlence* pe = new PredEquivlence(qual);
-		
-		LevelPredEquivlences * lpes = new LevelPredEquivlences();
-		lpes->Insert(pe);
-		final_lpes_list->Insert(lpes);
+		PType type = PredEquivlence::QualType(qual);
+		if(type != PType::SUBQUERY){
+			PredEquivlence* pe = new PredEquivlence(qual);
+			LevelPredEquivlences * lpes = new LevelPredEquivlences();
+			lpes->Insert(pe);
+			final_lpes_list->Insert(lpes);
+		}
+		// PredEquivlence* pe = new PredEquivlence(qual);
+		// LevelPredEquivlences * lpes = new LevelPredEquivlences();
+		// lpes->Insert(pe);
+		// final_lpes_list->Insert(lpes);
 
 	}else{
 		/* more then one level,it means here is more than one join_cond in current node ,they connect by and/or/not*/
@@ -705,10 +711,14 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
 								auto type = cur_op->Child(0)->Type();
 								switch (type){
 									case AbstractPredNodeType::QUALS:{
-										LevelPredEquivlences * lpes = new LevelPredEquivlences();
-										auto qual = static_cast<QualsWarp*>(cur_op->Child(i));
-										lpes->Insert(qual->GetQual(),false);
-										and_lpes_list->Insert(lpes,false);
+										//LevelPredEquivlences * lpes = new LevelPredEquivlences();
+										auto qual = static_cast<QualsWarp*>(cur_op->Child(i))->GetQual();
+										PType ptype = PredEquivlence::QualType(qual);
+										if(ptype != PType::SUBQUERY){
+											LevelPredEquivlences * lpes = new LevelPredEquivlences();
+											lpes->Insert(qual,false);
+											and_lpes_list->Insert(lpes,false);
+										}
 									}break;
 									case AbstractPredNodeType::OPERATOR:{
 										switch(cur_op->GetOpType()){
@@ -755,10 +765,14 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
 								auto type = cur_op->Child(0)->Type();
 								switch (type){
 									case AbstractPredNodeType::QUALS:{
-										LevelPredEquivlences * lpes = new LevelPredEquivlences();
-										auto qual = static_cast<QualsWarp*>(cur_op->Child(i));
-										lpes->Insert(qual->GetQual(),false);
-										or_lpes_list->Insert(lpes,true);
+										//LevelPredEquivlences * lpes = new LevelPredEquivlences();
+										auto qual = static_cast<QualsWarp*>(cur_op->Child(i))->GetQual();
+										PType ptype = PredEquivlence::QualType(qual);
+										if(ptype != PType::SUBQUERY){
+											LevelPredEquivlences * lpes = new LevelPredEquivlences();
+											lpes->Insert(qual,false);
+											or_lpes_list->Insert(lpes,true);
+										}
 									}break;
 									case AbstractPredNodeType::OPERATOR:{
 										switch (cur_op->GetOpType()){
@@ -1017,6 +1031,8 @@ PredEquivlence::PredEquivlence(Quals* qual){
 		}break;
 		case PType::SUBQUERY:{
 			/*nothing to do */
+			//set_.insert(qual->sub_plan_name);
+			set_.insert(qual->left);
 		}break;
 		default:{
 			std::cerr<<"unkonw type of qual while init pred equivlence"<<std::endl;
@@ -1063,48 +1079,105 @@ PType PredEquivlence::QualType(Quals* qual){
 					/*not support*/
 				}
 			}else if(PredVariable(left_type) && !PredVariable(right_type)){
-				if(!strcmp(op,"=")){
-					return PType::EQUAL;
-				}else if(!strcmp(op,">")){
-					return PType::RANGE;
-				}else if(!strcmp(op,">=")){
-					return PType::RANGE;
-				}else if(!strcmp(op,"<")){
-					return PType::RANGE;
-				}else if(!strcmp(op,"<=")){
-					return PType::RANGE;
-				}else if(!strcmp(op,"!=") or !strcmp(op,"<>")){
-					return PType::NOT_EQUAL;
-				}else if(!strcmp(op,"!~")){
-					return PType::NOT_EQUAL;
+				switch(right_type){
+					case T_Const:{
+						if(!strcmp(op,"=")){
+							return PType::EQUAL;
+						}else if(!strcmp(op,">")){
+							return PType::RANGE;
+						}else if(!strcmp(op,">=")){
+							return PType::RANGE;
+						}else if(!strcmp(op,"<")){
+							return PType::RANGE;
+						}else if(!strcmp(op,"<=")){
+							return PType::RANGE;
+						}else if(!strcmp(op,"!=") or !strcmp(op,"<>")){
+							return PType::NOT_EQUAL;
+						}else if(!strcmp(op,"!~")){
+							return PType::NOT_EQUAL;
+						}
+					}break;
+					case T_SubLink:{
+						/**
+						 * TODO: 01-07 may be should divide sublink from subquery
+						 */
+						return PType::SUBQUERY;
+					}break;
+					case T_SubPlan:{
+						return PType::SUBQUERY;
+					}break;
+					default:{
+						std::cerr<<"unsupport right value type :"<<right_type<<" of quals"<<std::endl;
+					}
 				}
 			}else if(!PredVariable(left_type) && PredVariable(right_type)){
 				/*we wish not appear this condition,but we try to process*/
 				std::swap(qual->left,qual->right);
 				std::swap(qual->l_type,qual->r_type);
 				auto& op = qual->op;
-				if(!strcmp(op,"=")){
-					return PType::EQUAL;
-				}else if(!strcmp(op,">")){
-					strcpy(op,"<");
-					return PType::RANGE;
-				}else if(!strcmp(op,">=")){
-					strcpy(op,"<=");
-					return PType::RANGE;
-				}else if(!strcmp(op,"<")){
-					strcpy(op,">");
-					return PType::RANGE;
-				}else if(!strcmp(op,"<=")){
-					strcpy(op,">=");
-					return PType::RANGE;
-				}else if(!strcmp(op,"!=") or !strcmp(op,"<>")){
-					return PType::NOT_EQUAL;
-				}else if(!strcmp(op,"!~")){
-					std::cerr<<"impossible left & right for !~ operator ! "<<std::endl;
-					exit(-1);
+				switch(right_type){
+					case T_Const:{
+						if(!strcmp(op,"=")){
+							return PType::EQUAL;
+						}else if(!strcmp(op,">")){
+							strcpy(op,"<");
+							return PType::RANGE;
+						}else if(!strcmp(op,">=")){
+							strcpy(op,"<=");
+							return PType::RANGE;
+						}else if(!strcmp(op,"<")){
+							strcpy(op,">");
+							return PType::RANGE;
+						}else if(!strcmp(op,"<=")){
+							strcpy(op,">=");
+							return PType::RANGE;
+						}else if(!strcmp(op,"!=") or !strcmp(op,"<>")){
+							return PType::NOT_EQUAL;
+						}else if(!strcmp(op,"!~")){
+							std::cerr<<"impossible left & right for !~ operator ! "<<std::endl;
+							exit(-1);
+						}
+					}break;
+					case T_SubLink:{
+						if(!strcmp(op,"=")){
+						}else if(!strcmp(op,">")){
+							strcpy(op,"<");
+						}else if(!strcmp(op,">=")){
+							strcpy(op,"<=");
+						}else if(!strcmp(op,"<")){
+							strcpy(op,">");
+						}else if(!strcmp(op,"<=")){
+							strcpy(op,">=");
+						}else if(!strcmp(op,"!=") or !strcmp(op,"<>")){
+						}else if(!strcmp(op,"!~")){
+							std::cerr<<"impossible left & right for !~ operator ! "<<std::endl;
+							exit(-1);
+						}
+						return PType::SUBQUERY;
+					}break;
+					case T_SubPlan:{
+						if(!strcmp(op,"=")){
+						}else if(!strcmp(op,">")){
+							strcpy(op,"<");
+						}else if(!strcmp(op,">=")){
+							strcpy(op,"<=");
+						}else if(!strcmp(op,"<")){
+							strcpy(op,">");
+						}else if(!strcmp(op,"<=")){
+							strcpy(op,">=");
+						}else if(!strcmp(op,"!=") or !strcmp(op,"<>")){
+						}else if(!strcmp(op,"!~")){
+							std::cerr<<"impossible left & right for !~ operator ! "<<std::endl;
+							exit(-1);
+						}
+						return PType::SUBQUERY;
+					}break;
+					default:{
+						std::cerr<<"unsupport right value type :"<<right_type<<" of quals"<<std::endl;
+					}
 				}
 			}else{
-				std::cerr<<"not support currnt type of quals"<<std::endl;
+				std::cerr<<"not support currnt type of quals: left: "<<left_type<<",right: "<<right_type<<std::endl;
 				exit(-1);
 			}
 		}
@@ -1118,7 +1191,9 @@ PType PredEquivlence::QualType(Quals* qual){
  */
 bool PredEquivlence::PredVariable(NodeTag node_tag){
 	switch(node_tag){
-		case T_Const:{
+		case T_Const:
+		case T_SubLink:
+		case T_SubPlan:{
 			return false;
 		}break;
 		default:{

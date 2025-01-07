@@ -198,7 +198,9 @@ public:
 
     static bool IsOnlyLeft(Quals* qual);
     static PType QualType(Quals* qual);
+
     static bool PredVariable(NodeTag node_tag);
+    static bool PredSubquery(NodeTag node_tag);
 
     bool Insert(PredEquivlence* pe, bool check_can_merged = true);
 
