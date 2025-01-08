@@ -839,7 +839,6 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
 		if(!GetPreProcessed(PreProcessLabel::PREDICATE)){
 			final_lpes_list->Insert(total_equivlences_[cur_height_-1],false);
 			SetPreProcessed(PreProcessLabel::PREDICATE,true);
-
 		}
 		if(first_pred_check_){
 			for(size_t i = 0;i<cur_hsps_->n_childs; ++i){
@@ -850,12 +849,41 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
 		}
 	}
 
-
-
+	
+	/**
+	 * here we try to extract the equivalence class from subquery 
+	*/
+	auto sub_final_lpes_list = new LevelPredEquivlencesList();
+	for(const auto& lpes_list : *final_lpes_list){
+		for(const auto& pe : *lpes_list){
+			for(const auto& sublink : pe->GetSubLinkLevelPeLists()){
+				auto sub_top_output =  sublink.second->GetTotalOutput()[0];
+				/*each item in output2pelist is or*/
+				for(size_t j = 0; j < sub_top_output->GetOutput2PeList().size(); ++j){
+					auto& u_map = sub_top_output->GetOutput2PeList()[j];
+					assert(u_map.size());
+					if(u_map.size() == 1){
+						/*subquery oputput*/
+						auto sub_set = sub_top_output->GetOutputExtendList()[j];
+						/* main query (lefthand) */
+						auto pe_set = pe->GetPredSet(); 
+						for(const auto& attr: sub_set){
+							if(pe_set.find(attr) != pe_set.end()){
+								auto sub_top_pe_list = sublink.second->GetTotalEquivlences()[0];
+								sub_final_lpes_list->Insert(sub_top_pe_list,false);
+								break;
+							}
+						}
+					}	
+				}
+			}
+		}
+	}
+	if(sub_final_lpes_list->Size())
+		final_lpes_list->Insert(sub_final_lpes_list,false);
 	/*update toal_equivlences*/
 	total_equivlences_[cur_height_] = final_lpes_list;
 	nodes_collector_map_[cur_hsps_]->node_equivlences_ = node_final_lpes_list;
-
 }
 
 /**

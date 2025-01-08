@@ -61,8 +61,8 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd){
             pf_context->executeStrategy();
             level_mgr->ShowTotalPredClass();
 
-            auto node_collect_map = level_mgr->GetNodeCollector();
             if(debug){
+                auto node_collect_map = level_mgr->GetNodeCollector();
                 ShowAllNodeCollect(hsps,node_collect_map);
             }
 
@@ -75,7 +75,6 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd){
          * build fast filter tree, here need ensure thread safe,moreover,we
          * need rebuild it after db restarting
         */
-        
 
         /**
          * TODO: 11-23 storage the slow sub query
