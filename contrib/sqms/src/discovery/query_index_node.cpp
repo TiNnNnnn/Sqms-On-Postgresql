@@ -153,7 +153,7 @@ bool LevelTwoStrategy::Serach(LevelManager* level_mgr){
         auto match_sets = inverted_idx_->SubSets(agg_vec);
         for(const auto& set:  match_sets){
             tbb::concurrent_hash_map<SET,std::shared_ptr<HistoryQueryIndexNode>,SetHasher>::const_accessor acc;
-            child_map_.find(acc,agg_vec);
+            child_map_.find(acc,set);
             assert(acc->second);
             if(acc->second->Search(level_mgr)){
                 return true;

@@ -45,7 +45,7 @@ public:
     NodeManager(HistorySlowPlanStat* hsps,std::shared_ptr<LevelManager> level_mgr)
         : hsps_(hsps),level_mgr_(level_mgr){}
     virtual bool Format() override;
-
+    virtual bool PrintPredEquivlences() override;
 private:
     void ComputeTotalNodes();
 

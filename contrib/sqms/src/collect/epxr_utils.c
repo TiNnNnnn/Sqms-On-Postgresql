@@ -6529,6 +6529,11 @@ get_oper_expr(OpExpr *expr, deparse_context *context)
 			}else{
 				trace_qual->r_type = arg2->type;
 			}
+
+			// trace_qual->hsps = (HistorySlowPlanStat*)malloc(sizeof(HistorySlowPlanStat));
+			// history_slow_plan_stat__init(trace_qual->hsps);
+			// *trace_qual->hsps =  *context->hsp;
+
 			PredExpression* expr_node = (PredExpression*)malloc(sizeof(PredExpression));
 			pred_expression__init(expr_node);
 			expr_node->qual = trace_qual;

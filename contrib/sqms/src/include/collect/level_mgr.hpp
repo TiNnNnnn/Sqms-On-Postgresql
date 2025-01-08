@@ -186,6 +186,7 @@ private:
  * 1. set: {A.a,B.b} , ranges: {150,200}
  * 2. set：{C.c}     , ranges: {250,UPPER_LIMIT}
  */
+class LevelManager;
 class PredEquivlence {
     struct RangesCompare {
     bool operator()(const PredEquivlenceRange* per1, const PredEquivlenceRange* per2) const {
@@ -229,6 +230,9 @@ public:
 
     bool MergePredEquivlenceRanges(const std::vector<PredEquivlenceRange*>& merge_pe_list);
 
+    std::unordered_map<std::string, std::shared_ptr<LevelManager>>& GetSubLinkLevelPeLists(){return sublink_level_pe_lists_;}
+    void SetSubLinkLevelPeLists(const std::unordered_map<std::string, std::shared_ptr<LevelManager>>& lists){sublink_level_pe_lists_ = lists;}
+
 private:
     std::string extract_field(const std::string& expression) {
         size_t start_pos = expression.find('(');  
@@ -242,13 +246,12 @@ private:
             return "";
         }
     }
-
 private:
     std::set<std::string> set_;
     /* common attr ranges */
     std::set<PredEquivlenceRange*,RangesCompare>ranges_;
     /* sublink attr ranges */
-    std::unordered_map<std::string, std::vector<LevelPredEquivlencesList*>> sublink_level_pe_lists_;
+    std::unordered_map<std::string, std::shared_ptr<LevelManager>> sublink_level_pe_lists_;
 };
 
 class LevelPredEquivlences{
@@ -283,7 +286,6 @@ public:
 
 private:
     std::unordered_set<PredEquivlence*> level_pe_sets_;
-
     /**
      * level pred equivlences index:
      * example:
@@ -297,7 +299,6 @@ private:
  */
 class LevelPredEquivlencesList{
 public:
-    LevelPredEquivlencesList(){};
     bool Insert(LevelPredEquivlences* lpes,bool is_or = false);
     bool Insert(LevelPredEquivlencesList* lpes_list,bool is_or = false);
 
@@ -437,7 +438,8 @@ public:
         :hsps_(hsps),sps_(sps),ms_(ms)
     {}
 
-    bool Format();
+    virtual bool Format();
+    virtual bool PrintPredEquivlences();
     void ComputeTotalClass(); 
     void ShowPredClass(int height,int depth = 0);
     void ShowTotalPredClass(int depth = 0);

@@ -16,7 +16,7 @@ class HistoryQueryIndexNode{
 public:
     HistoryQueryIndexNode(int l,int total_height);
     ~HistoryQueryIndexNode(){
-        delete(level_strategy_context_);
+        free(level_strategy_context_);
     };
     
     std::shared_ptr<HistoryQueryIndexNode> Child(size_t l,HistorySlowPlanStat* hsps);

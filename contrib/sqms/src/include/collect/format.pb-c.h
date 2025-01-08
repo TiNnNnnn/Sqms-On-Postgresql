@@ -267,10 +267,11 @@ struct  _Quals
    */
   protobuf_c_boolean hash_sub_plan;
   char *sub_plan_name;
+  HistorySlowPlanStat *hsps;
 };
 #define QUALS__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&quals__descriptor) \
-    , (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, 0, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string }
+    , (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, 0, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, NULL }
 
 
 /*

@@ -10,6 +10,14 @@ bool LevelManager::Format(){
 }
 
 /**
+ * LevelManager::PrintPredEquivlences
+ */
+bool LevelManager::PrintPredEquivlences(){
+	if(debug)
+	 	ShowTotalPredClass();
+}
+
+/**
  * ComputeEquivlenceClass: calulate the equivelence class and its containment for
  * each level for plan
  */
@@ -39,8 +47,8 @@ void LevelManager::ComputeTotalClass(){
         ComputeLevelClass(lc);
     }
 
-	if(debug)
-		ShowTotalPredClass();
+	// if(debug)
+	// 	ShowTotalPredClass();
 }
 
 void LevelManager::ComputeLevelClass(const std::vector<HistorySlowPlanStat*>& list){
@@ -517,7 +525,6 @@ void AggAndSortEquivlence::Init(HistorySlowPlanStat* hsps,LevelPredEquivlences* 
 }
 
 void AggAndSortEquivlence::ShowAggEquivlence(int depth){
-
 	std::cout<<tag_<<":(";
 	int j = 0;
 	for(const auto& e : key2pe_){
@@ -683,12 +690,11 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
         assert(level_collector[0][0]->Type() == AbstractPredNodeType::QUALS);
         
 		auto qual = static_cast<QualsWarp*>(level_collector[0][0])->GetQual();
+		qual->hsps = cur_hsps_;
 		PredEquivlence* pe = new PredEquivlence(qual);
 		LevelPredEquivlences * lpes = new LevelPredEquivlences();
 		lpes->Insert(pe);
 		final_lpes_list->Insert(lpes);
-
-
 	}else{
 		/* more then one level,it means here is more than one join_cond in current node ,they connect by and/or/not*/
 		for(const auto& level : level_collector){
@@ -706,7 +712,7 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
 									case AbstractPredNodeType::QUALS:{
 										//LevelPredEquivlences * lpes = new LevelPredEquivlences();
 										auto qual = static_cast<QualsWarp*>(cur_op->Child(i))->GetQual();
-										PType ptype = PredEquivlence::QualType(qual);
+										qual->hsps = cur_hsps_;
 										LevelPredEquivlences * lpes = new LevelPredEquivlences();
 										lpes->Insert(qual,false);
 										and_lpes_list->Insert(lpes,false);
@@ -758,7 +764,7 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
 									case AbstractPredNodeType::QUALS:{
 										//LevelPredEquivlences * lpes = new LevelPredEquivlences();
 										auto qual = static_cast<QualsWarp*>(cur_op->Child(i))->GetQual();
-										PType ptype = PredEquivlence::QualType(qual);
+										qual->hsps = cur_hsps_;
 										LevelPredEquivlences * lpes = new LevelPredEquivlences();
 										lpes->Insert(qual,false);
 										or_lpes_list->Insert(lpes,true);
@@ -833,6 +839,7 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
 		if(!GetPreProcessed(PreProcessLabel::PREDICATE)){
 			final_lpes_list->Insert(total_equivlences_[cur_height_-1],false);
 			SetPreProcessed(PreProcessLabel::PREDICATE,true);
+
 		}
 		if(first_pred_check_){
 			for(size_t i = 0;i<cur_hsps_->n_childs; ++i){
@@ -842,9 +849,13 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
 			first_pred_check_ = false;
 		}
 	}
+
+
+
 	/*update toal_equivlences*/
 	total_equivlences_[cur_height_] = final_lpes_list;
 	nodes_collector_map_[cur_hsps_]->node_equivlences_ = node_final_lpes_list;
+
 }
 
 /**
@@ -1025,8 +1036,15 @@ PredEquivlence::PredEquivlence(Quals* qual){
 			}else{
 				set_.insert(l);
 			}
+			assert(qual->hsps);
+			PlanFormatContext* pf_context = new PlanFormatContext();
 			/*calualate pred equivlence here*/
-			
+			for(size_t i = 0; i < qual->hsps->n_subplans; i++){
+				auto sub_level_mgr = std::make_shared<LevelManager>(qual->hsps->subplans[i],nullptr);
+				pf_context->SetStrategy(sub_level_mgr);
+				pf_context->executeStrategy();
+				sublink_level_pe_lists_[qual->hsps->subplans[i]->sub_plan_name] = sub_level_mgr; 
+			}
 		}break;
 		case PType::SUBLINK:{
 			std::string l = extract_field(qual->left);
@@ -1034,6 +1052,15 @@ PredEquivlence::PredEquivlence(Quals* qual){
 				set_.insert(qual->left);
 			}else{
 				set_.insert(l);
+			}
+			assert(qual->hsps);
+			PlanFormatContext* pf_context = new PlanFormatContext();
+			/*calualate pred equivlence here*/
+			for(size_t i = 0; i < qual->hsps->n_subplans; i++){
+				auto sub_level_mgr = std::make_shared<LevelManager>(qual->hsps->subplans[i],nullptr);
+				pf_context->SetStrategy(sub_level_mgr);
+				pf_context->executeStrategy();
+				sublink_level_pe_lists_[qual->hsps->subplans[i]->sub_plan_name] = sub_level_mgr; 
 			}
 		}break;
 		default:{
@@ -1345,9 +1372,9 @@ bool PredEquivlence::Compare(PredEquivlence* pe){
 bool PredEquivlence::Copy(PredEquivlence* pe){
 	pe->SetPredSet(set_);
 	pe->SetRanges(ranges_);
+	pe->SetSubLinkLevelPeLists(sublink_level_pe_lists_);
 	return true;
 }
-
 
 
 void PredEquivlence::ShowPredEquivlence(int depth){
@@ -1359,9 +1386,10 @@ void PredEquivlence::ShowPredEquivlence(int depth){
 		std::cout<<*iter;
 		idx++;
 	}
-	std::cout<<"] , ";
 	
+	std::cout<<"] , ";
 	idx = 0;
+
 	std::cout<<"range_sets:[";
 	for(const auto& range : ranges_){
 		if(idx)
@@ -1369,7 +1397,20 @@ void PredEquivlence::ShowPredEquivlence(int depth){
 		range->PrintPredEquivlenceRange(depth);
 		idx++;
 	}
-	std::cout<<"])";
+
+	if(sublink_level_pe_lists_.empty()){
+		std::cout<<"])";
+	}else{
+		std::cout<<"] , sublinks: ["<<std::endl;
+		PrintIndent(depth+1);
+		for(const auto& subklink : sublink_level_pe_lists_){
+			std::cout<<""<<subklink.first<<std::endl;
+			PrintIndent(depth+1);
+			subklink.second->ShowTotalPredClass(depth+3);
+		}
+		PrintIndent(depth);
+		std::cout<<"])";
+	}
 }
 
 void PredEquivlence::ShowPredEquivlenceSets(int depth){
@@ -1708,8 +1749,9 @@ void LevelManager::ShowPredClass(int height,int depth){
 	PrintIndent(depth);
 	std::cout<<"sort keys: "<<std::endl;
 	total_sorts_[height]->ShowLevelAggAndSortList(depth+1);
-
-	PrintLine(50);
+	
+	PrintIndent(depth);
+	PrintLine(50-depth);
 }
 
 void LevelManager::ShowTotalPredClass(int depth){

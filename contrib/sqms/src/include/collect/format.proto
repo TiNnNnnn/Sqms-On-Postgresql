@@ -150,6 +150,8 @@ message Quals{
 	/*SubQuery*/
 	bool hash_sub_plan = 8;
 	string sub_plan_name = 9;
+	
+	HistorySlowPlanStat hsps = 10;
 }
 
 

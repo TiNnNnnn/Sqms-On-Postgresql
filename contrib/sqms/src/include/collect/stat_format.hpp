@@ -68,6 +68,7 @@ class AbstractFormatStrategy {
 public:
     virtual ~AbstractFormatStrategy() = default;
     virtual bool Format() = 0;
+    virtual bool PrintPredEquivlences() = 0;
 };
 
 /**
@@ -86,7 +87,15 @@ public:
         } else {
             std::cerr << "No excavate strategy set!" << std::endl;
         }
-    } 
+    }
+
+    void PrintStrategy() const {
+        if (strategy_) {
+            strategy_->PrintPredEquivlences();
+        } else {
+            std::cerr << "No excavate strategy set!" << std::endl;
+        }
+    }
 private:
     std::shared_ptr<AbstractFormatStrategy> strategy_;
 };

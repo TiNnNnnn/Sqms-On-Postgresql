@@ -59,6 +59,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd){
             auto level_mgr = std::make_shared<LevelManager>(p,sps);
             pf_context->SetStrategy(level_mgr);
             pf_context->executeStrategy();
+            level_mgr->ShowTotalPredClass();
 
             auto node_collect_map = level_mgr->GetNodeCollector();
             if(debug){
