@@ -228,7 +228,7 @@ void PlanStatFormat::ShowSubPlansTree(HistorySlowPlanStat* hsps,int depth){
     auto subplans = hsps->subplans;
     for(size_t i=0;i<hsps->n_subplans;i++){
         PrintIndent(depth+1);
-        auto plan = hsps->subplans[i];
+        auto plan = subplans[i];
         std::cout<<plan->sub_plan_name<<":"<<std::endl;
         ShowAllHspsTree(plan,depth+2);
     }
@@ -254,6 +254,9 @@ void PlanStatFormat::ShowPredTree(PredExpression* p_expr, int depth) {
                 break;
             case PRED_OPERATOR__PRED_OPERATOR_TYPE__NOT:
                 std::cout << "NOT";
+                /*not implement*/
+                std::cerr<<"not implement"<<std::endl;
+                exit(-1);
                 break;
             default:
                 std::cout << "UNKNOWN";
@@ -272,7 +275,11 @@ void PlanStatFormat::ShowPredTree(PredExpression* p_expr, int depth) {
             PrintIndent(depth + 1);
             std::cout << "Left: " << p_expr->qual->left << std::endl;
             PrintIndent(depth + 1);
-            std::cout << "Right: " << p_expr->qual->right << std::endl;
+            if(p_expr->qual->hash_sub_plan){
+                std::cout << "Right:" << p_expr->qual->sub_plan_name <<std::endl;
+            }else{
+                std::cout << "Right: " << p_expr->qual->right << std::endl;
+            }
             PrintIndent(depth + 1);
             std::cout << "Operator: " << p_expr->qual->op << std::endl;
             if(strlen(p_expr->qual->use_or)){
@@ -283,13 +290,13 @@ void PlanStatFormat::ShowPredTree(PredExpression* p_expr, int depth) {
                 PrintIndent(depth + 1);
                 std::cout << "Format_type: " << p_expr->qual->format_type << std::endl;
             }
-            
-        }else if(p_expr->qual->sub_plan_name){
+        }else if(p_expr->qual->hash_sub_plan && !strlen(p_expr->qual->op)){
             PrintIndent(depth + 1);
             std::cout << "Hashed: " << ((p_expr->qual->hash_sub_plan == 0)?"false":"true")<< std::endl;
             PrintIndent(depth + 1);
             std::cout << "SubPlan: " << p_expr->qual->sub_plan_name << std::endl;
         }else{
+
         }
     } else {
         PrintIndent(depth);

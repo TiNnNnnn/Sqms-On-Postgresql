@@ -41,9 +41,11 @@ enum class PType{
     /**/
     LIST,
     /**/
+    SUBLINK,
     SUBQUERY,
 };
 
+/*operator type set*/
 enum class PreProcessLabel{
     PREDICATE = 0,
     SORT,
@@ -226,9 +228,27 @@ public:
     void SetRanges(std::set<PredEquivlenceRange*,RangesCompare> ranges){ranges_ = ranges;}
 
     bool MergePredEquivlenceRanges(const std::vector<PredEquivlenceRange*>& merge_pe_list);
+
+private:
+    std::string extract_field(const std::string& expression) {
+        size_t start_pos = expression.find('(');  
+        size_t end_pos = expression.find(')');   
+        size_t double_colon_pos = expression.find("::"); 
+
+        if (start_pos != std::string::npos && end_pos != std::string::npos && double_colon_pos != std::string::npos) {
+            std::string field = expression.substr(start_pos + 1, end_pos - start_pos - 1);
+            return field;
+        } else {
+            return "";
+        }
+    }
+
 private:
     std::set<std::string> set_;
+    /* common attr ranges */
     std::set<PredEquivlenceRange*,RangesCompare>ranges_;
+    /* sublink attr ranges */
+    std::unordered_map<std::string, std::vector<LevelPredEquivlencesList*>> sublink_level_pe_lists_;
 };
 
 class LevelPredEquivlences{

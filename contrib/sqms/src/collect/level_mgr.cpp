@@ -669,7 +669,6 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
 			SetPreProcessed(PreProcessLabel::PREDICATE,true);
 		}
 		total_equivlences_[cur_height_] = final_lpes_list;
-		
 		return;
 	}
 	
@@ -684,17 +683,11 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
         assert(level_collector[0][0]->Type() == AbstractPredNodeType::QUALS);
         
 		auto qual = static_cast<QualsWarp*>(level_collector[0][0])->GetQual();
-		PType type = PredEquivlence::QualType(qual);
-		if(type != PType::SUBQUERY){
-			PredEquivlence* pe = new PredEquivlence(qual);
-			LevelPredEquivlences * lpes = new LevelPredEquivlences();
-			lpes->Insert(pe);
-			final_lpes_list->Insert(lpes);
-		}
-		// PredEquivlence* pe = new PredEquivlence(qual);
-		// LevelPredEquivlences * lpes = new LevelPredEquivlences();
-		// lpes->Insert(pe);
-		// final_lpes_list->Insert(lpes);
+		PredEquivlence* pe = new PredEquivlence(qual);
+		LevelPredEquivlences * lpes = new LevelPredEquivlences();
+		lpes->Insert(pe);
+		final_lpes_list->Insert(lpes);
+
 
 	}else{
 		/* more then one level,it means here is more than one join_cond in current node ,they connect by and/or/not*/
@@ -714,11 +707,9 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
 										//LevelPredEquivlences * lpes = new LevelPredEquivlences();
 										auto qual = static_cast<QualsWarp*>(cur_op->Child(i))->GetQual();
 										PType ptype = PredEquivlence::QualType(qual);
-										if(ptype != PType::SUBQUERY){
-											LevelPredEquivlences * lpes = new LevelPredEquivlences();
-											lpes->Insert(qual,false);
-											and_lpes_list->Insert(lpes,false);
-										}
+										LevelPredEquivlences * lpes = new LevelPredEquivlences();
+										lpes->Insert(qual,false);
+										and_lpes_list->Insert(lpes,false);
 									}break;
 									case AbstractPredNodeType::OPERATOR:{
 										switch(cur_op->GetOpType()){
@@ -768,11 +759,9 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
 										//LevelPredEquivlences * lpes = new LevelPredEquivlences();
 										auto qual = static_cast<QualsWarp*>(cur_op->Child(i))->GetQual();
 										PType ptype = PredEquivlence::QualType(qual);
-										if(ptype != PType::SUBQUERY){
-											LevelPredEquivlences * lpes = new LevelPredEquivlences();
-											lpes->Insert(qual,false);
-											or_lpes_list->Insert(lpes,true);
-										}
+										LevelPredEquivlences * lpes = new LevelPredEquivlences();
+										lpes->Insert(qual,false);
+										or_lpes_list->Insert(lpes,true);
 									}break;
 									case AbstractPredNodeType::OPERATOR:{
 										switch (cur_op->GetOpType()){
@@ -1030,7 +1019,22 @@ PredEquivlence::PredEquivlence(Quals* qual){
 			ranges_.insert(range);
 		}break;
 		case PType::SUBQUERY:{
-			set_.insert(qual->left);
+			std::string l = extract_field(qual->left);
+			if(l.empty()){
+				set_.insert(qual->left);
+			}else{
+				set_.insert(l);
+			}
+			/*calualate pred equivlence here*/
+			
+		}break;
+		case PType::SUBLINK:{
+			std::string l = extract_field(qual->left);
+			if(l.empty()){
+				set_.insert(qual->left);
+			}else{
+				set_.insert(l);
+			}
 		}break;
 		default:{
 			std::cerr<<"unkonw type of qual while init pred equivlence"<<std::endl;
@@ -1096,10 +1100,7 @@ PType PredEquivlence::QualType(Quals* qual){
 						}
 					}break;
 					case T_SubLink:{
-						/**
-						 * TODO: 01-07 may be should divide sublink from subquery
-						 */
-						return PType::SUBQUERY;
+						return PType::SUBLINK;
 					}break;
 					case T_SubPlan:{
 						return PType::SUBQUERY;
@@ -1151,7 +1152,7 @@ PType PredEquivlence::QualType(Quals* qual){
 							std::cerr<<"impossible left & right for !~ operator ! "<<std::endl;
 							exit(-1);
 						}
-						return PType::SUBQUERY;
+						return PType::SUBLINK;
 					}break;
 					case T_SubPlan:{
 						if(!strcmp(op,"=")){

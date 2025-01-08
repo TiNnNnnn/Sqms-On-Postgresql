@@ -125,6 +125,7 @@ typedef struct
 								 * back to the parent rel */
 	HistorySlowPlanStat	*hsp; 
 	Stack* expr_stack;
+	NodeTag actual_var_type;
 
 } deparse_context;
 
@@ -3780,6 +3781,7 @@ get_variable(Var *var, int levelsup, bool istoplevel, deparse_context *context)
 	}
 	else
 	{
+		
 		resolve_special_varno((Node *) var, context,
 							  get_special_variable, NULL);
 		return NULL;
@@ -3928,6 +3930,7 @@ get_special_variable(Node *node, deparse_context *context, void *callback_arg)
 	 */
 	if (!IsA(node, Var))
 		appendStringInfoChar(buf, '(');
+	context->actual_var_type = node->type;
 	get_rule_expr(node, context, true);
 	if (!IsA(node, Var))
 		appendStringInfoChar(buf, ')');
@@ -5194,8 +5197,6 @@ get_rule_expr(Node *node, deparse_context *context,
 				Node	   *arg1 = (Node *) linitial(args);
 				Node	   *arg2 = (Node *) lsecond(args);
 
-				
-
 				Quals* trace_qual = NULL;
 				trace_qual = (Quals*) malloc(sizeof(Quals));
 				if (trace_qual == NULL) {
@@ -5425,7 +5426,7 @@ get_rule_expr(Node *node, deparse_context *context,
 		case T_SubPlan:
 			{
 				SubPlan    *subplan = (SubPlan *) node;
-
+				
 				/*
 				 * We cannot see an already-planned subplan in rule deparsing,
 				 * only while EXPLAINing a query plan.  We don't try to
@@ -5433,30 +5434,30 @@ get_rule_expr(Node *node, deparse_context *context,
 				 * that appears elsewhere in EXPLAIN's result.
 				 */
 				
-				Quals* trace_qual = (Quals*) malloc(sizeof(Quals));
-				if (trace_qual == NULL) {
-					fprintf(stderr, "Memory allocation failed\n");
-					exit(1);
-				}
-				quals__init(trace_qual);
-				trace_qual->sub_plan_name = malloc(strlen(subplan->plan_name)+1);
-				strcpy(trace_qual->sub_plan_name,subplan->plan_name);
-
+				//Quals* trace_qual = (Quals*) malloc(sizeof(Quals));
+				// if (trace_qual == NULL) {
+				// 	fprintf(stderr, "Memory allocation failed\n");
+				// 	exit(1);
+				// }
+				// quals__init(trace_qual);
+				// trace_qual->sub_plan_name = malloc(strlen(subplan->plan_name)+1);
+				// strcpy(trace_qual->sub_plan_name,subplan->plan_name);
+				
 				if (subplan->useHashTable){
 					appendStringInfo(buf, "(hashed %s)", subplan->plan_name);
-					trace_qual->hash_sub_plan = true;
+					//trace_qual->hash_sub_plan = true;
 				}else{
 					appendStringInfo(buf, "(%s)", subplan->plan_name);
-					trace_qual->hash_sub_plan = false;
+					//trace_qual->hash_sub_plan = false;
 				}
-				PredExpression* expr_node = (PredExpression*)malloc(sizeof(PredExpression));
-				pred_expression__init(expr_node);
-				expr_node->qual = trace_qual;
-				expr_node->expr_case =PRED_EXPRESSION__EXPR_QUAL;
-				if(stack_is_empty(context->expr_stack)){
-					set_expr_tree_root(context->hsp,expr_node);
-				}
-				stack_push(context->expr_stack,expr_node);
+				// PredExpression* expr_node = (PredExpression*)malloc(sizeof(PredExpression));
+				// pred_expression__init(expr_node);
+				// expr_node->qual = trace_qual;
+				// expr_node->expr_case =PRED_EXPRESSION__EXPR_QUAL;
+				// if(stack_is_empty(context->expr_stack)){
+				// 	set_expr_tree_root(context->hsp,expr_node);
+				// }
+				// stack_push(context->expr_stack,expr_node);
 		}break;
 		case T_AlternativeSubPlan:
 			{
@@ -6493,7 +6494,8 @@ get_oper_expr(OpExpr *expr, deparse_context *context)
 			}
 			quals__init(trace_qual);
 		}
-
+		
+		context->actual_var_type = T_Invalid;
 		get_rule_expr_paren(arg1, context, true, (Node *) expr,expr->location);
 		if(is_compare_expr(op)){
 			int current_offset = context->buf->len;
@@ -6503,27 +6505,35 @@ get_oper_expr(OpExpr *expr, deparse_context *context)
 			trace_qual->left[current_offset - pre_offset] = '\0';
 
 			trace_qual->op = malloc(sizeof(op)+1);
-			trace_qual->l_type =  arg1->type;
+			if(context->actual_var_type != arg1->type  && context->actual_var_type != T_Invalid){
+				trace_qual->l_type = context->actual_var_type;
+			}else{
+				trace_qual->l_type = arg1->type;
+			}
 			strcpy(trace_qual->op,op);
 		}
 		appendStringInfo(buf, " %s ", op);
 		pre_offset = context->buf->len;
+
+		context->actual_var_type = T_Invalid;
 		get_rule_expr_paren(arg2, context, true, (Node *) expr,expr->location);
-		
+
 		if(is_compare_expr(op)){
 			int current_offset = context->buf->len;
 
 			trace_qual->right = malloc(current_offset-pre_offset+1);
 			strncpy(trace_qual->right,context->buf->data+pre_offset,current_offset-pre_offset);
 			trace_qual->right[current_offset - pre_offset] = '\0';
-			trace_qual->r_type = arg2->type;
-
+			if(context->actual_var_type != arg2->type  && context->actual_var_type != T_Invalid){
+				trace_qual->r_type = context->actual_var_type;
+			}else{
+				trace_qual->r_type = arg2->type;
+			}
 			PredExpression* expr_node = (PredExpression*)malloc(sizeof(PredExpression));
 			pred_expression__init(expr_node);
 			expr_node->qual = trace_qual;
 			expr_node->expr_case =PRED_EXPRESSION__EXPR_QUAL;
 			if(stack_is_empty(context->expr_stack)){
-				//context->hsp->expr_root = expr_node;
 				set_expr_tree_root(context->hsp,expr_node);
 			}
 			stack_push(context->expr_stack,expr_node);

@@ -72,6 +72,7 @@ bool LevelTwoStrategy::Insert(LevelManager* level_mgr){
         /**
          * transforer set type to vector type to insert into inverted_idx
          * TODO: 01-06 how to reduce about agg or sort node more then one in one plan 
+         * yyk: 01-07: 
          */
         std::vector<std::string> agg_vec;
         for(const auto& agg : la_eq->GetLevelAggSets()){
@@ -175,7 +176,10 @@ bool LevelTwoStrategy::Remove(LevelManager* level_mgr){
  */
 bool LevelThreeStrategy::Insert(LevelManager* level_mgr){
     assert(level_mgr);
-
+    assert(level_mgr->GetTotalAggs().size());
+    
+    
+    
     return false;
 }
 
