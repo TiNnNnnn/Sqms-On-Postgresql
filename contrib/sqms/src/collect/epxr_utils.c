@@ -5434,29 +5434,29 @@ get_rule_expr(Node *node, deparse_context *context,
 				 * that appears elsewhere in EXPLAIN's result.
 				 */
 				
-				//Quals* trace_qual = (Quals*) malloc(sizeof(Quals));
-				// if (trace_qual == NULL) {
-				// 	fprintf(stderr, "Memory allocation failed\n");
-				// 	exit(1);
-				// }
-				// quals__init(trace_qual);
-				// trace_qual->sub_plan_name = malloc(strlen(subplan->plan_name)+1);
-				// strcpy(trace_qual->sub_plan_name,subplan->plan_name);
+				Quals* trace_qual = (Quals*) malloc(sizeof(Quals));
+				if (trace_qual == NULL) {
+				 	fprintf(stderr, "Memory allocation failed\n");
+				 	exit(1);
+				}
+				quals__init(trace_qual);
+				trace_qual->sub_plan_name = malloc(strlen(subplan->plan_name)+1);
+				strcpy(trace_qual->sub_plan_name,subplan->plan_name);
 				
 				if (subplan->useHashTable){
 					appendStringInfo(buf, "(hashed %s)", subplan->plan_name);
-					//trace_qual->hash_sub_plan = true;
+					trace_qual->hash_sub_plan = true;
 				}else{
 					appendStringInfo(buf, "(%s)", subplan->plan_name);
-					//trace_qual->hash_sub_plan = false;
+					trace_qual->hash_sub_plan = false;
 				}
-				// PredExpression* expr_node = (PredExpression*)malloc(sizeof(PredExpression));
-				// pred_expression__init(expr_node);
-				// expr_node->qual = trace_qual;
-				// expr_node->expr_case =PRED_EXPRESSION__EXPR_QUAL;
-				// if(stack_is_empty(context->expr_stack)){
-				// 	set_expr_tree_root(context->hsp,expr_node);
-				// }
+				PredExpression* expr_node = (PredExpression*)malloc(sizeof(PredExpression));
+				pred_expression__init(expr_node);
+				expr_node->qual = trace_qual;
+				expr_node->expr_case =PRED_EXPRESSION__EXPR_QUAL;
+				if(stack_is_empty(context->expr_stack)){
+					set_expr_tree_root(context->hsp,expr_node);
+				}
 				// stack_push(context->expr_stack,expr_node);
 		}break;
 		case T_AlternativeSubPlan:

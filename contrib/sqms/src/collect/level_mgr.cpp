@@ -848,8 +848,6 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
 			first_pred_check_ = false;
 		}
 	}
-
-	
 	/**
 	 * here we try to extract the equivalence class from subquery 
 	*/
@@ -1308,6 +1306,7 @@ bool PredEquivlence::RangesSerach(PredEquivlenceRange* range,std::vector<PredEqu
 	}
 	return found;	
 }
+
 /**
  * PredEquivlence::MergePredEquivlenceRanges: 
  * TODO: 24-12-27 current we only can merge ranges which types are all PType::Range!
