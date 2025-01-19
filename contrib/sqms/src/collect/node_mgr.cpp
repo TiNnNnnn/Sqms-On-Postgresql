@@ -4,7 +4,6 @@ bool NodeManager::Format(){
     return true;
 }
 
-
 bool NodeManager::PrintPredEquivlences(){
     return true;
 }

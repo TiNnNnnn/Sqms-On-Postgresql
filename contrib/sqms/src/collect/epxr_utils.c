@@ -5321,8 +5321,6 @@ get_rule_expr(Node *node, deparse_context *context,
 							assert(child_node);
 							expr_op->childs[idx] = child_node;
 							stack_pop(context->expr_stack);
-
-
 						}
 
 						if (!PRETTY_PAREN(context))
@@ -5433,7 +5431,7 @@ get_rule_expr(Node *node, deparse_context *context,
 				 * reconstruct the original SQL, just reference the subplan
 				 * that appears elsewhere in EXPLAIN's result.
 				 */
-				
+
 				Quals* trace_qual = (Quals*) malloc(sizeof(Quals));
 				if (trace_qual == NULL) {
 				 	fprintf(stderr, "Memory allocation failed\n");

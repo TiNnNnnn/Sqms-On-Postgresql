@@ -67,7 +67,7 @@ class LevelTwoStrategy : public LevelStrategy{
 public:
     LevelTwoStrategy(size_t total_height)
         :total_height_(total_height){}
-    std::string Name(){return "PlanGroupStrategy";}
+    std::string Name(){return "PlanGroupKeyStrategy";}
     bool Insert(LevelManager* level_mgr);
     bool Serach(LevelManager* level_mgr);
     bool Remove(LevelManager* level_mgr);   

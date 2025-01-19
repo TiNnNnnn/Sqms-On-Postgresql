@@ -368,6 +368,7 @@ public:
     void Insert(AggAndSortEquivlence* ae);
     void Insert(LevelAggAndSortEquivlences* level_ae);
     void ShowLevelAggEquivlence(int depth = 0);
+    size_t Size(){return level_agg_sets_.size();}
     const std::vector<AggAndSortEquivlence*>& GetLevelAggSets(){return level_agg_sets_;}
 private:
     std::vector<AggAndSortEquivlence*> level_agg_sets_;

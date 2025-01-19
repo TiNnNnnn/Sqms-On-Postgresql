@@ -135,30 +135,42 @@ bool LevelTwoStrategy::Insert(LevelManager* level_mgr){
 bool LevelTwoStrategy::Serach(LevelManager* level_mgr){
     assert(level_mgr);
     assert(level_mgr->GetTotalAggs().size());
-
+    /*we current only build index for top level aggs*/
     auto top_aggs = level_mgr->GetTotalAggs()[0];
     /**
      * item in levelagglist is or relation
      * TODO: here may be can use multi thread or coroutines
      **/
     for(const auto& la_eq : top_aggs->GetLevelAggList()){
-        std::vector<std::string> agg_vec;
+        std::unordered_map<SET,std::pair<int,bool>,SetHasher> match_maps;
         for(const auto& agg : la_eq->GetLevelAggSets()){
-            auto agg_extends = agg->GetExtends();
-            for(const auto& expr : agg_extends){
-                agg_vec.push_back(expr);
+            auto extends = agg->GetExtends();
+            for(const auto& expr : extends){
+                auto match_sets = inverted_idx_->SuperSets({expr});
+                for(const auto& m_set : match_sets){
+                    /*attrs in one pe, just counted once*/
+                    if(!match_maps[m_set].second){
+                        match_maps[m_set].first += 1;
+                        match_maps[m_set].second = true;
+                    }
+                }
+            }
+            for(auto& m_map: match_maps){
+                m_map.second.second =false;
             }
         }
 
-        auto match_sets = inverted_idx_->SubSets(agg_vec);
-        for(const auto& set:  match_sets){
-            tbb::concurrent_hash_map<SET,std::shared_ptr<HistoryQueryIndexNode>,SetHasher>::const_accessor acc;
-            child_map_.find(acc,set);
-            assert(acc->second);
-            if(acc->second->Search(level_mgr)){
-                return true;
+        for(const auto& m_map : match_maps){
+            if(m_map.second.first == la_eq->Size()){
+                tbb::concurrent_hash_map<SET,std::shared_ptr<HistoryQueryIndexNode>,SetHasher>::const_accessor acc;
+                child_map_.find(acc,m_map.first);
+                assert(acc->second);
+                if(acc->second->Search(level_mgr)){
+                    return true;
+                }
             }
         }
+        match_maps.clear();
     }
     return false;
 }
