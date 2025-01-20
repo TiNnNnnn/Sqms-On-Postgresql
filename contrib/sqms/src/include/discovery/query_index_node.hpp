@@ -3,12 +3,19 @@
 #include <string>
 #include <memory>
 #include <iostream>
-#include "collect/format.pb-c.h"
-#include "inverted_index.hpp"
+#include <list>
 #include <shared_mutex>
+#include <mutex>
+#include <thread>
+#include <functional>
+
+#include "inverted_index.hpp"
 #include "collect/level_mgr.hpp"
 #include "tbb/concurrent_hash_map.h"
-#include <list>
+
+extern "C" {
+    #include "collect/format.pb-c.h"
+}
 
 class LevelStrategyContext;
 class HistoryQueryIndexNode{
@@ -78,8 +85,10 @@ private:
     size_t total_height_;
 };
 
-class LevelThreeStrategy : public LevelStrategy{
+class LevelRangeStrategy : public LevelStrategy{
 public:
+    LevelRangeStrategy(size_t total_height)
+        :total_height_(total_height){}
     std::string Name(){return "PlanRangePredsStrategy";}
     bool Insert(LevelManager* level_mgr);
     bool Serach(LevelManager* level_mgr);
@@ -87,6 +96,9 @@ public:
     std::vector<std::string> findChildren();
 private:
     std::shared_ptr<InvertedIndex<PostingList>> inverted_idx_;
+    std::unordered_map<SET,std::unordered_map<LevelPredEquivlences *,std::shared_ptr<HistoryQueryIndexNode>>,SetHasher> child_map_;
+    std::shared_mutex rw_mutex_;
+    size_t total_height_;
 };
 
 /**
@@ -116,7 +128,7 @@ public:
                 strategy_ =  std::make_shared<LevelTwoStrategy>(total_height);
             }break;
             case 3 :{
-                strategy_ = std::make_shared<LevelThreeStrategy>();
+                strategy_ = std::make_shared<LevelRangeStrategy>(total_height);
             }break;
             default :{
                 std::cerr<<"unknon level strategy"<<std::endl;

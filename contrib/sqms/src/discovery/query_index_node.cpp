@@ -159,7 +159,6 @@ bool LevelTwoStrategy::Serach(LevelManager* level_mgr){
                 m_map.second.second =false;
             }
         }
-
         for(const auto& m_map : match_maps){
             if(m_map.second.first == la_eq->Size()){
                 tbb::concurrent_hash_map<SET,std::shared_ptr<HistoryQueryIndexNode>,SetHasher>::const_accessor acc;
@@ -186,19 +185,64 @@ bool LevelTwoStrategy::Remove(LevelManager* level_mgr){
 /**
  * LevelThreeStrategy::Insert
  */
-bool LevelThreeStrategy::Insert(LevelManager* level_mgr){
+bool LevelRangeStrategy::Insert(LevelManager* level_mgr){
     assert(level_mgr);
-    assert(level_mgr->GetTotalAggs().size());
+    assert(level_mgr->GetTotalEquivlences().size());
     
+    auto top_eqs = level_mgr->GetTotalEquivlences()[0];
+    /**we just build index on single attribute*/
+    for(const auto& lpes : *top_eqs){
+        std::vector<std::string>pe_vecs;
+        LevelPredEquivlences * remind_lpes = new LevelPredEquivlences();
+        for(const auto& pe : *lpes){
+            if(pe->GetPredSet().size() == 1){
+                pe_vecs.push_back(*pe->GetPredSet().begin());
+            }else{
+                remind_lpes->Insert(pe);
+            }
+        }
+        std::sort(pe_vecs.begin(),pe_vecs.end());
+        {
+            std::shared_lock<std::shared_mutex> lock(rw_mutex_);
+            if(inverted_idx_->Serach(pe_vecs)){    
+                auto acc = child_map_.find(pe_vecs);
+                assert(acc == child_map_.end());
+
+                auto remind_list = acc->second;
+                auto iter = remind_list.find(remind_lpes);
+                if(iter != remind_list.end()){
+                    auto child =  iter->second;
+                    return child->Insert(level_mgr);
+                }else{
+                    size_t next_level = FindNextInsertLevel(level_mgr,3);
+                    auto new_idx_node = std::make_shared<HistoryQueryIndexNode>(next_level,total_height_);
+                    if(!new_idx_node->Insert(level_mgr)){
+                        return false;
+                    }
+                    /*update cur level index*/
+                    remind_list[remind_lpes] = new_idx_node;
+                }
+            }else{
+                size_t next_level = FindNextInsertLevel(level_mgr,3);
+                auto new_idx_node = std::make_shared<HistoryQueryIndexNode>(next_level,total_height_);
+                if(!new_idx_node->Insert(level_mgr)){
+                    return false;
+                }
+                std::unordered_map<LevelPredEquivlences *, std::shared_ptr<HistoryQueryIndexNode>> new_remind_list;
+                new_remind_list[remind_lpes] = new_idx_node;
+                child_map_[pe_vecs] = new_remind_list;
+            }
+        }
+    }
     
-    
+
     return false;
 }
 
 /**
  * LevelThreeStrategy::Serach
  */
-bool LevelThreeStrategy::Serach(LevelManager* level_mgr){
+bool LevelRangeStrategy::Serach(LevelManager* level_mgr){
     assert(level_mgr);
 
     return false;
@@ -207,7 +251,7 @@ bool LevelThreeStrategy::Serach(LevelManager* level_mgr){
 /**
  * LevelThreeStrategy::Remove
  */
-bool LevelThreeStrategy::Remove(LevelManager* level_mgr){
+bool LevelRangeStrategy::Remove(LevelManager* level_mgr){
     assert(level_mgr);
     return false;
 }
@@ -222,7 +266,7 @@ std::vector<std::string> LevelTwoStrategy::findChildren(){
 /**
  * LevelThreeStrategy: check the range constraint condition
  */
-std::vector<std::string> LevelThreeStrategy::findChildren(){
+std::vector<std::string> LevelRangeStrategy::findChildren(){
     return std::vector<std::string>();
 }
 

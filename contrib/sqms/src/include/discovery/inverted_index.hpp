@@ -128,7 +128,7 @@ public:
         std::shared_lock<std::shared_mutex> lock(rw_mutex_);
         std::unordered_set<SET,SetHasher> set_list;
         auto map = inverted_map_[set[0]].GetBitSet();
-        for(int i=1;i<set.size();i++){
+        for(size_t i=1;i<set.size();i++){
             map &= inverted_map_[set[i]].GetBitSet();
         }
 

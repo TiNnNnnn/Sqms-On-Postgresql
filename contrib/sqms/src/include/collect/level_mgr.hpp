@@ -284,6 +284,8 @@ public:
     std::unordered_set<PredEquivlence*>::const_iterator begin() const { return level_pe_sets_.cbegin(); }
     std::unordered_set<PredEquivlence*>::const_iterator end() const { return level_pe_sets_.cend(); }
 
+    bool operator = (LevelPredEquivlences* lpes){}
+
 private:
     std::unordered_set<PredEquivlence*> level_pe_sets_;
     /**

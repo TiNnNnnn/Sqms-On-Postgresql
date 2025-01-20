@@ -1664,7 +1664,6 @@ bool LevelPredEquivlencesList::Insert(LevelPredEquivlencesList* lpes_list,bool i
 			 * TODO: merge, best metod isn't merge lpes here, instead, we wish merge before each Insert 
 			 */
 		}
-	
 	}
 	return true;
 }
