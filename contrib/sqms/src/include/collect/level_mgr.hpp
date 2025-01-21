@@ -267,11 +267,12 @@ public:
     /*search for insert*/
     bool Serach(Quals* quals,std::vector<PredEquivlence*>& merge_pe_list);
     bool Serach(PredEquivlence* pe, std::vector<PredEquivlence*>& merge_pe_list);
-
     bool Serach(const std::string& attr,PredEquivlence*& pe);
     
     bool Compare(PredEquivlence* range);
     bool Copy(LevelPredEquivlences* pe);
+
+    bool Match(LevelPredEquivlences* lpes);
 
     bool MergePredEquivlences(const std::vector<PredEquivlence*>& merge_pe_list);
 
@@ -284,7 +285,6 @@ public:
     std::unordered_set<PredEquivlence*>::const_iterator begin() const { return level_pe_sets_.cbegin(); }
     std::unordered_set<PredEquivlence*>::const_iterator end() const { return level_pe_sets_.cend(); }
 
-    bool operator = (LevelPredEquivlences* lpes){}
 
 private:
     std::unordered_set<PredEquivlence*> level_pe_sets_;

@@ -188,6 +188,9 @@ bool LevelTwoStrategy::Remove(LevelManager* level_mgr){
 bool LevelRangeStrategy::Insert(LevelManager* level_mgr){
     assert(level_mgr);
     assert(level_mgr->GetTotalEquivlences().size());
+
+    bool child_exist = false;
+    std::shared_ptr<HistoryQueryIndexNode> child_node = nullptr;
     
     auto top_eqs = level_mgr->GetTotalEquivlences()[0];
     /**we just build index on single attribute*/
@@ -200,10 +203,11 @@ bool LevelRangeStrategy::Insert(LevelManager* level_mgr){
             }else{
                 remind_lpes->Insert(pe);
             }
-        }
+        } 
+        
         std::sort(pe_vecs.begin(),pe_vecs.end());
         {
-            std::shared_lock<std::shared_mutex> lock(rw_mutex_);
+            std::unique_lock<std::shared_mutex> lock(rw_mutex_);
             if(inverted_idx_->Serach(pe_vecs)){    
                 auto acc = child_map_.find(pe_vecs);
                 assert(acc == child_map_.end());
@@ -211,9 +215,16 @@ bool LevelRangeStrategy::Insert(LevelManager* level_mgr){
                 auto remind_list = acc->second;
                 auto iter = remind_list.find(remind_lpes);
                 if(iter != remind_list.end()){
+                    child_exist = true;
                     auto child =  iter->second;
                     return child->Insert(level_mgr);
+                    child_node = child;
                 }else{
+                    if(child_exist){
+                        remind_list[remind_lpes] = child_node;
+                        continue;
+                    }
+
                     size_t next_level = FindNextInsertLevel(level_mgr,3);
                     auto new_idx_node = std::make_shared<HistoryQueryIndexNode>(next_level,total_height_);
                     if(!new_idx_node->Insert(level_mgr)){
@@ -221,21 +232,31 @@ bool LevelRangeStrategy::Insert(LevelManager* level_mgr){
                     }
                     /*update cur level index*/
                     remind_list[remind_lpes] = new_idx_node;
+                    child_exist = true;
+                    child_node = new_idx_node;
                 }
             }else{
+                inverted_idx_->Insert(pe_vecs);
+                std::unordered_map<LevelPredEquivlences *, std::shared_ptr<HistoryQueryIndexNode>> new_remind_list;
+                if(child_exist){
+                    new_remind_list[remind_lpes] = child_node;
+                    child_map_[pe_vecs] = new_remind_list;
+                    continue;
+                }
+
                 size_t next_level = FindNextInsertLevel(level_mgr,3);
                 auto new_idx_node = std::make_shared<HistoryQueryIndexNode>(next_level,total_height_);
                 if(!new_idx_node->Insert(level_mgr)){
                     return false;
                 }
-                std::unordered_map<LevelPredEquivlences *, std::shared_ptr<HistoryQueryIndexNode>> new_remind_list;
                 new_remind_list[remind_lpes] = new_idx_node;
                 child_map_[pe_vecs] = new_remind_list;
+                child_exist = true;
+                child_node = new_idx_node;
             }
-        }
+            return true;
+        }   
     }
-    
-
     return false;
 }
 
@@ -245,6 +266,38 @@ bool LevelRangeStrategy::Insert(LevelManager* level_mgr){
 bool LevelRangeStrategy::Serach(LevelManager* level_mgr){
     assert(level_mgr);
 
+    auto top_eqs = level_mgr->GetTotalEquivlences()[0];
+    for(const auto& lpes : *top_eqs){
+        std::vector<std::string>pe_vecs;
+        LevelPredEquivlences * remind_lpes = new LevelPredEquivlences();
+        for(const auto& pe : *lpes){
+            if(pe->GetPredSet().size() == 1){
+                pe_vecs.push_back(*pe->GetPredSet().begin());
+            }else{
+                remind_lpes->Insert(pe);
+            }
+        }
+        std::sort(pe_vecs.begin(),pe_vecs.end());
+        
+        auto match_list = inverted_idx_->SuperSets(pe_vecs);
+        for(const auto& mpe : match_list){
+            {
+                std::shared_lock<std::shared_mutex> lock(rw_mutex_);
+                auto iter = child_map_.find(mpe);
+                if(iter != child_map_.end()){
+                    auto remind_list = iter->second;
+                    for(const auto& lpes_pair: remind_list){
+                        /*check lpes if match */
+                        auto slow_remind_lpes = lpes_pair.first;
+                        if(slow_remind_lpes->Match(remind_lpes)){
+                            bool ret = lpes_pair.second->Search(level_mgr);
+                            if(ret) return true;
+                        }
+                    }
+                }
+            }
+        }
+    }
     return false;
 }
 
