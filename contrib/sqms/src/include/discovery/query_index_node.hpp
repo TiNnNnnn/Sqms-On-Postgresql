@@ -46,9 +46,12 @@ private:
 
 class LevelStrategy{
 public:
+    LevelStrategy(size_t total_height)
+        :total_height_(total_height){}
     virtual std::vector<std::string> findChildren() = 0;
     virtual std::string Name() = 0;
     size_t FindNextInsertLevel(LevelManager* level_mgr, size_t cur_level);
+    size_t total_height_;
 };
 
 /**
@@ -58,8 +61,7 @@ public:
  */
 class LevelOneStrategy : public LevelStrategy{
 public:
-    LevelOneStrategy(size_t total_height)
-        :total_height_(total_height){}
+    LevelOneStrategy(size_t total_height): LevelStrategy(total_height){}
     std::string Name(){return "PlanHashStrategy";}
     bool Insert(LevelManager* level_mgr);
     bool Serach(LevelManager* level_mgr);
@@ -67,13 +69,13 @@ public:
     std::vector<std::string> findChildren();
 private:
     tbb::concurrent_hash_map<std::string,HistoryQueryIndexNode*>set_map_;
-    size_t total_height_;
+    //size_t total_height_;
 };
 
-class LevelTwoStrategy : public LevelStrategy{
+class LevelAggStrategy : public LevelStrategy{
 public:
-    LevelTwoStrategy(size_t total_height)
-        :total_height_(total_height){}
+    LevelAggStrategy(size_t total_height)
+        :LevelStrategy(total_height){}
     std::string Name(){return "PlanGroupKeyStrategy";}
     bool Insert(LevelManager* level_mgr);
     bool Serach(LevelManager* level_mgr);
@@ -82,13 +84,28 @@ public:
 private:
     std::shared_ptr<InvertedIndex<PostingList>> inverted_idx_;
     tbb::concurrent_hash_map<SET,std::shared_ptr<HistoryQueryIndexNode>,SetHasher> child_map_;
-    size_t total_height_;
+    //size_t total_height_;
+};
+
+class LevelSortStrategy : public LevelStrategy{
+public:
+    LevelSortStrategy(size_t total_height)
+        :LevelStrategy(total_height){}
+    std::string Name(){return "PlanGroupKeyStrategy";}
+    bool Insert(LevelManager* level_mgr);
+    bool Serach(LevelManager* level_mgr);
+    bool Remove(LevelManager* level_mgr);   
+    std::vector<std::string> findChildren();
+private:
+    std::shared_ptr<InvertedIndex<PostingList>> inverted_idx_;
+    tbb::concurrent_hash_map<SET,std::shared_ptr<HistoryQueryIndexNode>,SetHasher> child_map_;
+    //size_t total_height_;
 };
 
 class LevelRangeStrategy : public LevelStrategy{
 public:
     LevelRangeStrategy(size_t total_height)
-        :total_height_(total_height){}
+        : LevelStrategy(total_height){}
     std::string Name(){return "PlanRangePredsStrategy";}
     bool Insert(LevelManager* level_mgr);
     bool Serach(LevelManager* level_mgr);
@@ -98,8 +115,25 @@ private:
     std::shared_ptr<InvertedIndex<PostingList>> inverted_idx_;
     std::unordered_map<SET,std::unordered_map<LevelPredEquivlences *,std::shared_ptr<HistoryQueryIndexNode>>,SetHasher> child_map_;
     std::shared_mutex rw_mutex_;
-    size_t total_height_;
+    size_t s_level_;
 };
+
+class LevelResidualStrategy : public LevelStrategy{
+public:
+    LevelResidualStrategy(size_t total_height)
+        : LevelStrategy(total_height){}
+    std::string Name(){return "PlanRangePredsStrategy";}
+    bool Insert(LevelManager* level_mgr);
+    bool Serach(LevelManager* level_mgr);
+    bool Remove(LevelManager* level_mgr);
+    std::vector<std::string> findChildren();
+private:
+    std::shared_ptr<InvertedIndex<PostingList>> inverted_idx_;
+    std::unordered_map<SET,std::unordered_map<LevelPredEquivlences *,std::shared_ptr<HistoryQueryIndexNode>>,SetHasher> child_map_;
+    std::shared_mutex rw_mutex_;
+    size_t s_level_;
+};
+
 
 /**
  * Leaf Strategy: 
@@ -108,7 +142,12 @@ private:
  */
 class LeafStrategy : public LevelStrategy{
 public:
+    LeafStrategy(size_t total_height)
+        : LevelStrategy(total_height){}
     std::string Name(){return "LeafStrategy";}
+    bool Insert(LevelManager* level_mgr);
+    bool Serach(LevelManager* level_mgr);
+    bool Remove(LevelManager* level_mgr);
     std::vector<std::string> findChildren(){}
 private:
     std::shared_ptr<LevelManager> level_mgr_;
@@ -125,10 +164,19 @@ public:
                 strategy_ =  std::make_shared<LevelOneStrategy>(total_height);
             }break;
             case 2 :{
-                strategy_ =  std::make_shared<LevelTwoStrategy>(total_height);
+                strategy_ =  std::make_shared<LevelAggStrategy>(total_height);
             }break;
             case 3 :{
+                strategy_ = std::make_shared<LevelSortStrategy>(total_height);
+            }break;
+            case 4 :{
                 strategy_ = std::make_shared<LevelRangeStrategy>(total_height);
+            }break;
+            case 5 :{
+                strategy_ = std::make_shared<LevelResidualStrategy>(total_height);
+            }break;
+            case 6: {
+                strategy_ = std::make_shared<LeafStrategy>(total_height);
             }break;
             default :{
                 std::cerr<<"unknon level strategy"<<std::endl;

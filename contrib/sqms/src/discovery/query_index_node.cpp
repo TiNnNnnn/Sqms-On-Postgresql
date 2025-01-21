@@ -58,7 +58,7 @@ bool LevelOneStrategy::Remove(LevelManager* level_mgr){
 /**
  * LevelTwoStrategy::Insert
  */
-bool LevelTwoStrategy::Insert(LevelManager* level_mgr){
+bool LevelAggStrategy::Insert(LevelManager* level_mgr){
     assert(level_mgr);
 
     assert(level_mgr->GetTotalAggs().size());
@@ -132,7 +132,7 @@ bool LevelTwoStrategy::Insert(LevelManager* level_mgr){
 /**
  * LevelTwoStrategy::Serach
  */
-bool LevelTwoStrategy::Serach(LevelManager* level_mgr){
+bool LevelAggStrategy::Serach(LevelManager* level_mgr){
     assert(level_mgr);
     assert(level_mgr->GetTotalAggs().size());
     /*we current only build index for top level aggs*/
@@ -177,7 +177,7 @@ bool LevelTwoStrategy::Serach(LevelManager* level_mgr){
 /**
  * LevelTwoStrategy::Remove
  */
-bool LevelTwoStrategy::Remove(LevelManager* level_mgr){
+bool LevelAggStrategy::Remove(LevelManager* level_mgr){
     assert(level_mgr);
     return false;
 }
@@ -244,7 +244,7 @@ bool LevelRangeStrategy::Insert(LevelManager* level_mgr){
                     continue;
                 }
 
-                size_t next_level = FindNextInsertLevel(level_mgr,3);
+                size_t next_level = FindNextInsertLevel(level_mgr,4);
                 auto new_idx_node = std::make_shared<HistoryQueryIndexNode>(next_level,total_height_);
                 if(!new_idx_node->Insert(level_mgr)){
                     return false;
@@ -312,7 +312,7 @@ bool LevelRangeStrategy::Remove(LevelManager* level_mgr){
 /**
  * LevelTwoStrategy: check the qual constraint condition,such as "t1.a = t2.b"
  */
-std::vector<std::string> LevelTwoStrategy::findChildren(){
+std::vector<std::string> LevelAggStrategy::findChildren(){
     return std::vector<std::string>();
 }
 
@@ -324,8 +324,41 @@ std::vector<std::string> LevelRangeStrategy::findChildren(){
 }
 
 size_t LevelStrategy::FindNextInsertLevel(LevelManager* level_mgr, size_t cur_level){
-    return cur_level+1;
+    assert(cur_level>=1);
+    for(size_t h = cur_level+1; h<= total_height_; ){
+        switch(h){
+            case 2:{
+                if(level_mgr->GetTotalAggs().size()){
+                    return h;
+                }
+                ++h;
+            }break;
+            case 3:{
+
+            }break;
+            case 4:{
+
+            }break;
+            default:{
+
+            }
+        }
+    }
+    return -1;
 }
+
+bool LeafStrategy::Insert(LevelManager* level_mgr){
+
+}
+
+bool LeafStrategy::Serach(LevelManager* level_mgr){
+
+}
+
+bool LeafStrategy::Remove(LevelManager* level_mgr){
+
+}
+
 
 void LevelStrategyContext::Insert(LevelManager* level_mgr){
 
