@@ -348,7 +348,7 @@ size_t LevelStrategy::FindNextInsertLevel(LevelManager* level_mgr, size_t cur_le
 }
 
 bool LeafStrategy::Insert(LevelManager* level_mgr){
-
+    
 }
 
 bool LeafStrategy::Serach(LevelManager* level_mgr){

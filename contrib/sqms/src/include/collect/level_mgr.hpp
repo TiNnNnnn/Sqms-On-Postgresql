@@ -233,6 +233,8 @@ public:
     std::unordered_map<std::string, std::shared_ptr<LevelManager>>& GetSubLinkLevelPeLists(){return sublink_level_pe_lists_;}
     void SetSubLinkLevelPeLists(const std::unordered_map<std::string, std::shared_ptr<LevelManager>>& lists){sublink_level_pe_lists_ = lists;}
 
+    bool EarlyStop(){return early_stop_;}
+    void SetEarlyStop(bool early_stop){early_stop_ = early_stop;}
 private:
     std::string extract_field(const std::string& expression) {
         size_t start_pos = expression.find('(');  
@@ -252,6 +254,7 @@ private:
     std::set<PredEquivlenceRange*,RangesCompare>ranges_;
     /* sublink attr ranges */
     std::unordered_map<std::string, std::shared_ptr<LevelManager>> sublink_level_pe_lists_;
+    bool early_stop_ = true;
 };
 
 class LevelPredEquivlences{
@@ -284,16 +287,12 @@ public:
     std::unordered_set<PredEquivlence*>::iterator end() { return level_pe_sets_.end(); }
     std::unordered_set<PredEquivlence*>::const_iterator begin() const { return level_pe_sets_.cbegin(); }
     std::unordered_set<PredEquivlence*>::const_iterator end() const { return level_pe_sets_.cend(); }
-
-
+    
+    bool EarlyStop(){return early_stop_;}
+    void SetEarlyStop(bool early_stop){early_stop_ = early_stop;}
 private:
     std::unordered_set<PredEquivlence*> level_pe_sets_;
-    /**
-     * level pred equivlences index:
-     * example:
-     *    1. A.a --> 0, B.b --> 0,C.c --> 1
-     */
-    //std::unordered_map<std::string,int> level_idx_;
+    bool early_stop_ = true;
 };
 
 /**

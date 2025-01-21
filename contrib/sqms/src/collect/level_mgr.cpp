@@ -1267,8 +1267,8 @@ bool PredEquivlence::Insert(PredEquivlence* pe, bool check_can_merged){
 	}
 	/*update pred_name set*/
 	auto pred_set = pe->GetPredSet();
-		for(const auto& pred_name: pred_set){
-			set_.insert(pred_name);
+	for(const auto& pred_name: pred_set){
+		set_.insert(pred_name);
 	}
 	/*update ranges*/
 	for(const auto& r : pe->GetRanges()){
@@ -1339,6 +1339,9 @@ bool PredEquivlence::MergePredEquivlenceRanges(const std::vector<PredEquivlenceR
 			){
 				upper_bound = r->UpperLimit();
 				right = r->GetUpperBoundaryConstraint();
+				if(idx == merge_range_list.size()-1){
+					early_stop_ = false;
+				}
 			}
 			
 			if((r->LowerLimit() > lower_bound && r->LowerLimit() != LOWER_LIMIT &&  lower_bound != LOWER_LIMIT)||
@@ -1347,6 +1350,9 @@ bool PredEquivlence::MergePredEquivlenceRanges(const std::vector<PredEquivlenceR
 			){
 				lower_bound = r->LowerLimit();
 				left = r->GetLowerBoundaryConstraint();
+				if(idx == merge_range_list.size()-1){
+					early_stop_ = false;
+				}
 			}
 		}
 		ranges_.erase(r);
@@ -1355,6 +1361,7 @@ bool PredEquivlence::MergePredEquivlenceRanges(const std::vector<PredEquivlenceR
 	new_range->SetPredType(PType::RANGE);
 	new_range->SetLowerLimit(lower_bound);
 	new_range->SetUpperLimit(upper_bound);
+
 	ranges_.insert(new_range);
 	return true;
 }
@@ -1400,9 +1407,9 @@ bool PredEquivlence::Copy(PredEquivlence* pe){
 	pe->SetPredSet(set_);
 	pe->SetRanges(ranges_);
 	pe->SetSubLinkLevelPeLists(sublink_level_pe_lists_);
+	pe->SetEarlyStop(early_stop_);
 	return true;
 }
-
 
 void PredEquivlence::ShowPredEquivlence(int depth){
 	std::cout<<"(name_sets: [";
@@ -1466,6 +1473,13 @@ bool LevelPredEquivlences::Insert(Quals* quals,bool is_or){
 		PredEquivlence* pe = new PredEquivlence(quals);
 		level_pe_sets_.insert(pe);
 	}
+
+	bool early_stop = true;
+	for(const auto& pe : level_pe_sets_){
+		early_stop &= pe->EarlyStop();
+	}
+	early_stop_ = early_stop;
+	
 	return true;
 }
 
@@ -1481,6 +1495,13 @@ bool LevelPredEquivlences::Insert(PredEquivlence* pe){
 		pe->Copy(new_pe);
 		level_pe_sets_.insert(new_pe);
 	}
+
+	bool early_stop = true;
+	for(const auto& pe : level_pe_sets_){
+		early_stop &= pe->EarlyStop();
+	}
+	early_stop_ = early_stop;
+
 	return true;
 }
 
@@ -1502,6 +1523,13 @@ bool LevelPredEquivlences::Insert(LevelPredEquivlences* lpes){
 			level_pe_sets_.insert(new_pe);
 		}
 	}
+
+	bool early_stop = true;
+	for(const auto& pe : level_pe_sets_){
+		early_stop &= pe->EarlyStop();
+	}
+	early_stop_ = early_stop;
+
 	return true;
 }
 
@@ -1586,6 +1614,7 @@ bool LevelPredEquivlences::Copy(LevelPredEquivlences* lpes){
 		pe->Copy(new_pred);
 		lpes->Insert(new_pred);
 	}
+	lpes->SetEarlyStop(early_stop_);
 	return true;
 }
 
