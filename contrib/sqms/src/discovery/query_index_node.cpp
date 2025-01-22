@@ -182,6 +182,17 @@ bool LevelAggStrategy::Remove(LevelManager* level_mgr){
     return false;
 }
 
+
+bool LevelSortStrategy::Insert(LevelManager* level_mgr){
+    return true;
+}
+bool LevelSortStrategy::Serach(LevelManager* level_mgr){
+    return true;
+}
+bool LevelSortStrategy::Remove(LevelManager* level_mgr){
+    return true;
+}  
+
 /**
  * LevelThreeStrategy::Insert
  */
@@ -197,6 +208,7 @@ bool LevelRangeStrategy::Insert(LevelManager* level_mgr){
     for(const auto& lpes : *top_eqs){
         std::vector<std::string>pe_vecs;
         LevelPredEquivlences * remind_lpes = new LevelPredEquivlences();
+        remind_lpes->SetLpeId(lpes->LpeId());
         for(const auto& pe : *lpes){
             if(pe->GetPredSet().size() == 1){
                 pe_vecs.push_back(*pe->GetPredSet().begin());
@@ -270,6 +282,7 @@ bool LevelRangeStrategy::Serach(LevelManager* level_mgr){
     for(const auto& lpes : *top_eqs){
         std::vector<std::string>pe_vecs;
         LevelPredEquivlences * remind_lpes = new LevelPredEquivlences();
+        remind_lpes->SetLpeId(lpes->LpeId());
         for(const auto& pe : *lpes){
             if(pe->GetPredSet().size() == 1){
                 pe_vecs.push_back(*pe->GetPredSet().begin());
@@ -309,17 +322,27 @@ bool LevelRangeStrategy::Remove(LevelManager* level_mgr){
     return false;
 }
 
-/**
- * LevelTwoStrategy: check the qual constraint condition,such as "t1.a = t2.b"
- */
+bool LevelResidualStrategy::Insert(LevelManager* level_mgr){
+    return true;
+}
+bool LevelResidualStrategy::Serach(LevelManager* level_mgr){
+    return true;
+}
+bool LevelResidualStrategy::Remove(LevelManager* level_mgr){
+    return true;
+}
+
+
 std::vector<std::string> LevelAggStrategy::findChildren(){
     return std::vector<std::string>();
 }
-
-/**
- * LevelThreeStrategy: check the range constraint condition
- */
+std::vector<std::string> LevelSortStrategy::findChildren(){
+    return std::vector<std::string>();
+}
 std::vector<std::string> LevelRangeStrategy::findChildren(){
+    return std::vector<std::string>();
+}
+std::vector<std::string> LevelResidualStrategy::findChildren(){
     return std::vector<std::string>();
 }
 
@@ -348,11 +371,14 @@ size_t LevelStrategy::FindNextInsertLevel(LevelManager* level_mgr, size_t cur_le
 }
 
 bool LeafStrategy::Insert(LevelManager* level_mgr){
-    
+    if(level_mgr_)return true;
+    //level_mgr_ = std::make_shared<LevelManager>(level_mgr);
+    return true;
 }
 
 bool LeafStrategy::Serach(LevelManager* level_mgr){
-
+    auto lpes_list = level_mgr->GetTotalEquivlences();
+    
 }
 
 bool LeafStrategy::Remove(LevelManager* level_mgr){

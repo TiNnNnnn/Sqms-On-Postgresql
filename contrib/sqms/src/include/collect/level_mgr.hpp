@@ -74,70 +74,6 @@ public:
 
     AbstractPredNodeType type_;
 };
-
-class LevelPredEquivlences;
-class LevelPredEquivlencesList;
-class PredOperatorWrap: public AbstractPredNode{
-public:
-    PredOperatorWrap(PredOperator__PredOperatorType op_type , AbstractPredNode* parent = nullptr)
-        :AbstractPredNode(AbstractPredNodeType::OPERATOR)
-        ,op_type_(op_type),parent_(parent){}
-    
-    AbstractPredNode * Child(size_t idx){
-        assert(idx < childs_.size() && idx >=0);
-        return childs_[idx];
-    }
-
-    size_t ChildSize(){return childs_.size();}
-    void SetChildSize(int size){
-        childs_.resize(size);
-    }
-    void AddChild(AbstractPredNode* child){childs_.push_back(child);}
-    void ReSetChild(AbstractPredNode* child,int pos){childs_[pos] = child;}
-
-    AbstractPredNode* GetParent() override {return parent_;}
-    void SetParent(AbstractPredNode* parent) override {parent_ = parent;}
-
-    PredOperator__PredOperatorType GetOpType(){return op_type_;}
-
-    void SetOrLpesList(LevelPredEquivlencesList* or_lpes_list){or_lpes_list_ = or_lpes_list;}
-    LevelPredEquivlencesList* GetOrLpesList(){return or_lpes_list_;}
-    void SetAndLpesList(LevelPredEquivlencesList* and_lpes_list){and_lpes_list_ = and_lpes_list;}
-    LevelPredEquivlencesList* GetAndLpesList(){return and_lpes_list_;}
-    
-private:
-    PredOperator__PredOperatorType op_type_;
-    AbstractPredNode* parent_ = nullptr;
-    std::vector<AbstractPredNode*>childs_;
-
-    LevelPredEquivlencesList* or_lpes_list_ = nullptr;
-    LevelPredEquivlencesList* and_lpes_list_ = nullptr;
-};
-
-class QualsWarp: public AbstractPredNode {
-public:
-    QualsWarp(Quals* qual,AbstractPredNode* parent = nullptr):AbstractPredNode(AbstractPredNodeType::QUALS)
-        ,parent_(parent){
-        size_t msg_size = quals__get_packed_size(qual);
-        uint8_t *buffer = (uint8_t*)malloc(msg_size);
-        if (buffer == NULL) {
-            perror("Failed to allocate memory for quals_wrap");
-            exit(-1);
-        }
-       quals__pack(qual,buffer);
-       qual_ = quals__unpack(NULL, msg_size, buffer);
-    }
-
-    AbstractPredNode* GetParent(){return parent_;}
-    void SetParent(AbstractPredNode* parent){parent_ = parent;}
-
-    Quals* GetQual() {return qual_;}
-
-private:
-    Quals* qual_ = nullptr;
-    AbstractPredNode* parent_ = nullptr;
-};
- 
 /**
  *TODO：should we note the range data type? such as int,string,and so on ...
  */
@@ -259,6 +195,7 @@ private:
 
 class LevelPredEquivlences{
 public:
+  
     bool Insert(Quals* quals,bool is_or = false);
     bool Insert(PredEquivlence* pe);
     bool Insert(LevelPredEquivlences* pe);
@@ -290,9 +227,14 @@ public:
     
     bool EarlyStop(){return early_stop_;}
     void SetEarlyStop(bool early_stop){early_stop_ = early_stop;}
+
+    int LpeId(){return lpe_id_;}
+    void SetLpeId(int id){lpe_id_ = id;}
+    
 private:
     std::unordered_set<PredEquivlence*> level_pe_sets_;
     bool early_stop_ = true;
+    int  lpe_id_;
 };
 
 /**
@@ -311,10 +253,18 @@ public:
     std::vector<LevelPredEquivlences*>::const_iterator begin() const { return lpes_list_.cbegin(); }
     std::vector<LevelPredEquivlences*>::const_iterator end() const { return lpes_list_.cend();}
 
-    void ShowLevelPredEquivlencesList(int depth);
+    std::vector<LevelPredEquivlences*>& GetLpesList(){return lpes_list_;}
 
+    void ShowLevelPredEquivlencesList(int depth);
+    int DistributeId(){
+        int ret = lpes_id_creator_;
+        lpes_id_creator_++;
+        return ret;
+    }
 private:
     std::vector<LevelPredEquivlences*> lpes_list_;
+    /*local id creator for each level*/
+    int lpes_id_creator_ = 0;
 };
 
 /**
@@ -498,5 +448,73 @@ private:
     std::unordered_map<HistorySlowPlanStat*, NodeCollector*> nodes_collector_map_;
 };
 
+class PredOperatorWrap: public AbstractPredNode{
+public:
+    PredOperatorWrap(PredOperator__PredOperatorType op_type , AbstractPredNode* parent = nullptr)
+        :AbstractPredNode(AbstractPredNodeType::OPERATOR)
+        ,op_type_(op_type),parent_(parent){}
+    
+    AbstractPredNode * Child(size_t idx){
+        assert(idx < childs_.size() && idx >=0);
+        return childs_[idx];
+    }
 
+    size_t ChildSize(){return childs_.size();}
+    void SetChildSize(int size){
+        childs_.resize(size);
+    }
+    void AddChild(AbstractPredNode* child){childs_.push_back(child);}
+    void ReSetChild(AbstractPredNode* child,int pos){childs_[pos] = child;}
 
+    AbstractPredNode* GetParent() override {return parent_;}
+    void SetParent(AbstractPredNode* parent) override {parent_ = parent;}
+
+    PredOperator__PredOperatorType GetOpType(){return op_type_;}
+
+    void SetOrLpesList(LevelPredEquivlencesList* or_lpes_list){
+        if(!or_lpes_list_){
+            or_lpes_list_ = new LevelPredEquivlencesList();
+        }
+        or_lpes_list->Copy(or_lpes_list_);
+    }
+    LevelPredEquivlencesList* GetOrLpesList(){return or_lpes_list_;}
+    void SetAndLpesList(LevelPredEquivlencesList* and_lpes_list){
+        if(!and_lpes_list_){
+            and_lpes_list_ = new LevelPredEquivlencesList();
+        }
+        and_lpes_list->Copy(and_lpes_list_);
+    }
+    LevelPredEquivlencesList* GetAndLpesList(){return and_lpes_list_;}
+    
+private:
+    PredOperator__PredOperatorType op_type_;
+    AbstractPredNode* parent_ = nullptr;
+    std::vector<AbstractPredNode*>childs_;
+
+    LevelPredEquivlencesList* or_lpes_list_ = nullptr;
+    LevelPredEquivlencesList* and_lpes_list_ = nullptr;
+};
+
+class QualsWarp: public AbstractPredNode {
+public:
+    QualsWarp(Quals* qual,AbstractPredNode* parent = nullptr):AbstractPredNode(AbstractPredNodeType::QUALS)
+        ,parent_(parent){
+        size_t msg_size = quals__get_packed_size(qual);
+        uint8_t *buffer = (uint8_t*)malloc(msg_size);
+        if (buffer == NULL) {
+            perror("Failed to allocate memory for quals_wrap");
+            exit(-1);
+        }
+       quals__pack(qual,buffer);
+       qual_ = quals__unpack(NULL, msg_size, buffer);
+    }
+
+    AbstractPredNode* GetParent(){return parent_;}
+    void SetParent(AbstractPredNode* parent){parent_ = parent;}
+
+    Quals* GetQual() {return qual_;}
+
+private:
+    Quals* qual_ = nullptr;
+    AbstractPredNode* parent_ = nullptr;
+};

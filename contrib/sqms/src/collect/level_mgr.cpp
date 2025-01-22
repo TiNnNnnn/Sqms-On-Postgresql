@@ -651,7 +651,7 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
 	}
 
 	LevelPredEquivlencesList* node_final_lpes_list = nullptr;
-	LevelPredEquivlencesList* final_lpes_list = nullptr;
+	LevelPredEquivlencesList* final_lpes_list;
 
 	if(!root){
 		if(first_pred_check_){
@@ -707,7 +707,7 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
 							//LevelPredEquivlences * lpes = new LevelPredEquivlences();
 							LevelPredEquivlencesList* and_lpes_list = new LevelPredEquivlencesList();
 							for(size_t i=0;i<cur_op->ChildSize();i++){
-								auto type = cur_op->Child(0)->Type();
+								auto type = cur_op->Child(i)->Type();
 								switch (type){
 									case AbstractPredNodeType::QUALS:{
 										//LevelPredEquivlences * lpes = new LevelPredEquivlences();
@@ -718,16 +718,17 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
 										and_lpes_list->Insert(lpes,false);
 									}break;
 									case AbstractPredNodeType::OPERATOR:{
-										switch(cur_op->GetOpType()){
+										auto child_op = static_cast<PredOperatorWrap*>(cur_op->Child(i));
+										switch(child_op->GetOpType()){
 											case PRED_OPERATOR__PRED_OPERATOR_TYPE__AND:{
-												auto child_and_lpes_list = cur_op->GetAndLpesList();
-												assert(and_lpes_list->Size());
+												auto child_and_lpes_list = child_op->GetAndLpesList();
+												assert(child_and_lpes_list->Size());
 												and_lpes_list->Insert(child_and_lpes_list,false);
 											}break;
 											case PRED_OPERATOR__PRED_OPERATOR_TYPE__OR:{
-												auto or_lpes_list = cur_op->GetOrLpesList();
-												assert(or_lpes_list->Size());
-												and_lpes_list->Insert(or_lpes_list,false);
+												auto child_or_lpes_list = child_op->GetOrLpesList();
+												assert(child_or_lpes_list->Size());
+												and_lpes_list->Insert(child_or_lpes_list,false);
 											}break;
 											case PRED_OPERATOR__PRED_OPERATOR_TYPE__NOT:{
 												/**
@@ -755,14 +756,12 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
 							}
 						}break;
 						case PRED_OPERATOR__PRED_OPERATOR_TYPE__OR:{
-							//std::vector<LevelPredEquivlences*>* or_lpes_list = new std::vector<LevelPredEquivlences*>();
 							LevelPredEquivlencesList* or_lpes_list = new LevelPredEquivlencesList();
 							std::vector<AbstractPredNode*>or_op_list;
 							for(size_t i=0;i<cur_op->ChildSize();i++){
-								auto type = cur_op->Child(0)->Type();
+								auto type = cur_op->Child(i)->Type();
 								switch (type){
 									case AbstractPredNodeType::QUALS:{
-										//LevelPredEquivlences * lpes = new LevelPredEquivlences();
 										auto qual = static_cast<QualsWarp*>(cur_op->Child(i))->GetQual();
 										qual->hsps = cur_hsps_;
 										LevelPredEquivlences * lpes = new LevelPredEquivlences();
@@ -770,16 +769,17 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
 										or_lpes_list->Insert(lpes,true);
 									}break;
 									case AbstractPredNodeType::OPERATOR:{
-										switch (cur_op->GetOpType()){
+										auto child_op = static_cast<PredOperatorWrap*>(cur_op->Child(i));
+										switch (child_op->GetOpType()){
 											case PRED_OPERATOR__PRED_OPERATOR_TYPE__AND:{
-												auto and_lpes_list = cur_op->GetAndLpesList();
-												assert(or_lpes_list->Size());
-												or_lpes_list->Insert(and_lpes_list);
+												auto child_and_lpes_list = child_op->GetAndLpesList();
+												assert(child_and_lpes_list->Size());
+												or_lpes_list->Insert(child_and_lpes_list,true);
 											}break;
 											case PRED_OPERATOR__PRED_OPERATOR_TYPE__OR:{
-												auto child_or_lpes_list = cur_op->GetOrLpesList();
-												assert(or_lpes_list->Size());
-												or_lpes_list->Insert(child_or_lpes_list);
+												auto child_or_lpes_list = child_op->GetOrLpesList();
+												assert(child_or_lpes_list->Size());
+												or_lpes_list->Insert(child_or_lpes_list,true);
 											}break;
 											case PRED_OPERATOR__PRED_OPERATOR_TYPE__NOT:{
 												/**
@@ -1615,7 +1615,18 @@ bool LevelPredEquivlences::Copy(LevelPredEquivlences* lpes){
 		lpes->Insert(new_pred);
 	}
 	lpes->SetEarlyStop(early_stop_);
+	lpes->SetLpeId(lpe_id_);
 	return true;
+}
+
+/**
+ * LevelPredEquivlences::Match
+ */
+bool LevelPredEquivlences::Match(LevelPredEquivlences* lpes){
+	/**
+	 * TODO: no implement
+	 */
+	return false;
 }
 
 void LevelPredEquivlences::ShowLevelPredEquivlences(int depth){
@@ -1660,9 +1671,14 @@ bool LevelPredEquivlencesList::Insert(LevelPredEquivlences* pe,bool is_or){
  */
 bool LevelPredEquivlencesList::Insert(LevelPredEquivlencesList* lpes_list,bool is_or){
 	assert(lpes_list);
+	
+	if(lpes_list->Size() == 0){
+				return true;
+	}
+			
 	if(is_or){ /*or_model*/
 		for(const auto& lpes: *lpes_list){
-			Insert(lpes,false);
+			Insert(lpes,true);
 		}
 	}else{ /*and_model*/
 		if(lpes_list_.empty()){
@@ -1674,18 +1690,20 @@ bool LevelPredEquivlencesList::Insert(LevelPredEquivlencesList* lpes_list,bool i
 			}
 		}else{
 			int sz = lpes_list->Size()-1;
+			const size_t lpes_sz = lpes_list_.size();
 			while(sz > 0){
-				for(const auto& dst : lpes_list_){
+				/*here create new lpes, we should give them id */
+				for(size_t i = 0;i < lpes_sz; ++i){
 					LevelPredEquivlences* new_lpes = new LevelPredEquivlences();
-					dst->Copy(new_lpes);
+					lpes_list_[i]->Copy(new_lpes);
 					lpes_list_.push_back(new_lpes);
 				}
 				--sz;
 			}
 
-			for(auto& src : *lpes_list){
-				for(auto& dst : lpes_list_){
-					dst->Insert(src);
+			for(size_t i = 0;i<lpes_list_.size();){
+				for(const auto& src : *lpes_list){
+					lpes_list_[i++]->Insert(src);
 				}
 			}
 
