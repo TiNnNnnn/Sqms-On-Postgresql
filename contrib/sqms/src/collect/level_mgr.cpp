@@ -659,7 +659,7 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
 			if(cur_height_ >= 1){
 				for(size_t i = 0;i<cur_hsps_->n_childs; ++i){
 					auto child_eq = nodes_collector_map_[cur_hsps_->childs[i]]->node_equivlences_;
-					node_final_lpes_list->Insert(child_eq);
+					node_final_lpes_list->Insert(child_eq,false);
 				}
 			}
 			nodes_collector_map_[cur_hsps_]->node_equivlences_ = node_final_lpes_list;
@@ -672,7 +672,7 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
 		final_lpes_list = new LevelPredEquivlencesList();
 		/*we should merge pre level's lpes with this level*/
 		if(cur_height_ >= 1 && !GetPreProcessed(PreProcessLabel::PREDICATE)){
-			final_lpes_list->Insert(total_equivlences_[cur_height_-1],false);
+			final_lpes_list->Insert(total_equivlences_[cur_height_-1],false,true);
 			SetPreProcessed(PreProcessLabel::PREDICATE,true);
 		}
 		total_equivlences_[cur_height_] = final_lpes_list;
@@ -694,7 +694,7 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
 		PredEquivlence* pe = new PredEquivlence(qual);
 		LevelPredEquivlences * lpes = new LevelPredEquivlences();
 		lpes->Insert(pe);
-		final_lpes_list->Insert(lpes);
+		final_lpes_list->Insert(lpes,false);
 	}else{
 		/* more then one level,it means here is more than one join_cond in current node ,they connect by and/or/not*/
 		for(const auto& level : level_collector){
@@ -828,22 +828,29 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
 	final_lpes_list->Copy(node_final_lpes_list);
 
 	/*we should merge current level's pre lpes with this level*/
-	if(same_level_need_merged){
-		final_lpes_list->Insert(total_equivlences_[cur_height_],false);
-	}
+	// if(same_level_need_merged){
+	// 	final_lpes_list->Insert(total_equivlences_[cur_height_],false);
+	// }
+
+	if(!total_equivlences_[cur_height_])
+		total_equivlences_[cur_height_] = new LevelPredEquivlencesList();
+	total_equivlences_[cur_height_]->Insert(final_lpes_list,false);
+
+
 	if(nodes_collector_map_[cur_hsps_]->node_equivlences_ && nodes_collector_map_[cur_hsps_]->node_equivlences_->Size())
-		node_final_lpes_list->Insert(nodes_collector_map_[cur_hsps_]->node_equivlences_);
+		node_final_lpes_list->Insert(nodes_collector_map_[cur_hsps_]->node_equivlences_,false);
 	
 	/*we should merge pre level's lpes with this level*/
 	if(cur_height_ >= 1){	
 		if(!GetPreProcessed(PreProcessLabel::PREDICATE)){
-			final_lpes_list->Insert(total_equivlences_[cur_height_-1],false);
+			//final_lpes_list->Insert(total_equivlences_[cur_height_-1],false,true);
+			total_equivlences_[cur_height_]->Insert(total_equivlences_[cur_height_-1],false,true);
 			SetPreProcessed(PreProcessLabel::PREDICATE,true);
 		}
 		if(first_pred_check_){
 			for(size_t i = 0;i<cur_hsps_->n_childs; ++i){
 				auto child_eq = nodes_collector_map_[cur_hsps_->childs[i]]->node_equivlences_;
-				node_final_lpes_list->Insert(child_eq);
+				node_final_lpes_list->Insert(child_eq,false);
 			}
 			first_pred_check_ = false;
 		}
@@ -877,10 +884,13 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
 			}
 		}
 	}
-	if(sub_final_lpes_list->Size())
-		final_lpes_list->Insert(sub_final_lpes_list,false);
+	if(sub_final_lpes_list->Size()){
+		//final_lpes_list->Insert(sub_final_lpes_list,false);
+		total_equivlences_[cur_height_]->Insert(sub_final_lpes_list,false);
+	}
+		
 	/*update toal_equivlences*/
-	total_equivlences_[cur_height_] = final_lpes_list;
+	//total_equivlences_[cur_height_] = final_lpes_list;
 	nodes_collector_map_[cur_hsps_]->node_equivlences_ = node_final_lpes_list;
 }
 
@@ -1339,9 +1349,9 @@ bool PredEquivlence::MergePredEquivlenceRanges(const std::vector<PredEquivlenceR
 			){
 				upper_bound = r->UpperLimit();
 				right = r->GetUpperBoundaryConstraint();
-				if(idx == merge_range_list.size()-1){
-					early_stop_ = false;
-				}
+				// if(idx == merge_range_list.size()-1){
+				// 	early_stop_ = false;
+				// }
 			}
 			
 			if((r->LowerLimit() > lower_bound && r->LowerLimit() != LOWER_LIMIT &&  lower_bound != LOWER_LIMIT)||
@@ -1350,9 +1360,9 @@ bool PredEquivlence::MergePredEquivlenceRanges(const std::vector<PredEquivlenceR
 			){
 				lower_bound = r->LowerLimit();
 				left = r->GetLowerBoundaryConstraint();
-				if(idx == merge_range_list.size()-1){
-					early_stop_ = false;
-				}
+				// if(idx == merge_range_list.size()-1){
+				// 	early_stop_ = false;
+				// }
 			}
 		}
 		ranges_.erase(r);
@@ -1361,6 +1371,14 @@ bool PredEquivlence::MergePredEquivlenceRanges(const std::vector<PredEquivlenceR
 	new_range->SetPredType(PType::RANGE);
 	new_range->SetLowerLimit(lower_bound);
 	new_range->SetUpperLimit(upper_bound);
+
+	auto old_range = merge_range_list.back();
+	if(old_range->LowerLimit() < new_range->LowerLimit() 
+		|| (old_range->GetBoundaryConstraint().first && !new_range->GetBoundaryConstraint().first&&old_range->LowerLimit() == new_range->LowerLimit())
+		|| old_range->UpperLimit() > new_range->UpperLimit()
+		|| (old_range->GetBoundaryConstraint().second && !new_range->GetBoundaryConstraint().second&&old_range->UpperLimit() == new_range->UpperLimit())){
+			early_stop_ = false;
+	}
 
 	ranges_.insert(new_range);
 	return true;
@@ -1630,8 +1648,6 @@ bool LevelPredEquivlences::Match(LevelPredEquivlences* lpes){
 }
 
 void LevelPredEquivlences::ShowLevelPredEquivlences(int depth){
-	PrintIndent(depth);
-	std::cout<<"{";
 	int idx  = 0; 
 	for(const auto& pe : level_pe_sets_){
 		if(idx)
@@ -1669,24 +1685,29 @@ bool LevelPredEquivlencesList::Insert(LevelPredEquivlences* pe,bool is_or){
  *              	src: {[B.b,C.c]}
  * 					--> dst': {[A.a,B.b,C.c]},{[A.a,B.c],[B.b,C.c],[D.d]}
  */
-bool LevelPredEquivlencesList::Insert(LevelPredEquivlencesList* lpes_list,bool is_or){
+bool LevelPredEquivlencesList::Insert(LevelPredEquivlencesList* lpes_list,bool is_or,bool pre_merge){
 	assert(lpes_list);
-	
-	if(lpes_list->Size() == 0){
-				return true;
-	}
-			
+	if(!lpes_list->Size()){
+		return true;
+	}	
 	if(is_or){ /*or_model*/
+		size_t src_idx = 0;
 		for(const auto& lpes: *lpes_list){
 			Insert(lpes,true);
+			if(pre_merge)
+				child_lpes_map_[lpes_list_.size()].push_back(src_idx++);
 		}
 	}else{ /*and_model*/
 		if(lpes_list_.empty()){
 			/*current level don't has any predicates,we just copy the pre level*/
+			size_t src_idx = 0;
 			for(const auto& src : *lpes_list){
 				LevelPredEquivlences* new_lpes = new LevelPredEquivlences();
 				src->Copy(new_lpes);
+				if(pre_merge)
+					child_lpes_map_[src_idx].push_back(src_idx);
 				lpes_list_.push_back(new_lpes);
+				src_idx++;
 			}
 		}else{
 			int sz = lpes_list->Size()-1;
@@ -1696,13 +1717,22 @@ bool LevelPredEquivlencesList::Insert(LevelPredEquivlencesList* lpes_list,bool i
 				for(size_t i = 0;i < lpes_sz; ++i){
 					LevelPredEquivlences* new_lpes = new LevelPredEquivlences();
 					lpes_list_[i]->Copy(new_lpes);
+					
+					auto iter = child_lpes_map_.find(i);
+					assert(iter != lpes_list->GetChildLpesMap().end());
+
 					lpes_list_.push_back(new_lpes);
+					child_lpes_map_[lpes_list_.size()-1] = iter->second;
 				}
 				--sz;
 			}
-
+			
 			for(size_t i = 0;i<lpes_list_.size();){
+				size_t src_idx = 0;
 				for(const auto& src : *lpes_list){
+					if(pre_merge){
+						child_lpes_map_[i].push_back(src_idx++);
+					}
 					lpes_list_[i++]->Insert(src);
 				}
 			}
@@ -1717,18 +1747,28 @@ bool LevelPredEquivlencesList::Insert(LevelPredEquivlencesList* lpes_list,bool i
 
 
 void LevelPredEquivlencesList::Copy(LevelPredEquivlencesList* new_lpes_list){
+	size_t src_idx = 0;
 	for(const auto& lpes : lpes_list_){
 		LevelPredEquivlences* new_lpes =  new LevelPredEquivlences();
 		lpes->Copy(new_lpes);
 		new_lpes_list->Insert(new_lpes,true);
 	}
+	new_lpes_list->SetChildLpesMap(child_lpes_map_);
 }
 
 
 void LevelPredEquivlencesList::ShowLevelPredEquivlencesList(int depth){
-	for(const auto& lpe: lpes_list_){
-		lpe->ShowLevelPredEquivlences(depth+1);
-	}	
+	
+	for(size_t i = 0; i< lpes_list_.size();i++){
+		PrintIndent(depth+1);
+		std::cout<<"[id:"<<i<<", childs:";
+		for(const auto& child : child_lpes_map_[i]){
+			std::cout<<child<<",";
+		}
+		std::cout<<"ealry_stop:"<<lpes_list_[i]->EarlyStop();
+		std::cout<<"]->";
+		lpes_list_[i]->ShowLevelPredEquivlences(depth+1);
+	}
 }
 
 /**

@@ -242,8 +242,8 @@ private:
  */
 class LevelPredEquivlencesList{
 public:
-    bool Insert(LevelPredEquivlences* lpes,bool is_or = false);
-    bool Insert(LevelPredEquivlencesList* lpes_list,bool is_or = false);
+    bool Insert(LevelPredEquivlences* lpes,bool is_or);
+    bool Insert(LevelPredEquivlencesList* lpes_list,bool is_or,bool pre_merge = false);
 
     void Copy(LevelPredEquivlencesList* new_lpes_list);
     size_t Size(){return lpes_list_.size();}
@@ -261,8 +261,16 @@ public:
         lpes_id_creator_++;
         return ret;
     }
+
+    void SetChildLpesMap(std::unordered_map<size_t,std::vector<size_t>> map){child_lpes_map_ = map;}
+    std::unordered_map<size_t,std::vector<size_t>>& GetChildLpesMap(){return child_lpes_map_;}
 private:
     std::vector<LevelPredEquivlences*> lpes_list_;
+    /**
+     * a map from current level lpes to previous level lpes
+     * we just use idx as lpes's unique id in one level
+     */
+    std::unordered_map<size_t,std::vector<size_t>> child_lpes_map_;
     /*local id creator for each level*/
     int lpes_id_creator_ = 0;
 };
