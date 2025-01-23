@@ -34,7 +34,16 @@ void LevelManager::ComputeTotalClass(){
             for(size_t j = 0; j < levels[i]->n_childs ; j++){
                 tmp_levels.push_back(levels[i]->childs[j]);
             }
+
+			/*collect plan_join type*/
+			if(NodeTag(levels[i]->node_tag) == T_NestLoop 
+				|| NodeTag(levels[i]->node_tag) == T_MergeJoin 
+				|| NodeTag(levels[i]->node_tag) == T_HashJoin){
+				assert(strlen(levels[i]->join_type));
+				join_type_list_.push_back(levels[i]->join_type);
+			}
         }
+
         level_collector.push_back(levels);
         levels.clear();
         std::swap(levels,tmp_levels);
@@ -46,9 +55,6 @@ void LevelManager::ComputeTotalClass(){
     for(auto &lc : level_collector){
         ComputeLevelClass(lc);
     }
-
-	// if(debug)
-	// 	ShowTotalPredClass();
 }
 
 void LevelManager::ComputeLevelClass(const std::vector<HistorySlowPlanStat*>& list){

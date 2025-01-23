@@ -1022,6 +1022,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 						break;
 				}
 				FormatPropertyText("Join Type", jointype, es);
+				hsp.join_type = jointype;
 			}
 			break;
 		case T_SetOp:

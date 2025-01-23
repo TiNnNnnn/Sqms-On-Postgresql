@@ -33,11 +33,6 @@ public:
     bool Remove(LevelManager* level_mgr);
     bool Search(LevelManager* level_mgr);
 private: 
-    // /*set2node*/
-    // std::unordered_map<SET,std::shared_ptr<HistoryQueryIndexNode>,SetHasher>childs_;
-    // /*inverted_idx storage all sets in the node*/
-    // std::shared_ptr<InvertedIndex<PostingList>> inverted_idx_;
-
     /*use context to operate node*/
     LevelStrategyContext* level_strategy_context_;
     /*current node level*/
@@ -59,9 +54,9 @@ public:
  * node type is in (join,project,filter,groupby),we will apply more checking,ohterwise,
  * we just use hash to compare,with time going,we will 
  */
-class LevelOneStrategy : public LevelStrategy{
+class LevelHashStrategy : public LevelStrategy{
 public:
-    LevelOneStrategy(size_t total_height): LevelStrategy(total_height){}
+    LevelHashStrategy(size_t total_height): LevelStrategy(total_height){}
     std::string Name(){return "PlanHashStrategy";}
     bool Insert(LevelManager* level_mgr);
     bool Serach(LevelManager* level_mgr);
@@ -69,7 +64,41 @@ public:
     std::vector<std::string> findChildren();
 private:
     tbb::concurrent_hash_map<std::string,HistoryQueryIndexNode*>set_map_;
-    //size_t total_height_;
+};
+
+class ScalingInfo{
+public:
+    ScalingInfo(std::vector<std::string> join_type_list)    
+        :join_type_list_(join_type_list){
+        join_type_score_ = CalJoinTypeScore(join_type_list_,unique_id_);
+    }
+    static int CalJoinTypeScore(const std::vector<std::string>& join_type_list,std::string& unique_id);
+    bool Match(ScalingInfo* scale_info);
+    const std::string& UniqueId(){return unique_id_;}
+    int JoinTypeScore(){return join_type_score_;}
+private:
+    std::vector<std::string> join_type_list_;
+    int join_type_score_ = -1;
+    std::string unique_id_;
+};
+
+/**
+ * LevelScalingStrategy
+ */
+class LevelScalingStrategy : public LevelStrategy{
+public:
+    LevelScalingStrategy(size_t total_height): LevelStrategy(total_height){}
+    std::string Name(){return "PlanHashStrategy";}
+    bool Insert(LevelManager* level_mgr);
+    bool Serach(LevelManager* level_mgr);
+    bool Remove(LevelManager* level_mgr);
+    std::vector<std::string> findChildren();
+private:
+    std::shared_mutex rw_mutex_;
+    /* from join_type_score to scaling_list id map */
+    std::map<int,std::unordered_set<std::string>> scaling_idx_;
+    /* from scaling_list id map to child node*/
+    std::unordered_map<std::string,std::pair<std::shared_ptr<ScalingInfo>,HistoryQueryIndexNode*>>child_map_;
 };
 
 class LevelAggStrategy : public LevelStrategy{
@@ -161,21 +190,24 @@ public:
     void SetStrategy(int l,int total_height){
         switch(l){
             case 1 :{
-                strategy_ =  std::make_shared<LevelOneStrategy>(total_height);
+                strategy_ =  std::make_shared<LevelHashStrategy>(total_height);
             }break;
             case 2 :{
-                strategy_ =  std::make_shared<LevelAggStrategy>(total_height);
+                strategy_ =  std::make_shared<LevelScalingStrategy>(total_height);
             }break;
             case 3 :{
-                strategy_ = std::make_shared<LevelSortStrategy>(total_height);
+                strategy_ =  std::make_shared<LevelAggStrategy>(total_height);
             }break;
             case 4 :{
-                strategy_ = std::make_shared<LevelRangeStrategy>(total_height);
+                strategy_ = std::make_shared<LevelSortStrategy>(total_height);
             }break;
             case 5 :{
+                strategy_ = std::make_shared<LevelRangeStrategy>(total_height);
+            }break;
+            case 6 :{
                 strategy_ = std::make_shared<LevelResidualStrategy>(total_height);
             }break;
-            case 6: {
+            case 7: {
                 strategy_ = std::make_shared<LeafStrategy>(total_height);
             }break;
             default :{

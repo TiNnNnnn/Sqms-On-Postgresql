@@ -405,6 +405,7 @@ public:
     void ShowTotalPredClass(int depth = 0);
 
     /*for index*/
+    const std::vector<std::string>& GetJoinTypeList(){return join_type_list_;}
     HistorySlowPlanStat* GetHsps(){return hsps_;}
     const std::vector<LevelPredEquivlencesList*>& GetTotalEquivlences(){return total_equivlences_;}
     const std::vector<LevelOutputList*>& GetTotalOutput(){return total_outputs_;}
@@ -454,6 +455,9 @@ private:
     std::unordered_map<PreProcessLabel, bool> pre_processed_map_;
 
     std::unordered_map<HistorySlowPlanStat*, NodeCollector*> nodes_collector_map_;
+
+    /*plan join_nodes type, we put them in vec as the level sequence from left to right*/
+    std::vector<std::string> join_type_list_;
 };
 
 class PredOperatorWrap: public AbstractPredNode{

@@ -3,14 +3,14 @@
 #include <algorithm>
 #include <memory>
 
-std::vector<std::string> LevelOneStrategy::findChildren(){
+std::vector<std::string> LevelHashStrategy::findChildren(){
     return std::vector<std::string>();
 }
 
 /**
  * LevelOneStrategy::Insert
  */
-bool LevelOneStrategy::Insert(LevelManager* level_mgr){
+bool LevelHashStrategy::Insert(LevelManager* level_mgr){
     assert(level_mgr);
     auto json_sub_plan = std::string(level_mgr->GetHsps()->canonical_json_plan);
 
@@ -34,7 +34,7 @@ bool LevelOneStrategy::Insert(LevelManager* level_mgr){
 /**
  * LevelOneStrategy::Serach
  */
-bool LevelOneStrategy::Serach(LevelManager* level_mgr){
+bool LevelHashStrategy::Serach(LevelManager* level_mgr){
     assert(level_mgr);
     auto json_sub_plan = std::string(level_mgr->GetHsps()->canonical_json_plan);
 
@@ -51,8 +51,107 @@ bool LevelOneStrategy::Serach(LevelManager* level_mgr){
 /**
  * LevelOneStrategy::Remove
  */
-bool LevelOneStrategy::Remove(LevelManager* level_mgr){
+bool LevelHashStrategy::Remove(LevelManager* level_mgr){
     return false;
+}
+
+int ScalingInfo::CalJoinTypeScore(const std::vector<std::string>& join_type_list,std::string& unique_id){
+    int score = 0;
+    std::string id;
+    for(const auto& join_type : join_type_list){  
+        if (!std::strcmp(join_type.c_str(),"Semi") || !std::strcmp(join_type.c_str(),"Anti")){
+            score += 1;
+            id += "1";
+        }else if(!std::strcmp(join_type.c_str(),"Inner")){
+            score += 2;
+            id += "2";
+        }else if(!std::strcmp(join_type.c_str(),"Left") || !std::strcmp(join_type.c_str(),"Right")){
+            score += 3;
+            id += "3";
+        }else if(!std::strcmp(join_type.c_str(),"Full")){
+            score += 4;
+            id += "4";
+        }else{
+            std::cerr<<"unkonw join type"<<std::endl;
+            exit(-1);
+        }
+    }
+    unique_id = id;
+    return score;
+}
+
+bool ScalingInfo::Match(ScalingInfo* scale_info){
+    /*check join_type_list */
+    bool matched  = true;
+    auto src_id = scale_info->UniqueId();
+    assert(src_id.size() == unique_id_.size());
+    for(size_t i=0;i<src_id.size();i++){
+        if(src_id[i] < unique_id_[i]){
+            matched = false;
+            break;
+        }
+    }
+    return matched;
+}
+
+bool LevelScalingStrategy::Insert(LevelManager* level_mgr){
+    assert(level_mgr);
+    assert(level_mgr->GetJoinTypeList().size());
+    auto new_scaling_info = std::make_shared<ScalingInfo>(level_mgr->GetJoinTypeList());
+    bool exist = true;
+    {
+        std::unique_lock<std::shared_mutex> lock(rw_mutex_);
+        auto iter = scaling_idx_.find(new_scaling_info->JoinTypeScore());
+        if(iter != scaling_idx_.end()){
+            auto id_pos = iter->second.find(new_scaling_info->UniqueId());
+            if(id_pos == iter->second.end()){
+                iter->second.insert(new_scaling_info->UniqueId());
+                exist = false;
+            }
+        }else{
+            scaling_idx_[new_scaling_info->JoinTypeScore()].insert(new_scaling_info->UniqueId());
+            exist = false;
+        }
+
+        if(exist){
+            return child_map_[new_scaling_info->UniqueId()].second->Insert(level_mgr);
+        }else{
+            /*create a new child node*/
+            size_t next_level = FindNextInsertLevel(level_mgr,1);
+            HistoryQueryIndexNode* new_idx_node = new HistoryQueryIndexNode(next_level,total_height_);
+            if(!new_idx_node->Insert(level_mgr)){
+                return false;
+            }
+            child_map_.insert({new_scaling_info->UniqueId(),{new_scaling_info,new_idx_node}});
+        }
+    }
+}
+
+bool LevelScalingStrategy::Serach(LevelManager* level_mgr){
+    assert(level_mgr);
+    assert(level_mgr->GetJoinTypeList().size());
+    auto new_scaling_info = std::make_shared<ScalingInfo>(level_mgr->GetJoinTypeList());
+    {
+        std::shared_lock<std::shared_mutex> lock(rw_mutex_);
+        auto iter = scaling_idx_.find(new_scaling_info->JoinTypeScore());
+        if(iter != scaling_idx_.end()){
+            const auto& match_id_list = iter->second;
+            for(const auto& id : match_id_list){
+                if(child_map_[id].first->Match(new_scaling_info.get())){
+                    return child_map_[id].second->Search(level_mgr);
+                }
+            }
+        }
+        return false;
+    }
+}
+
+bool LevelScalingStrategy::Remove(LevelManager* level_mgr){
+    return true;
+}
+
+std::vector<std::string> LevelScalingStrategy::findChildren(){
+    return std::vector<std::string>();
 }
 
 /**
