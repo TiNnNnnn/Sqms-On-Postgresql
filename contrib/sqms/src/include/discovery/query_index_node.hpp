@@ -31,7 +31,7 @@ public:
 
     bool Insert(LevelManager* level_mgr);
     bool Remove(LevelManager* level_mgr);
-    bool Search(LevelManager* level_mgr);
+    bool Search(LevelManager* level_mgr,int id);
 private: 
     /*use context to operate node*/
     LevelStrategyContext* level_strategy_context_;
@@ -45,6 +45,9 @@ public:
         :total_height_(total_height){}
     virtual std::vector<std::string> findChildren() = 0;
     virtual std::string Name() = 0;
+    virtual bool Insert(LevelManager* level_mgr) = 0;
+    virtual bool Serach(LevelManager* level_mgr,int id) = 0;
+    virtual bool Remove(LevelManager* level_mgr) = 0;
     size_t FindNextInsertLevel(LevelManager* level_mgr, size_t cur_level);
     size_t total_height_;
 };
@@ -59,13 +62,18 @@ public:
     LevelHashStrategy(size_t total_height): LevelStrategy(total_height){}
     std::string Name(){return "PlanHashStrategy";}
     bool Insert(LevelManager* level_mgr);
-    bool Serach(LevelManager* level_mgr);
+    bool Serach(LevelManager* level_mgr,int id);
     bool Remove(LevelManager* level_mgr);
     std::vector<std::string> findChildren();
 private:
     tbb::concurrent_hash_map<std::string,HistoryQueryIndexNode*>set_map_;
 };
 
+/**
+ * ScalingInfo
+ * - join_type_list
+ * TODO: 01-23 maybe we can put indexname , cols here to scale  
+ */
 class ScalingInfo{
 public:
     ScalingInfo(std::vector<std::string> join_type_list)    
@@ -90,7 +98,7 @@ public:
     LevelScalingStrategy(size_t total_height): LevelStrategy(total_height){}
     std::string Name(){return "PlanHashStrategy";}
     bool Insert(LevelManager* level_mgr);
-    bool Serach(LevelManager* level_mgr);
+    bool Serach(LevelManager* level_mgr,int id);
     bool Remove(LevelManager* level_mgr);
     std::vector<std::string> findChildren();
 private:
@@ -107,7 +115,7 @@ public:
         :LevelStrategy(total_height){}
     std::string Name(){return "PlanGroupKeyStrategy";}
     bool Insert(LevelManager* level_mgr);
-    bool Serach(LevelManager* level_mgr);
+    bool Serach(LevelManager* level_mgr,int id);
     bool Remove(LevelManager* level_mgr);   
     std::vector<std::string> findChildren();
 private:
@@ -122,7 +130,7 @@ public:
         :LevelStrategy(total_height){}
     std::string Name(){return "PlanGroupKeyStrategy";}
     bool Insert(LevelManager* level_mgr);
-    bool Serach(LevelManager* level_mgr);
+    bool Serach(LevelManager* level_mgr,int id);
     bool Remove(LevelManager* level_mgr);   
     std::vector<std::string> findChildren();
 private:
@@ -137,7 +145,7 @@ public:
         : LevelStrategy(total_height){}
     std::string Name(){return "PlanRangePredsStrategy";}
     bool Insert(LevelManager* level_mgr);
-    bool Serach(LevelManager* level_mgr);
+    bool Serach(LevelManager* level_mgr,int id);
     bool Remove(LevelManager* level_mgr);
     std::vector<std::string> findChildren();
 private:
@@ -153,7 +161,7 @@ public:
         : LevelStrategy(total_height){}
     std::string Name(){return "PlanRangePredsStrategy";}
     bool Insert(LevelManager* level_mgr);
-    bool Serach(LevelManager* level_mgr);
+    bool Serach(LevelManager* level_mgr,int id);
     bool Remove(LevelManager* level_mgr);
     std::vector<std::string> findChildren();
 private:
@@ -162,7 +170,6 @@ private:
     std::shared_mutex rw_mutex_;
     size_t s_level_;
 };
-
 
 /**
  * Leaf Strategy: 
@@ -175,7 +182,7 @@ public:
         : LevelStrategy(total_height){}
     std::string Name(){return "LeafStrategy";}
     bool Insert(LevelManager* level_mgr);
-    bool Serach(LevelManager* level_mgr);
+    bool Serach(LevelManager* level_mgr,int id);
     bool Remove(LevelManager* level_mgr);
     std::vector<std::string> findChildren(){}
 private:
@@ -217,9 +224,9 @@ public:
         }
     }
 
-    void Insert(LevelManager* level_mgr);
-    void Remove(LevelManager* level_mgr);
-    void Search(LevelManager* level_mgr);
+    bool Insert(LevelManager* level_mgr);
+    bool Remove(LevelManager* level_mgr);
+    bool Search(LevelManager* level_mgr,int id);
 
 private:
     std::shared_ptr<LevelStrategy> strategy_;
