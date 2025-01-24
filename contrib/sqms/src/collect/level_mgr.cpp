@@ -574,7 +574,7 @@ void LevelAggAndSortEquivlences::Insert(LevelAggAndSortEquivlences* level_ae){
 
 void LevelAggAndSortEquivlences::ShowLevelAggEquivlence(int depth){
 	PrintIndent(depth);
-	std::cout<<"{";
+	std::cout<<"[id:"<<lpe_id_<<"]->{";
 	int idx = 0;
 	for(const auto& ae : level_agg_sets_){
 		if(idx)std::cout<<",";
@@ -586,11 +586,19 @@ void LevelAggAndSortEquivlences::ShowLevelAggEquivlence(int depth){
 
 void LevelAggAndSortList::Insert(HistorySlowPlanStat* hsps,std::string label){
 	assert(lpes_list_);
+
+	if(hsps->n_group_sort_keys == 0){
+		return;
+	}
+
 	if(!lpes_list_->Size()){
 		AggAndSortEquivlence* new_agg = new AggAndSortEquivlence(label);
 		new_agg->Init(hsps,nullptr);
 		LevelAggAndSortEquivlences* new_ae_list = new LevelAggAndSortEquivlences();
 		new_ae_list->Insert(new_agg);
+		
+		new_ae_list->SetLpeId(-1);
+
 		level_agg_list_.push_back(new_ae_list);
 	}else{
 		for(const auto& lpes: *lpes_list_){			
@@ -610,12 +618,15 @@ void LevelAggAndSortList::Insert(HistorySlowPlanStat* hsps,std::string label){
 void LevelAggAndSortList::Insert(LevelAggAndSortList* la_list){
 	assert(la_list);
 
+	if(!la_list->Size()){
+		return;
+	}
+
 	if(level_agg_list_.empty()){
 		LevelAggAndSortEquivlences *new_dst_lae = new LevelAggAndSortEquivlences();
 		for(const auto& src_lae : la_list->GetLevelAggList()){
 			new_dst_lae->Insert(src_lae);
 		}
-		level_agg_list_.push_back(new_dst_lae);
 		return;
 	}
 
@@ -1783,6 +1794,9 @@ void LevelPredEquivlencesList::ShowLevelPredEquivlencesList(int depth){
 		for(const auto& child : child_lpes_map_[i]){
 			std::cout<<child<<",";
 		}
+		if(!child_lpes_map_[i].size()){
+			std::cout<<",";
+		}
 		std::cout<<"ealry_stop:"<<lpes_list_[i]->EarlyStop();
 		std::cout<<"]->";
 		lpes_list_[i]->ShowLevelPredEquivlences(depth+1);
@@ -1887,13 +1901,12 @@ void LevelManager::ShowPredClass(int height,int depth){
 
 void LevelManager::ShowTotalPredClass(int depth){
 	std::cout<<"Total Pred Class: "<<std::endl;
-	std::reverse(total_equivlences_.begin(),total_equivlences_.end());
-	std::reverse(total_outputs_.begin(),total_outputs_.end());
-	std::reverse(total_aggs_.begin(),total_aggs_.end());
-	std::reverse(total_sorts_.begin(),total_sorts_.end()); 
-	std::reverse(total_tbls_.begin(),total_tbls_.end());
-
-	for(size_t i = 0; i< total_equivlences_.size();i++){
+	// std::reverse(total_equivlences_.begin(),total_equivlences_.end());
+	// std::reverse(total_outputs_.begin(),total_outputs_.end());
+	// std::reverse(total_aggs_.begin(),total_aggs_.end());
+	// std::reverse(total_sorts_.begin(),total_sorts_.end()); 
+	// std::reverse(total_tbls_.begin(),total_tbls_.end());
+	for(int i = total_equivlences_.size()-1;i>=0;--i){
 		ShowPredClass(i,depth+1);
 	}
 }
