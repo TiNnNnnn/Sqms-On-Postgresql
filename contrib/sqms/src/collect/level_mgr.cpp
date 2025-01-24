@@ -68,6 +68,12 @@ void LevelManager::ComputeLevelClass(const std::vector<HistorySlowPlanStat*>& li
 		first_pred_check_ = true;
         HandleEquivleces(s);
 	}
+
+	size_t idx = 0;
+	for(const auto& e : *total_equivlences_[cur_height_]){
+		e->SetLpeId(idx++);
+	}
+	
 	/*calulate other attrs based on equivlences*/
 	for(const auto& s : list){
 		cur_hsps_ = s;
@@ -270,7 +276,7 @@ void LevelManager::OutputDecompase(HistorySlowPlanStat* hsps){
 	auto lpes_list =  total_equivlences_[cur_height_];
 	final_lo_list->Insert(lpes_list,hsps);
 
-	auto node_lpes_list = nodes_collector_map_[cur_hsps_]->node_equivlences_;
+	auto& node_lpes_list = nodes_collector_map_[cur_hsps_]->node_equivlences_;
 	node_final_lo_list->Insert(node_lpes_list,cur_hsps_);
 
 	if(same_level_need_merged){
@@ -287,13 +293,17 @@ void LevelOutputList::Insert(LevelPredEquivlencesList* lpes_list,HistorySlowPlan
 	if(lpes_list->Size()){
 		output2pe_list_.resize(lpes_list->Size());
 		output_extend_list_.resize(lpes_list->Size());
+		lpe_id_list_.resize(lpes_list->Size());
 	}else{
 		output2pe_list_.resize(1);
 		output_extend_list_.resize(1);
+		lpe_id_list_.resize(1);
 	}
 
 	/* lpes_list == nullptr , just for node_collector */
 	if(!lpes_list->Size()){
+		/*set id*/
+		lpe_id_list_[0] = -1;
 		for(size_t i=0;i<hsps->n_output;i++){
 			std::string attr(hsps->output[i]);
 			output2pe_list_[0].insert(std::make_pair(attr,nullptr));
@@ -304,6 +314,8 @@ void LevelOutputList::Insert(LevelPredEquivlencesList* lpes_list,HistorySlowPlan
 	
 	int lpes_idx = 0;
 	for(const auto& e: *lpes_list){
+		/*set id*/
+		lpe_id_list_[lpes_idx] = e->LpeId();
 		for(size_t i=0;i<hsps->n_output;i++){
 			std::string attr(hsps->output[i]);
 			PredEquivlence* pe = nullptr;
@@ -327,7 +339,7 @@ void LevelOutputList::Insert(LevelOutputList* lo_list){
 	assert(lo_list);
 	for(size_t i = 0;i < output2pe_list_.size();i++){
 		auto& dst_map = output2pe_list_[i];
-		auto src_map = lo_list->output2pe_list_[i];
+		const auto& src_map = lo_list->output2pe_list_[i];
 		for(const auto& src_attr: src_map){
 			if(dst_map.find(src_attr.first) != dst_map.end()){
 				/*here we need check if it is a equivlence,if not,it's a error*/
@@ -337,7 +349,7 @@ void LevelOutputList::Insert(LevelOutputList* lo_list){
 		}
 
 		auto& dst_set = output_extend_list_[i];
-		auto src_set = lo_list->output_extend_list_[i];
+		const auto& src_set = lo_list->output_extend_list_[i];
 		for(const auto& src_attr : src_set){
 			dst_set.insert(src_attr);
 		}
@@ -345,10 +357,9 @@ void LevelOutputList::Insert(LevelOutputList* lo_list){
 }
 
 void LevelOutputList::ShowLevelOutputList(int depth){
-	PrintIndent(depth);
 	for(size_t i = 0; i < output2pe_list_.size(); i++){
-		std::cout<<"output: (";
-		if(i)std::cout<<",";
+		PrintIndent(depth);
+		std::cout<<"[id:"<<lpe_id_list_[i]<<"]->(";
 		int j = 0;	
 		for(const auto& e : output2pe_list_[i]){
 			if(j) std::cout<<",";
@@ -367,10 +378,8 @@ void LevelOutputList::ShowLevelOutputList(int depth){
 			std::cout<<e;
 			j++;
 		}
-		std::cout<<")";
-		i++;
+		std::cout<<")\n";
 	}
-	std::cout<<"\n";
 }
 
 void LevelManager::SortKeyDecompase(HistorySlowPlanStat* hsps){
@@ -588,6 +597,10 @@ void LevelAggAndSortList::Insert(HistorySlowPlanStat* hsps,std::string label){
 			AggAndSortEquivlence* new_agg = new AggAndSortEquivlence(label);
 			new_agg->Init(hsps,lpes);
 			LevelAggAndSortEquivlences* new_ae_list = new LevelAggAndSortEquivlences();
+			
+			/*set lpeid for every LevelAggAndSortEquivlences*/
+			new_ae_list->SetLpeId(lpes->LpeId());
+
 			new_ae_list->Insert(new_agg);
 			level_agg_list_.push_back(new_ae_list);
 		}
@@ -1764,7 +1777,6 @@ void LevelPredEquivlencesList::Copy(LevelPredEquivlencesList* new_lpes_list){
 
 
 void LevelPredEquivlencesList::ShowLevelPredEquivlencesList(int depth){
-	
 	for(size_t i = 0; i< lpes_list_.size();i++){
 		PrintIndent(depth+1);
 		std::cout<<"[id:"<<i<<", childs:";

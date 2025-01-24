@@ -294,7 +294,11 @@ public:
 
     UMAP& GetOutput2PeListItem(int pos){return output2pe_list_[pos];}
     USET& GetOutputExtendListItem(int pos){return output_extend_list_[pos];}
+
+    void SetLpeId(int id){lpe_id_list_.push_back(id);}
+    int GetLpeId(int pos){return lpe_id_list_[pos];}
 private:
+    std::vector<int> lpe_id_list_;
     std::vector<UMAP> output2pe_list_;
     std::vector<USET> output_extend_list_;
 };
@@ -329,8 +333,12 @@ public:
     void ShowLevelAggEquivlence(int depth = 0);
     size_t Size(){return level_agg_sets_.size();}
     const std::vector<AggAndSortEquivlence*>& GetLevelAggSets(){return level_agg_sets_;}
+
+    void SetLpeId(int id){lpe_id_ = id;}
+    int GetLpeId(){return lpe_id_;}
 private:
     std::vector<AggAndSortEquivlence*> level_agg_sets_;
+    int lpe_id_;
 };
 
 /**
