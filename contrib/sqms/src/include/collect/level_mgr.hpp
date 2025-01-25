@@ -151,7 +151,7 @@ public:
 
     bool RangesSerach(PredEquivlenceRange* range,std::vector<PredEquivlenceRange*>& merge_pe_list);
 
-    bool Compare(PredEquivlence* range);
+    bool SuperSet(PredEquivlence* pe);
 
     bool Copy(PredEquivlence* pe);
 
@@ -230,9 +230,17 @@ public:
 
     int LpeId(){return lpe_id_;}
     void SetLpeId(int id){lpe_id_ = id;}
+
+    /* this must be used after a LevelPredEquivlencesList not changed*/
+    void BuildKey2PeMap();
+    const std::unordered_map<std::string,PredEquivlence*>& GetKey2Pe(){return key2pe_;}
     
 private:
     std::unordered_set<PredEquivlence*> level_pe_sets_;
+     /**
+     * a fast map from attr to its pe  
+     */
+    std::unordered_map<std::string,PredEquivlence*> key2pe_;
     /*mark pe that can't early stop */
     std::unordered_map<int,int>pe2pe_map_;
     bool early_stop_ = true;

@@ -117,7 +117,7 @@ bool LevelScalingStrategy::Insert(LevelManager* level_mgr){
             return child_map_[new_scaling_info->UniqueId()].second->Insert(level_mgr);
         }else{
             /*create a new child node*/
-            size_t next_level = FindNextInsertLevel(level_mgr,1);
+            size_t next_level = FindNextInsertLevel(level_mgr,2);
             HistoryQueryIndexNode* new_idx_node = new HistoryQueryIndexNode(next_level,total_height_);
             if(!new_idx_node->Insert(level_mgr)){
                 return false;
@@ -211,7 +211,7 @@ bool LevelAggStrategy::Insert(LevelManager* level_mgr){
         }
         return true;
     }else{
-        size_t next_level = FindNextInsertLevel(level_mgr,2);
+        size_t next_level = FindNextInsertLevel(level_mgr,5);
         auto new_idx_node = std::make_shared<HistoryQueryIndexNode>(next_level,total_height_);
         for(const auto& agg_vec : all_agg_vecs){
             inverted_idx_->Insert(agg_vec);
@@ -317,15 +317,11 @@ bool LevelRangeStrategy::Insert(LevelManager* level_mgr){
     /**we just build index on single attribute*/
     for(const auto& lpes : *top_eqs){
         std::vector<std::string>pe_vecs;
-        LevelPredEquivlences * remind_lpes = new LevelPredEquivlences();
-        remind_lpes->SetLpeId(lpes->LpeId());
         for(const auto& pe : *lpes){
             if(pe->GetPredSet().size() == 1){
                 pe_vecs.push_back(*pe->GetPredSet().begin());
-            }else{
-                remind_lpes->Insert(pe);
             }
-        } 
+        }
         std::sort(pe_vecs.begin(),pe_vecs.end());
         {
             std::unique_lock<std::shared_mutex> lock(rw_mutex_);
@@ -334,7 +330,7 @@ bool LevelRangeStrategy::Insert(LevelManager* level_mgr){
                 assert(acc == child_map_.end());
 
                 auto remind_list = acc->second;
-                auto iter = remind_list.find(remind_lpes);
+                auto iter = remind_list.find(lpes);
                 if(iter != remind_list.end()){
                     child_exist = true;
                     auto child =  iter->second;
@@ -342,17 +338,16 @@ bool LevelRangeStrategy::Insert(LevelManager* level_mgr){
                     child_node = child;
                 }else{
                     if(child_exist){
-                        remind_list[remind_lpes] = child_node;
+                        remind_list[lpes] = child_node;
                         continue;
                     }
-
                     size_t next_level = FindNextInsertLevel(level_mgr,3);
                     auto new_idx_node = std::make_shared<HistoryQueryIndexNode>(next_level,total_height_);
                     if(!new_idx_node->Insert(level_mgr)){
                         return false;
                     }
                     /*update cur level index*/
-                    remind_list[remind_lpes] = new_idx_node;
+                    remind_list[lpes] = new_idx_node;
                     child_exist = true;
                     child_node = new_idx_node;
                 }
@@ -360,17 +355,17 @@ bool LevelRangeStrategy::Insert(LevelManager* level_mgr){
                 inverted_idx_->Insert(pe_vecs);
                 std::unordered_map<LevelPredEquivlences *, std::shared_ptr<HistoryQueryIndexNode>> new_remind_list;
                 if(child_exist){
-                    new_remind_list[remind_lpes] = child_node;
+                    new_remind_list[lpes] = child_node;
                     child_map_[pe_vecs] = new_remind_list;
                     continue;
                 }
 
-                size_t next_level = FindNextInsertLevel(level_mgr,4);
+                size_t next_level = FindNextInsertLevel(level_mgr,3);
                 auto new_idx_node = std::make_shared<HistoryQueryIndexNode>(next_level,total_height_);
                 if(!new_idx_node->Insert(level_mgr)){
                     return false;
                 }
-                new_remind_list[remind_lpes] = new_idx_node;
+                new_remind_list[lpes] = new_idx_node;
                 child_map_[pe_vecs] = new_remind_list;
                 child_exist = true;
                 child_node = new_idx_node;
@@ -461,7 +456,8 @@ bool LeafStrategy::Serach(LevelManager* level_mgr,int id){
         if(lpes->EarlyStop()){
             return true;
         }
-    
+        
+        --h;
     }
     return false;
 }

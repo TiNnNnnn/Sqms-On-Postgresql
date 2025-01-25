@@ -68,10 +68,11 @@ void LevelManager::ComputeLevelClass(const std::vector<HistorySlowPlanStat*>& li
 		first_pred_check_ = true;
         HandleEquivleces(s);
 	}
-
+	
 	size_t idx = 0;
 	for(const auto& e : *total_equivlences_[cur_height_]){
 		e->SetLpeId(idx++);
+		e->BuildKey2PeMap();
 	}
 	
 	/*calulate other attrs based on equivlences*/
@@ -1437,10 +1438,54 @@ bool PredEquivlence::Serach(const std::string& attr){
 }
 
 /**
- * PredEquivlence::Compare: use while check if is the slow subqueries
- * TODO: not implement
+ * PredEquivlence::SuperSet: check if this input pe is a superset of the current pe
  */
-bool PredEquivlence::Compare(PredEquivlence* pe){
+bool PredEquivlence::SuperSet(PredEquivlence* pe){
+	assert(pe);
+	auto range = pe->GetRanges();
+	for(const auto r :ranges_){
+		bool match = false;
+		for(const auto src_r : range){
+			bool super = true;
+			/* check lowlimit */
+			if(r->LowerLimit() == LOWER_LIMIT){
+				if(src_r->LowerLimit() != LOWER_LIMIT){
+					super = false;
+					continue;
+				}
+			}else{
+				if(src_r->LowerLimit() != LOWER_LIMIT){
+					if(r->LowerLimit() < src_r->LowerLimit()){
+						super = false;
+						continue;
+					}
+				}			
+			}
+
+			/* check upperlimit */
+			if(r->UpperLimit() == UPPER_LIMIT){
+				if(src_r->UpperLimit() != UPPER_LIMIT){
+					super = false;
+					continue;
+				}
+			}else{
+				if(src_r->UpperLimit() != UPPER_LIMIT){
+					if(r->UpperLimit() > src_r->UpperLimit()){
+						super = false;
+						continue;
+					}
+				}			
+			}
+			if(super){
+				match = true;
+				break;
+			}
+		}
+		if(!match){
+			return false;
+		}
+	}
+
 	return true;
 }
 
@@ -1664,10 +1709,20 @@ bool LevelPredEquivlences::Copy(LevelPredEquivlences* lpes){
  * LevelPredEquivlences::Match
  */
 bool LevelPredEquivlences::Match(LevelPredEquivlences* lpes){
-	/**
-	 * TODO: no implement
-	 */
-	return false;
+	assert(lpes);
+	for(const auto& pe : *lpes){
+		for(const auto& attr : pe->GetPredSet()){
+			if(key2pe_.find(attr) != key2pe_.end()){
+				auto dst_pe = key2pe_[attr];
+				if(dst_pe->SuperSet(pe)){
+					continue;
+				}else{
+					return false;
+				}
+			}
+		}
+	}
+	return true;
 }
 
 void LevelPredEquivlences::ShowLevelPredEquivlences(int depth){
@@ -1679,6 +1734,16 @@ void LevelPredEquivlences::ShowLevelPredEquivlences(int depth){
 		idx++;
 	}
 	std::cout<<"}\n";
+}
+
+void LevelPredEquivlences::BuildKey2PeMap(){
+	assert(!key2pe_.size());
+	for(const auto& pe : level_pe_sets_){
+		auto set = pe->GetPredSet();
+		for(const auto& attr : set){
+			key2pe_[attr] = pe;
+		}
+	}
 }
 
 /**
