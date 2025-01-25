@@ -233,6 +233,8 @@ public:
     
 private:
     std::unordered_set<PredEquivlence*> level_pe_sets_;
+    /*mark pe that can't early stop */
+    std::unordered_map<int,int>pe2pe_map_;
     bool early_stop_ = true;
     int  lpe_id_;
 };

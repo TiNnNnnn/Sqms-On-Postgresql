@@ -203,13 +203,13 @@ public:
                 strategy_ =  std::make_shared<LevelScalingStrategy>(total_height);
             }break;
             case 3 :{
-                strategy_ =  std::make_shared<LevelAggStrategy>(total_height);
+                strategy_ = std::make_shared<LevelRangeStrategy>(total_height);
             }break;
             case 4 :{
                 strategy_ = std::make_shared<LevelSortStrategy>(total_height);
             }break;
             case 5 :{
-                strategy_ = std::make_shared<LevelRangeStrategy>(total_height);
+                strategy_ =  std::make_shared<LevelAggStrategy>(total_height);
             }break;
             case 6 :{
                 strategy_ = std::make_shared<LevelResidualStrategy>(total_height);

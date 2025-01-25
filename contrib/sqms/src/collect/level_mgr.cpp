@@ -617,11 +617,9 @@ void LevelAggAndSortList::Insert(HistorySlowPlanStat* hsps,std::string label){
 
 void LevelAggAndSortList::Insert(LevelAggAndSortList* la_list){
 	assert(la_list);
-
 	if(!la_list->Size()){
 		return;
 	}
-
 	if(level_agg_list_.empty()){
 		LevelAggAndSortEquivlences *new_dst_lae = new LevelAggAndSortEquivlences();
 		for(const auto& src_lae : la_list->GetLevelAggList()){
@@ -629,7 +627,6 @@ void LevelAggAndSortList::Insert(LevelAggAndSortList* la_list){
 		}
 		return;
 	}
-
 	for(const auto& dst_lae: level_agg_list_){
 		for(const auto& src_lae : la_list->GetLevelAggList()){
 			dst_lae->Insert(src_lae);
@@ -1390,9 +1387,6 @@ bool PredEquivlence::MergePredEquivlenceRanges(const std::vector<PredEquivlenceR
 			){
 				lower_bound = r->LowerLimit();
 				left = r->GetLowerBoundaryConstraint();
-				// if(idx == merge_range_list.size()-1){
-				// 	early_stop_ = false;
-				// }
 			}
 		}
 		ranges_.erase(r);
@@ -1409,7 +1403,6 @@ bool PredEquivlence::MergePredEquivlenceRanges(const std::vector<PredEquivlenceR
 		|| (old_range->GetBoundaryConstraint().second && !new_range->GetBoundaryConstraint().second&&old_range->UpperLimit() == new_range->UpperLimit())){
 			early_stop_ = false;
 	}
-
 	ranges_.insert(new_range);
 	return true;
 }
