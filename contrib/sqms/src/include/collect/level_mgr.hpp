@@ -371,7 +371,7 @@ public:
     void Insert(LevelAggAndSortList* la_list);
     void ShowLevelAggAndSortList(int depth = 0);
 
-    int Size(){return level_agg_list_.size();}
+    size_t Size(){return level_agg_list_.size();}
     void Copy(LevelAggAndSortList* lal);
 
     const std::vector<LevelAggAndSortEquivlences*>& GetLevelAggList(){return level_agg_list_;}

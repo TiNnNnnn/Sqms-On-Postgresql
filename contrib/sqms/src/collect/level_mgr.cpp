@@ -1836,7 +1836,6 @@ bool LevelPredEquivlencesList::Insert(LevelPredEquivlencesList* lpes_list,bool i
 
 
 void LevelPredEquivlencesList::Copy(LevelPredEquivlencesList* new_lpes_list){
-	size_t src_idx = 0;
 	for(const auto& lpes : lpes_list_){
 		LevelPredEquivlences* new_lpes =  new LevelPredEquivlences();
 		lpes->Copy(new_lpes);

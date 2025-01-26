@@ -127,8 +127,7 @@ public:
     std::vector<std::string> findChildren();
 private:
     std::shared_ptr<InvertedIndex<PostingList>> inverted_idx_;
-    tbb::concurrent_hash_map<SET,std::shared_ptr<HistoryQueryIndexNode>,SetHasher> child_map_;
-    
+    tbb::concurrent_hash_map<uint32_t,std::shared_ptr<HistoryQueryIndexNode>> child_map_;
 };
 
 class LevelSortStrategy : public LevelStrategy{
