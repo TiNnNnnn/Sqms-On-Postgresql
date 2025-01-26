@@ -1,4 +1,5 @@
 #include "discovery/query_index_node.hpp"
+#include "common/util.hpp"
 #include <unordered_set>
 #include <algorithm>
 #include <memory>
@@ -246,10 +247,7 @@ bool LevelAggStrategy::Serach(LevelManager* level_mgr,int id){
     }
     assert(top_idx != -1);
     auto la_eq = top_aggs->GetLevelAggList()[top_idx];
-    /**
-     * item in levelagglist is or relation
-     * TODO: here may be can use multi thread or coroutines
-     **/
+
     std::unordered_map<SET,std::pair<int,bool>,SetHasher> match_maps;
     for(const auto& agg : la_eq->GetLevelAggSets()){
         auto extends = agg->GetExtends();
@@ -267,6 +265,7 @@ bool LevelAggStrategy::Serach(LevelManager* level_mgr,int id){
             m_map.second.second =false;
         }
     }
+
     for(const auto& m_map : match_maps){
         if(m_map.second.first == la_eq->Size()){
             tbb::concurrent_hash_map<SET,std::shared_ptr<HistoryQueryIndexNode>,SetHasher>::const_accessor acc;
@@ -281,6 +280,7 @@ bool LevelAggStrategy::Serach(LevelManager* level_mgr,int id){
     return false;
 }
 
+
 /**
  * LevelTwoStrategy::Remove
  */
@@ -293,13 +293,91 @@ bool LevelAggStrategy::Remove(LevelManager* level_mgr){
  * LevelSortStrategy::Insert
  */
 bool LevelSortStrategy::Insert(LevelManager* level_mgr){
+    assert(level_mgr);
+    assert(level_mgr->GetTotalSorts().size());
+    /*we current only build index for top level aggs*/
+    auto top_sorts = level_mgr->GetTotalSorts().back();
+
+    for(const auto& la_eq : top_sorts->GetLevelAggList()){
+        std::vector<int> sort_vec_id_list;
+        for(const auto& sort : la_eq->GetLevelAggSets()){
+            auto sort_extends = sort->GetExtends();
+            std::vector<std::string> sort_vec;
+            for(const auto& expr : sort_extends){
+                sort_vec.push_back(expr);
+            }
+            std::sort(sort_vec.begin(),sort_vec.end());
+            
+            if(!inverted_idx_->Serach(sort_vec))
+                inverted_idx_->Insert(sort_vec);
+            int vec_id = inverted_idx_->GetSetIdBySet(sort_vec);
+            assert(vec_id != -1);
+            sort_vec_id_list.push_back(vec_id);
+        }
+        std::sort(sort_vec_id_list.begin(),sort_vec_id_list.end());
+        auto hash_value =  hash_array(sort_vec_id_list);
+        
+        tbb::concurrent_hash_map<uint32_t,std::shared_ptr<HistoryQueryIndexNode>>::const_accessor acc;
+        if(child_map_.find(acc,hash_value)){
+            auto child = acc->second;
+            return child->Insert(level_mgr);
+        }else{
+            size_t next_level = FindNextInsertLevel(level_mgr,4);
+            auto new_idx_node = std::make_shared<HistoryQueryIndexNode>(next_level,total_height_);
+            if(!new_idx_node->Insert(level_mgr)){
+                return false;
+            }
+            child_map_.insert(std::make_pair(hash_value,new_idx_node));
+        }
+
+    }
     return true;
 }
+
 bool LevelSortStrategy::Serach(LevelManager* level_mgr,int id){
-    return true;
+    assert(level_mgr);
+    assert(level_mgr->GetTotalSorts().size());
+    auto top_sorts = level_mgr->GetTotalSorts().back();
+    auto la_eq = top_sorts->GetLevelAggList()[id];
+    
+    std::vector<std::vector<int>> sort_vec_id_list;
+    int candidate_size = 1;
+    for(const auto& sort : la_eq->GetLevelAggSets()){
+        auto sort_extends = sort->GetExtends();
+        std::vector<std::string> sort_vec;
+        for(const auto& expr : sort_extends){
+            sort_vec.push_back(expr);
+        }
+        std::sort(sort_vec.begin(),sort_vec.end());
+
+        std::vector<int>match_set_id_list;
+        auto match_set = inverted_idx_->SuperSets(sort_vec);
+        for(const auto& m_set : match_set){
+            int set_id = inverted_idx_->GetSetIdBySet(m_set);
+            assert(set_id != -1);
+            match_set_id_list.push_back(set_id);
+        }
+        std::sort(match_set_id_list.begin(),match_set_id_list.end());
+        sort_vec_id_list.push_back(match_set_id_list);
+        candidate_size *= match_set_id_list.size();
+    }
+    std::vector<std::vector<int>> combination;
+    std::vector<int> currentCombination(sort_vec_id_list.size());
+    generateCombinations(sort_vec_id_list, currentCombination, 0, combination);
+
+    for(const auto& c_id_list : combination){
+        auto hash_value = hash_array(c_id_list);
+        tbb::concurrent_hash_map<uint32_t,std::shared_ptr<HistoryQueryIndexNode>>::const_accessor acc;
+        if(child_map_.find(acc,hash_value)){
+            auto child = acc->second;
+            if(child->Search(level_mgr,id)){
+                return true;
+            }
+        }
+    }
+    return false;
 }
 bool LevelSortStrategy::Remove(LevelManager* level_mgr){
-
     return true;
 }  
 
@@ -408,7 +486,7 @@ bool LevelRangeStrategy::Serach(LevelManager* level_mgr,int id){
                         /*check lpes if match */
                         auto slow_remind_lpes = lpes_pair.first;
                         if(slow_remind_lpes->Match(remind_lpes)){
-                            bool ret = lpes_pair.second->Search(level_mgr,top_idx);
+                            bool ret = lpes_pair.second->Search(level_mgr,lpes->LpeId());
                             if(ret) return true;
                         }
                     }
@@ -444,6 +522,7 @@ bool LevelResidualStrategy::Remove(LevelManager* level_mgr){
 bool LeafStrategy::Insert(LevelManager* level_mgr){
     if(level_mgr_)return true;
     level_mgr_ = std::shared_ptr<LevelManager>(level_mgr);
+
     return true;
 }
 
@@ -451,12 +530,21 @@ bool LeafStrategy::Serach(LevelManager* level_mgr,int id){
     auto total_lpes_list = level_mgr->GetTotalEquivlences();
     /*check lpes from top to down*/
     int h = total_height_-1;
+    int lpe_id = id;
     while(h >= 0){
-        auto lpes = total_lpes_list[h]->GetLpesList()[id];
+        auto lpes = total_lpes_list[h]->GetLpesList()[lpe_id];
         if(lpes->EarlyStop()){
             return true;
         }
-        
+        auto child_lpes_list = total_lpes_list[h]->GetChildLpesMap()[lpe_id];
+        int tmp_h = h;
+        for(const auto& child_id : child_lpes_list){
+            --tmp_h;
+            auto ret = SerachRange(level_mgr,tmp_h,lpe_id) && SerachSort(level_mgr,tmp_h,lpe_id) && SerachAgg(level_mgr,tmp_h,lpe_id) && SerachResidual(level_mgr,tmp_h,lpe_id);
+            if(!ret){
+                return false;
+            }
+        }
         --h;
     }
     return false;
@@ -464,6 +552,59 @@ bool LeafStrategy::Serach(LevelManager* level_mgr,int id){
 
 bool LeafStrategy::Remove(LevelManager* level_mgr){
     return true;
+}
+
+/**
+ * LevelAggStrategy::Serach: check src_mgr can match dst_mgr 
+ */
+bool LeafStrategy::SerachAgg(LevelManager* level_mgr,int h,int id){;
+    auto src_aggs = level_mgr->GetTotalAggs()[h];
+    int agg_idx = -1;
+    for(size_t i = 0;i< src_aggs->Size();++i){
+        if(src_aggs->GetLevelAggList()[i]->GetLpeId() == id){
+            agg_idx = i;
+            break;
+        }
+    }
+    assert(agg_idx != -1);
+    auto src_la_eqs = src_aggs->GetLevelAggList()[agg_idx];
+    assert(src_la_eqs->Size() == 1);
+    
+    auto src_keys = src_la_eqs->GetLevelAggSets()[0]->GetExtends();
+    for(const auto& la_eqs : level_mgr_->GetTotalAggs()[h]->GetLevelAggList()){
+        assert(la_eqs->Size() == 1);
+        auto keys = la_eqs->GetLevelAggSets()[0]->GetExtends();
+        bool matched = true;
+        for(const auto& src_key :src_keys){
+            if(keys.find(src_key) == keys.end()){
+                matched = false;
+            }
+        }
+        if(matched){
+            return true;
+        }
+    }
+    return false;
+}
+
+bool LeafStrategy::SerachSort(LevelManager* src_mgr,int h,int id){
+
+}
+
+bool LeafStrategy::SerachRange(LevelManager* src_mgr,int h,int id){
+    assert(src_mgr);
+    auto src_lpes = src_mgr->GetTotalEquivlences()[h]->GetLpesList()[id];
+    auto dst_lpes_list = level_mgr_->GetTotalEquivlences()[h];
+    for(const auto& dst_lpes : *dst_lpes_list){
+        if(src_lpes->Match(dst_lpes)){
+            return true;
+        }
+    }
+    return false;
+}
+
+bool LeafStrategy::SerachResidual(LevelManager* src_mgr,int h,int id){
+
 }
 
 std::vector<std::string> LevelAggStrategy::findChildren(){

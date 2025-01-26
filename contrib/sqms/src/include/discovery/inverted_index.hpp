@@ -152,6 +152,13 @@ public:
         }
         return set_list;
     }
+
+    int GetSetIdBySet(const SET&set){
+        std::shared_lock<std::shared_mutex> lock(rw_mutex_);
+        if(sets2id_.find(set) == sets2id_.end())return -1;
+        return sets2id_[set];
+    }
+
 private:
     std::unordered_map<std::string, PostingList> inverted_map_;
 

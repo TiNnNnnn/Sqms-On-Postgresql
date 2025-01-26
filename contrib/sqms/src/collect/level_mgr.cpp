@@ -862,8 +862,6 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
 
 	if(!total_equivlences_[cur_height_])
 		total_equivlences_[cur_height_] = new LevelPredEquivlencesList();
-	total_equivlences_[cur_height_]->Insert(final_lpes_list,false);
-
 
 	if(nodes_collector_map_[cur_hsps_]->node_equivlences_ && nodes_collector_map_[cur_hsps_]->node_equivlences_->Size())
 		node_final_lpes_list->Insert(nodes_collector_map_[cur_hsps_]->node_equivlences_,false);
@@ -883,6 +881,9 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
 			first_pred_check_ = false;
 		}
 	}
+
+	total_equivlences_[cur_height_]->Insert(final_lpes_list,false);
+
 	/**
 	 * here we try to extract the equivalence class from subquery 
 	*/
@@ -1295,7 +1296,7 @@ bool PredEquivlence::PredVariable(NodeTag node_tag){
 /**
  * PredEquivlence::Insert: used while pred_equivlences merging
  */
-bool PredEquivlence::Insert(PredEquivlence* pe, bool check_can_merged){
+bool PredEquivlence::Insert(PredEquivlence* pe, bool check_can_merged, bool pre_merged){
 	assert(pe);
 	if(!check_can_merged){
 		/*we should check if the pe can insert into current pe*/
@@ -1314,8 +1315,9 @@ bool PredEquivlence::Insert(PredEquivlence* pe, bool check_can_merged){
 		if(RangesSerach(r,merge_range_list)){
 			/*merge ranges */
 			merge_range_list.push_back(r);
-			if(!MergePredEquivlenceRanges(merge_range_list)){
-				return false;
+			bool early_stop =  MergePredEquivlenceRanges(merge_range_list);
+			if(!early_stop){
+				child_ = std::shared_ptr<PredEquivlence>(pe);
 			}
 		}else{
 			/*add a new range*/
@@ -1348,6 +1350,7 @@ bool PredEquivlence::RangesSerach(PredEquivlenceRange* range,std::vector<PredEqu
 /**
  * PredEquivlence::MergePredEquivlenceRanges: 
  * TODO: 24-12-27 current we only can merge ranges which types are all PType::Range!
+ * ret: early_stop_
  */
 bool PredEquivlence::MergePredEquivlenceRanges(const std::vector<PredEquivlenceRange*>& merge_range_list) {
 	PredEquivlenceRange* new_range = new PredEquivlenceRange();
@@ -1377,9 +1380,6 @@ bool PredEquivlence::MergePredEquivlenceRanges(const std::vector<PredEquivlenceR
 			){
 				upper_bound = r->UpperLimit();
 				right = r->GetUpperBoundaryConstraint();
-				// if(idx == merge_range_list.size()-1){
-				// 	early_stop_ = false;
-				// }
 			}
 			
 			if((r->LowerLimit() > lower_bound && r->LowerLimit() != LOWER_LIMIT &&  lower_bound != LOWER_LIMIT)||
@@ -1403,6 +1403,7 @@ bool PredEquivlence::MergePredEquivlenceRanges(const std::vector<PredEquivlenceR
 		|| old_range->UpperLimit() > new_range->UpperLimit()
 		|| (old_range->GetBoundaryConstraint().second && !new_range->GetBoundaryConstraint().second&&old_range->UpperLimit() == new_range->UpperLimit())){
 			early_stop_ = false;
+			return false;
 	}
 	ranges_.insert(new_range);
 	return true;
@@ -1485,7 +1486,6 @@ bool PredEquivlence::SuperSet(PredEquivlence* pe){
 			return false;
 		}
 	}
-
 	return true;
 }
 
@@ -1494,6 +1494,7 @@ bool PredEquivlence::Copy(PredEquivlence* pe){
 	pe->SetRanges(ranges_);
 	pe->SetSubLinkLevelPeLists(sublink_level_pe_lists_);
 	pe->SetEarlyStop(early_stop_);
+	pe->SetChild(std::shared_ptr<PredEquivlence>(this));
 	return true;
 }
 
@@ -1594,13 +1595,13 @@ bool LevelPredEquivlences::Insert(PredEquivlence* pe){
 /**
  * LevelPredEquivlences::Insert
  */
-bool LevelPredEquivlences::Insert(LevelPredEquivlences* lpes){
+bool LevelPredEquivlences::Insert(LevelPredEquivlences* lpes,bool pre_merged){
 	assert(lpes);
 	for(const auto& pe : *lpes){
 		std::vector<PredEquivlence*>merge_pe_list;
 		if(Serach(pe,merge_pe_list)){
 			merge_pe_list.push_back(pe);
-			if(!MergePredEquivlences(merge_pe_list)){
+			if(!MergePredEquivlences(merge_pe_list,pre_merged)){
 				return false;
 			}
 		}else{
@@ -1622,7 +1623,7 @@ bool LevelPredEquivlences::Insert(LevelPredEquivlences* lpes){
 /**
  * LevelPredEquivlences::MergePredEquivlences,here 
  */
-bool LevelPredEquivlences::MergePredEquivlences(const std::vector<PredEquivlence*>& merge_pe_list){
+bool LevelPredEquivlences::MergePredEquivlences(const std::vector<PredEquivlence*>& merge_pe_list,bool pre_merged){
 	PredEquivlence* new_pe = new PredEquivlence();
 	std::set<std::string>pred_name_set;
 	int idx = 0;
@@ -1630,7 +1631,7 @@ bool LevelPredEquivlences::MergePredEquivlences(const std::vector<PredEquivlence
 		if(idx == 0){
 			mpe[idx].Copy(new_pe);
 		}else{
-			new_pe->Insert(mpe,true);
+			new_pe->Insert(mpe,true,pre_merged);
 		}
 		/*remove the pe has been merged*/
 		level_pe_sets_.erase(mpe);

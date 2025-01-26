@@ -141,7 +141,7 @@ public:
     static bool PredVariable(NodeTag node_tag);
     static bool PredSubquery(NodeTag node_tag);
 
-    bool Insert(PredEquivlence* pe, bool check_can_merged = true);
+    bool Insert(PredEquivlence* pe, bool check_can_merged,bool pre_merged);
 
     bool Delete(Quals* quals);
     
@@ -171,6 +171,10 @@ public:
 
     bool EarlyStop(){return early_stop_;}
     void SetEarlyStop(bool early_stop){early_stop_ = early_stop;}
+
+    void SetChild(std::shared_ptr<PredEquivlence> child){child_ = child;}
+    std::shared_ptr<PredEquivlence> Child(){return child_;}
+
 private:
     std::string extract_field(const std::string& expression) {
         size_t start_pos = expression.find('(');  
@@ -190,7 +194,9 @@ private:
     std::set<PredEquivlenceRange*,RangesCompare>ranges_;
     /* sublink attr ranges */
     std::unordered_map<std::string, std::shared_ptr<LevelManager>> sublink_level_pe_lists_;
+
     bool early_stop_ = true;
+    std::shared_ptr<PredEquivlence> child_ = nullptr;
 };
 
 class LevelPredEquivlences{
@@ -198,7 +204,7 @@ public:
   
     bool Insert(Quals* quals,bool is_or = false);
     bool Insert(PredEquivlence* pe);
-    bool Insert(LevelPredEquivlences* pe);
+    bool Insert(LevelPredEquivlences* pe,bool pre_merged = false);
 
     bool Delete(PredEquivlence* quals);
     bool UpdateRanges(Quals* quals);
@@ -214,7 +220,7 @@ public:
 
     bool Match(LevelPredEquivlences* lpes);
 
-    bool MergePredEquivlences(const std::vector<PredEquivlence*>& merge_pe_list);
+    bool MergePredEquivlences(const std::vector<PredEquivlence*>& merge_pe_list,bool pre_merged = false);
 
     void ShowLevelPredEquivlences(int depth = 0);
 
@@ -241,8 +247,8 @@ private:
      * a fast map from attr to its pe  
      */
     std::unordered_map<std::string,PredEquivlence*> key2pe_;
-    /*mark pe that can't early stop */
-    std::unordered_map<int,int>pe2pe_map_;
+    /*mark pe that can't early stop,from current level's pe to p4re level's pe*/
+    std::unordered_map<PredEquivlence*,PredEquivlence*>pe2pe_map_;
     bool early_stop_ = true;
     int  lpe_id_;
 };

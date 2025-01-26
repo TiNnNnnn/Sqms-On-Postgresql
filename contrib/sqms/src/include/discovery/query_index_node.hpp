@@ -39,6 +39,12 @@ private:
     size_t level_;
 };
 
+class HistoryQueryIndexNodeContext{
+public:
+    int id_;
+    int mid_;
+};
+
 class LevelStrategy{
 public:
     LevelStrategy(size_t total_height)
@@ -49,6 +55,7 @@ public:
     virtual bool Serach(LevelManager* level_mgr,int id) = 0;
     virtual bool Remove(LevelManager* level_mgr) = 0;
     size_t FindNextInsertLevel(LevelManager* level_mgr, size_t cur_level);
+
     size_t total_height_;
 };
 
@@ -121,7 +128,7 @@ public:
 private:
     std::shared_ptr<InvertedIndex<PostingList>> inverted_idx_;
     tbb::concurrent_hash_map<SET,std::shared_ptr<HistoryQueryIndexNode>,SetHasher> child_map_;
-    //size_t total_height_;
+    
 };
 
 class LevelSortStrategy : public LevelStrategy{
@@ -135,8 +142,7 @@ public:
     std::vector<std::string> findChildren();
 private:
     std::shared_ptr<InvertedIndex<PostingList>> inverted_idx_;
-    tbb::concurrent_hash_map<SET,std::shared_ptr<HistoryQueryIndexNode>,SetHasher> child_map_;
-    //size_t total_height_;
+    tbb::concurrent_hash_map<uint32_t,std::shared_ptr<HistoryQueryIndexNode>> child_map_;
 };
 
 class LevelRangeStrategy : public LevelStrategy{
@@ -184,7 +190,13 @@ public:
     bool Insert(LevelManager* level_mgr);
     bool Serach(LevelManager* level_mgr,int id);
     bool Remove(LevelManager* level_mgr);
+
     std::vector<std::string> findChildren(){}
+private:
+    bool SerachAgg(LevelManager* src_mgr,int h,int id);
+    bool SerachSort(LevelManager* src_mgr,int h,int id);
+    bool SerachRange(LevelManager* src_mgr,int h,int id);
+    bool SerachResidual(LevelManager* src_mgr,int h,int id);
 private:
     std::shared_ptr<LevelManager> level_mgr_;
 };
