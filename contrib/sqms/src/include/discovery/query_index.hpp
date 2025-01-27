@@ -17,9 +17,8 @@ public:
     bool Search(NodeCollector* node_collector);
 
     void ShowAllNodeTypes();
-    
 
 private:
     std::shared_ptr<HistoryQueryIndexNode> root_;
-    size_t height_ = 5;
+    size_t height_ = 7;
 };

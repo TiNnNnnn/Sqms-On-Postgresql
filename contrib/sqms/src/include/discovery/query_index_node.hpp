@@ -198,6 +198,7 @@ private:
     bool SerachResidual(LevelManager* src_mgr,int h,int id);
 private:
     std::shared_ptr<LevelManager> level_mgr_;
+    std::vector<std::shared_ptr<LevelManager>> historys_;
 };
 
 /**

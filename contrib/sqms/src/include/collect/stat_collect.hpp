@@ -32,6 +32,7 @@ private:
 public:
     static int nesting_level;
     static bool current_query_sampled;
+    static std::shared_ptr<HistoryQueryLevelTree> history_index_;
 };
 
 

@@ -6,14 +6,14 @@
 #include <memory>
 
 extern "C"{
-#include "postgres.h"
-#include "nodes/execnodes.h"
-#include "format.h"
-#include "format.pb-c.h"
-#include <postgres_ext.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+    #include "postgres.h"
+    #include "nodes/execnodes.h"
+    #include "format.h"
+    #include "format.pb-c.h"
+    #include <postgres_ext.h>
+    #include <stdio.h>
+    #include <stdlib.h>
+    #include <string.h>
 };
 
 /** 
@@ -58,7 +58,7 @@ private:
     /* HistorySlowPlanStat is a protobuf format structrue,it will be encoding and stored in kv engine*/
     HistorySlowPlanStat hsps_;
     std::shared_ptr<RedisSlowPlanStatProvider> storage_;
-    
+    //std::shared_ptr<HistoryQueryLevelTree> history_index_;
 };
 
 /**

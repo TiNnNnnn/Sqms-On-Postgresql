@@ -18,10 +18,6 @@ extern "C" {
     void		_PG_init(void);
     void		_PG_fini(void);
 
-    // StatCollecter * StatCollectCreate(){
-    //     return new StatCollecter();
-    // }
-
     void _PG_init(void){
 		DefineCustomIntVariable("sqms.query_min_duration",
 							"Sets the minimum execution time above which plans will be logged.",
@@ -47,6 +43,9 @@ extern "C" {
 
         prev_ExecutorEnd = ExecutorEnd_hook;
         ExecutorEnd_hook = StmtExecutorEnd;
+
+		/* create index in pg shared_memory */
+		
     }
 
     void _PG_fini(void){
@@ -60,10 +59,8 @@ extern "C" {
 int StatCollecter::nesting_level = 0;
 bool StatCollecter::current_query_sampled = false;
 /*we hope the index built while database starting*/
-//HistoryQueryLevelTree* history_idx = new HistoryQueryLevelTree();
 
-
-StatCollecter::StatCollecter(){					 
+StatCollecter::StatCollecter(){
 }
 
 void StatCollecter::StmtExecutorStartWrapper(QueryDesc *queryDesc, int eflags){
@@ -143,7 +140,7 @@ void StatCollecter::StmtExecutorEndWrapper(QueryDesc *queryDesc)
 		 * levels of hook all do this.)
 		 */
 		InstrEndLoop(queryDesc->totaltime);
-
+		
 		/*stoage plan stats*/
 		msec = queryDesc->totaltime->total * 1000.0;
 		if (msec >= query_min_duration){

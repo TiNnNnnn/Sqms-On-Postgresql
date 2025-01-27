@@ -64,7 +64,6 @@ constexpr std::array<PreProcessLabel, 5> p_labels = {
 
 class AbstractPredNode{
 public:
-    
     AbstractPredNode(AbstractPredNodeType type)
        :type_(type){}
 
@@ -194,7 +193,7 @@ private:
     std::set<PredEquivlenceRange*,RangesCompare>ranges_;
     /* sublink attr ranges */
     std::unordered_map<std::string, std::shared_ptr<LevelManager>> sublink_level_pe_lists_;
-
+    
     bool early_stop_ = true;
     std::shared_ptr<PredEquivlence> child_ = nullptr;
 };
@@ -436,6 +435,7 @@ public:
     const std::vector<LevelTblList*>& GetTotalTables(){return total_tbls_;}
     const std::vector<LevelAggAndSortList*>& GetTotalAggs(){return total_aggs_;}
     const std::vector<LevelAggAndSortList*>& GetTotalSorts(){return total_sorts_;}
+    const std::vector<LevelPredEquivlencesList*>& GetTotalResidualEquivlences(){return total_residual_equivlences_;}
     std::unordered_map<HistorySlowPlanStat*, NodeCollector*>& GetNodeCollector(){return nodes_collector_map_;}
 
 private:
@@ -482,6 +482,8 @@ private:
 
     /*plan join_nodes type, we put them in vec as the level sequence from left to right*/
     std::vector<std::string> join_type_list_;
+
+    std::vector<LevelPredEquivlencesList*> total_residual_equivlences_;
 };
 
 class PredOperatorWrap: public AbstractPredNode{

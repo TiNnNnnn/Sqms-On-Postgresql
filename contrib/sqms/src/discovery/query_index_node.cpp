@@ -479,9 +479,11 @@ bool LevelResidualStrategy::Remove(LevelManager* level_mgr){
 }
 
 bool LeafStrategy::Insert(LevelManager* level_mgr){
-    if(level_mgr_)return true;
+    //if(level_mgr_)return true;
+    if(level_mgr){
+        historys_.insert(historys_.begin(),level_mgr_);
+    }
     level_mgr_ = std::shared_ptr<LevelManager>(level_mgr);
-
     return true;
 }
 
@@ -600,7 +602,7 @@ bool LeafStrategy::SerachRange(LevelManager* src_mgr,int h,int id){
 }
 
 bool LeafStrategy::SerachResidual(LevelManager* src_mgr,int h,int id){
-
+    return true;
 }
 
 std::vector<std::string> LevelAggStrategy::findChildren(){
@@ -618,23 +620,40 @@ std::vector<std::string> LevelResidualStrategy::findChildren(){
 
 size_t LevelStrategy::FindNextInsertLevel(LevelManager* level_mgr, size_t cur_level){
     assert(cur_level>=1);
-    for(size_t h = cur_level+1; h<= total_height_; ){
+    for(size_t h = cur_level+1; h< total_height_; ){
         switch(h){
             case 2:{
-                if(level_mgr->GetTotalAggs().size()){
+                if(level_mgr->GetJoinTypeList().size()){
                     return h;
                 }
-                ++h;
             }break;
             case 3:{
-
+                if(level_mgr->GetTotalEquivlences().back()->Size()){
+                    return h;
+                }
             }break;
             case 4:{
-
+                if(level_mgr->GetTotalSorts().back()->Size()){
+                    return h;
+                }
+            }break;
+            case 5:{
+                if(level_mgr->GetTotalAggs().back()->Size()){
+                    return h;
+                }
+            }break;
+            case 6:{
+                // if(level_mgr->GetTotalResidualEquivlences().back()->Size()){
+                //     return h;
+                // }
+            }break;
+            case 7:{
+                return h;
             }break;
             default:{
-
+                std::cerr<<"error height"<<std::endl;
             }
+            ++h;
         }
     }
     return -1;
