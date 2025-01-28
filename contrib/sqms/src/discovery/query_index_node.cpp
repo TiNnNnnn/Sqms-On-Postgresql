@@ -4,10 +4,6 @@
 #include <algorithm>
 #include <memory>
 
-std::vector<std::string> LevelHashStrategy::findChildren(){
-    return std::vector<std::string>();
-}
-
 /**
  * LevelOneStrategy::Insert
  */
@@ -15,7 +11,7 @@ bool LevelHashStrategy::Insert(LevelManager* level_mgr){
     assert(level_mgr);
     auto json_sub_plan = std::string(level_mgr->GetHsps()->canonical_json_plan);
 
-    tbb::concurrent_hash_map<std::string, HistoryQueryIndexNode*>::const_accessor acc;
+    SMConcurrentHashMap<std::string,HistoryQueryIndexNode*>::const_accessor acc;
     if(set_map_.find(acc ,json_sub_plan)){
         auto child = acc->second;
         return child->Insert(level_mgr);
@@ -38,8 +34,7 @@ bool LevelHashStrategy::Insert(LevelManager* level_mgr){
 bool LevelHashStrategy::Serach(LevelManager* level_mgr,int id){
     assert(level_mgr);
     auto json_sub_plan = std::string(level_mgr->GetHsps()->canonical_json_plan);
-
-    tbb::concurrent_hash_map<std::string, HistoryQueryIndexNode*>::const_accessor acc;
+    SMConcurrentHashMap<std::string,HistoryQueryIndexNode*>::const_accessor acc;
     if(set_map_.find(acc ,json_sub_plan)){
         auto child = acc->second;
         return child->Search(level_mgr,-1);
@@ -56,7 +51,7 @@ bool LevelHashStrategy::Remove(LevelManager* level_mgr){
     return false;
 }
 
-int ScalingInfo::CalJoinTypeScore(const std::vector<std::string>& join_type_list,std::string& unique_id){
+int ScalingInfo::CalJoinTypeScore(const SMVector<std::string>& join_type_list,std::string& unique_id){
     int score = 0;
     std::string id;
     for(const auto& join_type : join_type_list){  
@@ -151,10 +146,6 @@ bool LevelScalingStrategy::Remove(LevelManager* level_mgr){
     return true;
 }
 
-std::vector<std::string> LevelScalingStrategy::findChildren(){
-    return std::vector<std::string>();
-}
-
 /**
  * LevelTwoStrategy::Insert
  */
@@ -165,10 +156,10 @@ bool LevelAggStrategy::Insert(LevelManager* level_mgr){
     auto top_aggs = level_mgr->GetTotalAggs().back();
 
     for(const auto& la_eq : top_aggs->GetLevelAggList()){
-        std::vector<int> agg_vec_id_list;
+        SMVector<int> agg_vec_id_list;
         for(const auto& agg : la_eq->GetLevelAggSets()){
             auto agg_extends = agg->GetExtends();
-            std::vector<std::string> agg_vec;
+            SET agg_vec;
             for(const auto& expr : agg_extends){
                 agg_vec.push_back(expr);
             }
@@ -182,8 +173,7 @@ bool LevelAggStrategy::Insert(LevelManager* level_mgr){
         }
         std::sort(agg_vec_id_list.begin(),agg_vec_id_list.end());
         auto hash_value =  hash_array(agg_vec_id_list);
-        
-        tbb::concurrent_hash_map<uint32_t,std::shared_ptr<HistoryQueryIndexNode>>::const_accessor acc;
+        SMConcurrentHashMap<uint32_t,std::shared_ptr<HistoryQueryIndexNode>>::const_accessor acc;
         if(child_map_.find(acc,hash_value)){
             auto child = acc->second;
             return child->Insert(level_mgr);
@@ -208,16 +198,16 @@ bool LevelAggStrategy::Serach(LevelManager* level_mgr,int id){
     auto top_aggs = level_mgr->GetTotalAggs().back();
     auto la_eq = top_aggs->GetLevelAggList()[id];
     
-    std::vector<std::vector<int>> agg_vec_id_list;
+    SMVector<SMVector<int>> agg_vec_id_list;
     for(const auto& agg : la_eq->GetLevelAggSets()){
         auto agg_extends = agg->GetExtends();
-        std::vector<std::string> agg_vec;
+        SET agg_vec;
         for(const auto& expr : agg_extends){
             agg_vec.push_back(expr);
         }
         std::sort(agg_vec.begin(),agg_vec.end());
 
-        std::vector<int>match_set_id_list;
+        SMVector<int>match_set_id_list;
         auto match_set = inverted_idx_->SuperSets(agg_vec);
         for(const auto& m_set : match_set){
             int set_id = inverted_idx_->GetSetIdBySet(m_set);
@@ -227,13 +217,13 @@ bool LevelAggStrategy::Serach(LevelManager* level_mgr,int id){
         std::sort(match_set_id_list.begin(),match_set_id_list.end());
         agg_vec_id_list.push_back(match_set_id_list);
     }
-    std::vector<std::vector<int>> combination;
-    std::vector<int> currentCombination(agg_vec_id_list.size());
+    SMVector<SMVector<int>> combination;
+    SMVector<int> currentCombination(agg_vec_id_list.size());
     generateCombinations(agg_vec_id_list, currentCombination, 0, combination);
 
     for(const auto& c_id_list : combination){
         auto hash_value = hash_array(c_id_list);
-        tbb::concurrent_hash_map<uint32_t,std::shared_ptr<HistoryQueryIndexNode>>::const_accessor acc;
+        SMConcurrentHashMap<uint32_t,std::shared_ptr<HistoryQueryIndexNode>>::const_accessor acc;
         if(child_map_.find(acc,hash_value)){
             auto child = acc->second;
             if(child->Search(level_mgr,id)){
@@ -262,10 +252,10 @@ bool LevelSortStrategy::Insert(LevelManager* level_mgr){
     auto top_sorts = level_mgr->GetTotalSorts().back();
 
     for(const auto& la_eq : top_sorts->GetLevelAggList()){
-        std::vector<int> sort_vec_id_list;
+        SMVector<int> sort_vec_id_list;
         for(const auto& sort : la_eq->GetLevelAggSets()){
             auto sort_extends = sort->GetExtends();
-            std::vector<std::string> sort_vec;
+            SET sort_vec;
             for(const auto& expr : sort_extends){
                 sort_vec.push_back(expr);
             }
@@ -280,7 +270,7 @@ bool LevelSortStrategy::Insert(LevelManager* level_mgr){
         std::sort(sort_vec_id_list.begin(),sort_vec_id_list.end());
         auto hash_value =  hash_array(sort_vec_id_list);
         
-        tbb::concurrent_hash_map<uint32_t,std::shared_ptr<HistoryQueryIndexNode>>::const_accessor acc;
+        SMConcurrentHashMap<uint32_t,std::shared_ptr<HistoryQueryIndexNode>>::const_accessor acc;
         if(child_map_.find(acc,hash_value)){
             auto child = acc->second;
             return child->Insert(level_mgr);
@@ -303,16 +293,16 @@ bool LevelSortStrategy::Serach(LevelManager* level_mgr,int id){
     auto top_sorts = level_mgr->GetTotalSorts().back();
     auto la_eq = top_sorts->GetLevelAggList()[id];
     
-    std::vector<std::vector<int>> sort_vec_id_list;
+    SMVector<SMVector<int>> sort_vec_id_list;
     for(const auto& sort : la_eq->GetLevelAggSets()){
         auto sort_extends = sort->GetExtends();
-        std::vector<std::string> sort_vec;
+        SET sort_vec;
         for(const auto& expr : sort_extends){
             sort_vec.push_back(expr);
         }
         std::sort(sort_vec.begin(),sort_vec.end());
 
-        std::vector<int>match_set_id_list;
+       SMVector<int>match_set_id_list;
         auto match_set = inverted_idx_->SuperSets(sort_vec);
         for(const auto& m_set : match_set){
             int set_id = inverted_idx_->GetSetIdBySet(m_set);
@@ -322,13 +312,13 @@ bool LevelSortStrategy::Serach(LevelManager* level_mgr,int id){
         std::sort(match_set_id_list.begin(),match_set_id_list.end());
         sort_vec_id_list.push_back(match_set_id_list);
     }
-    std::vector<std::vector<int>> combination;
-    std::vector<int> currentCombination(sort_vec_id_list.size());
+    SMVector<SMVector<int>> combination;
+    SMVector<int> currentCombination(sort_vec_id_list.size());
     generateCombinations(sort_vec_id_list, currentCombination, 0, combination);
 
     for(const auto& c_id_list : combination){
         auto hash_value = hash_array(c_id_list);
-        tbb::concurrent_hash_map<uint32_t,std::shared_ptr<HistoryQueryIndexNode>>::const_accessor acc;
+        SMConcurrentHashMap<uint32_t,std::shared_ptr<HistoryQueryIndexNode>>::const_accessor acc;
         if(child_map_.find(acc,hash_value)){
             auto child = acc->second;
             if(child->Search(level_mgr,id)){
@@ -356,7 +346,7 @@ bool LevelRangeStrategy::Insert(LevelManager* level_mgr){
     auto top_eqs = level_mgr->GetTotalEquivlences().back();
     /**we just build index on single attribute*/
     for(const auto& lpes : *top_eqs){
-        std::vector<std::string>pe_vecs;
+        SET pe_vecs;
         for(const auto& pe : *lpes){
             if(pe->GetPredSet().size() == 1){
                 pe_vecs.push_back(*pe->GetPredSet().begin());
@@ -393,7 +383,7 @@ bool LevelRangeStrategy::Insert(LevelManager* level_mgr){
                 }
             }else{
                 inverted_idx_->Insert(pe_vecs);
-                std::unordered_map<LevelPredEquivlences *, std::shared_ptr<HistoryQueryIndexNode>> new_remind_list;
+                SMUnorderedMap<LevelPredEquivlences *, std::shared_ptr<HistoryQueryIndexNode>>new_remind_list;
                 if(child_exist){
                     new_remind_list[lpes] = child_node;
                     child_map_[pe_vecs] = new_remind_list;
@@ -425,7 +415,7 @@ bool LevelRangeStrategy::Serach(LevelManager* level_mgr,int id){
     auto top_eqs = level_mgr->GetTotalEquivlences().back();
     size_t top_idx = 0;
     for(const auto& lpes : *top_eqs){
-        std::vector<std::string>pe_vecs;
+        SET pe_vecs;
         LevelPredEquivlences * remind_lpes = new LevelPredEquivlences();
         remind_lpes->SetLpeId(lpes->LpeId());
         for(const auto& pe : *lpes){
@@ -605,19 +595,6 @@ bool LeafStrategy::SerachResidual(LevelManager* src_mgr,int h,int id){
     return true;
 }
 
-std::vector<std::string> LevelAggStrategy::findChildren(){
-    return std::vector<std::string>();
-}
-std::vector<std::string> LevelSortStrategy::findChildren(){
-    return std::vector<std::string>();
-}
-std::vector<std::string> LevelRangeStrategy::findChildren(){
-    return std::vector<std::string>();
-}
-std::vector<std::string> LevelResidualStrategy::findChildren(){
-    return std::vector<std::string>();
-}
-
 size_t LevelStrategy::FindNextInsertLevel(LevelManager* level_mgr, size_t cur_level){
     assert(cur_level>=1);
     for(size_t h = cur_level+1; h< total_height_; ){
@@ -658,7 +635,6 @@ size_t LevelStrategy::FindNextInsertLevel(LevelManager* level_mgr, size_t cur_le
     }
     return -1;
 }
-
 
 bool LevelStrategyContext::Insert(LevelManager* level_mgr){
     return strategy_->Insert(level_mgr);

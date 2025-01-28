@@ -24,7 +24,8 @@ long totalSetTimeMillis = 1000;
 long defaultTTLSeconds = INT_MAX;
 
 bool debug = true;
-
+const char* queue_name = "query_index";
+int max_msg_size = 1024; 
 // const struct config_enum_entry format_options[] = {
 // 	{"text", EXPLAIN_FORMAT_TEXT, false},
 // 	{"xml", EXPLAIN_FORMAT_XML, false},

@@ -3,7 +3,16 @@
 #include <stdint.h>
 #include <vector>
 #include <string>
+#include "tbb/concurrent_hash_map.h"
+#include <unordered_map>
+#include <unordered_set>
+#include <map>
 
+extern "C" {
+    #include "postgres.h"
+    #include "common/config.h"
+    #include "storage/shmem.h"
+}
 //单位是ms
 uint64_t GetCurrentTime();
 void GetCurrentTimeString(std::string&output);
@@ -14,58 +23,84 @@ uint32_t DecodeFixed32(const char* ptr);
 uint32_t SimMurMurHash(const char *data, uint32_t len);
 int64_t Next2Power(uint64_t value);
 
-// MurmurHash3 32位实现
-uint32_t murmurhash3_32(const void* key, size_t len, uint32_t seed) {
-    const uint8_t* data = static_cast<const uint8_t*>(key);
-    const int nblocks = len / 4;
+/*shared memory allocator based on postgres shemem interfaces*/
+template <typename T>
+struct SharedMemoryAllocator {
+    using value_type = T;
 
-    uint32_t h1 = seed;
-    const uint32_t c1 = 0xcc9e2d51;
-    const uint32_t c2 = 0x1b873593;
+    SharedMemoryAllocator() {}
+    template <typename U>
+    SharedMemoryAllocator(const SharedMemoryAllocator<U>&) {}
 
-    // Body
-    const uint32_t* blocks = reinterpret_cast<const uint32_t*>(data);
-    for (int i = 0; i < nblocks; i++) {
-        uint32_t k1 = blocks[i];
-        k1 *= c1;
-        k1 = (k1 << 15) | (k1 >> (32 - 15));
-        k1 *= c2;
-
-        h1 ^= k1;
-        h1 = (h1 << 13) | (h1 >> (32 - 13));
-        h1 = h1 * 5 + 0xe6546b64;
+    T* allocate(std::size_t n) {
+        void* ptr = ShmemAlloc(n * sizeof(T));
+        if (!ptr) {
+            throw std::bad_alloc();
+        }
+        return static_cast<T*>(ptr);
     }
 
-    // Tail
-    const uint8_t* tail = data + nblocks * 4;
-    uint32_t k1 = 0;
-    switch (len & 3) {
-        case 3: k1 ^= tail[2] << 16;
-        case 2: k1 ^= tail[1] << 8;
-        case 1: k1 ^= tail[0];
-                k1 *= c1;
-                k1 = (k1 << 15) | (k1 >> (32 - 15));
-                k1 *= c2;
-                h1 ^= k1;
+    void deallocate(T* p, std::size_t n) {
     }
 
-    // Finalization
-    h1 ^= len;
-    h1 ^= h1 >> 16;
-    h1 *= 0x85ebca6b;
-    h1 ^= h1 >> 13;
-    h1 *= 0xc2b2ae35;
-    h1 ^= h1 >> 16;
+    bool operator==(const SharedMemoryAllocator& other) const noexcept {
+        return true; 
+    }
 
-    return h1;
-}
+    bool operator!=(const SharedMemoryAllocator& other) const noexcept {
+        return !(*this == other);
+    }
+};
 
-uint32_t hash_array(const std::vector<int>& array, uint32_t seed = 42) {
-    size_t len = array.size() * sizeof(int);
-    const void* data = static_cast<const void*>(array.data());
+template <typename Key, typename Value,typename Hash = std::hash<Key>,typename EqualTo = std::equal_to<Key>>
+using SMUnorderedMap = std::unordered_map<
+    Key,
+    Value,
+    Hash,
+    EqualTo,
+    SharedMemoryAllocator<std::pair<const Key, Value>>
+>;
 
-    return murmurhash3_32(data, len, seed);
-}
+template <typename Key, typename Value,typename Hash = tbb::tbb_hash_compare<Key>>
+using SMConcurrentHashMap = tbb::concurrent_hash_map<
+    Key,
+    Value,
+    Hash,
+    SharedMemoryAllocator<std::pair<const Key, Value>>
+>;
+
+template <typename Key, typename Value,typename Compare = std::less<Key>>
+using SMMap = std::map<
+    Key,
+    Value,
+    Compare,
+    SharedMemoryAllocator<std::pair<const Key, Value>>
+>;
+
+template <typename Key, typename Hash = std::hash<Key>,typename EqualTo = std::equal_to<Key>>
+using SMUnorderedSet = std::unordered_set<
+    Key,
+    Hash,
+    EqualTo,
+    SharedMemoryAllocator<Key>
+>;
+
+
+template <typename Key>
+using SMVector = std::vector<Key,SharedMemoryAllocator<Key>>;
+
+
+template <typename T>
+void generateCombinations(const std::vector<std::vector<T>>& arrays, 
+                          std::vector<T>& currentCombination, 
+                          size_t depth, 
+                          std::vector<std::vector<T>>& results);
+
+template <typename T>
+void generateCombinations(const SMVector<SMVector<T>>& arrays, 
+                          SMVector<T>& currentCombination, 
+                          size_t depth, 
+                          SMVector<SMVector<T>>& results);
 
 template <typename T>
 void generateCombinations(const std::vector<std::vector<T>>& arrays, 
@@ -82,5 +117,22 @@ void generateCombinations(const std::vector<std::vector<T>>& arrays,
     }
 }
 
+template <typename T>
+void generateCombinations(const SMVector<SMVector<T>>& arrays, 
+                          SMVector<T>& currentCombination, 
+                          size_t depth, 
+                          SMVector<SMVector<T>>& results) {
+    if (depth == arrays.size()) {
+        results.push_back(currentCombination);
+        return;
+    }
+    for (const T& element : arrays[depth]) {
+        currentCombination[depth] = element; 
+        generateCombinations(arrays, currentCombination, depth + 1, results); 
+    }
+}
+
+uint32_t hash_array(const std::vector<int>& array);
+uint32_t hash_array(const SMVector<int>& array);
 
 #endif

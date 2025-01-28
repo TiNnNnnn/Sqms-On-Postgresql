@@ -47,3 +47,32 @@ bool HistoryQueryIndexNode::Search(LevelManager* level_mgr,int id){
     return level_strategy_context_->Search(level_mgr,id);
 } 
 
+void QueryIndexManager::RegisterQueryIndex(){
+    std::thread([](){
+        auto query_index = std::make_shared<HistoryQueryLevelTree>();
+        struct mq_attr attr;
+        std::atomic<bool> stop_thread;
+
+        attr.mq_flags = 0;
+        attr.mq_maxmsg = 100;            
+        attr.mq_msgsize = max_msg_size;
+        attr.mq_curmsgs = 0;
+
+        mqd_t mq = mq_open(queue_name, O_CREAT | O_RDONLY, 0666, &attr);
+        if (mq == (mqd_t)-1) {
+            perror("query index mq_open failed in IndexThreadMain");
+            return;
+        }
+
+        char buffer[max_msg_size];
+        while (!stop_thread) {
+            ssize_t bytes_read = mq_receive(mq, buffer, max_msg_size, nullptr);
+            if (bytes_read >= 0) {
+                // Message* msg = reinterpret_cast<Message*>(buffer);
+                // HandleMessage(*msg);
+            } else if (errno != EINTR) {
+                perror("mq_receive failed");
+            }
+        }
+    });
+}

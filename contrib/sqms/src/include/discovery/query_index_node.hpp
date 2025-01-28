@@ -39,6 +39,7 @@ private:
     size_t level_;
 };
 
+
 class HistoryQueryIndexNodeContext{
 public:
     int id_;
@@ -49,7 +50,6 @@ class LevelStrategy{
 public:
     LevelStrategy(size_t total_height)
         :total_height_(total_height){}
-    virtual std::vector<std::string> findChildren() = 0;
     virtual std::string Name() = 0;
     virtual bool Insert(LevelManager* level_mgr) = 0;
     virtual bool Serach(LevelManager* level_mgr,int id) = 0;
@@ -71,9 +71,9 @@ public:
     bool Insert(LevelManager* level_mgr);
     bool Serach(LevelManager* level_mgr,int id);
     bool Remove(LevelManager* level_mgr);
-    std::vector<std::string> findChildren();
 private:
-    tbb::concurrent_hash_map<std::string,HistoryQueryIndexNode*>set_map_;
+    SMConcurrentHashMap<std::string,HistoryQueryIndexNode*>set_map_;
+    //tbb::concurrent_hash_map<std::string,HistoryQueryIndexNode*,std::hash<std::string>,SharedMemoryAllocator<std::string>>set_map_;
 };
 
 /**
@@ -83,16 +83,23 @@ private:
  */
 class ScalingInfo{
 public:
-    ScalingInfo(std::vector<std::string> join_type_list)    
+    ScalingInfo(std::vector<std::string,SharedMemoryAllocator<std::string>> join_type_list)    
         :join_type_list_(join_type_list){
         join_type_score_ = CalJoinTypeScore(join_type_list_,unique_id_);
     }
-    static int CalJoinTypeScore(const std::vector<std::string>& join_type_list,std::string& unique_id);
+    ScalingInfo(std::vector<std::string> join_type_list){
+        for(const auto& type : join_type_list){
+            join_type_list_.push_back(type);
+        }
+        join_type_score_ = CalJoinTypeScore(join_type_list_,unique_id_);
+    }
+    static int CalJoinTypeScore(const SMVector<std::string>& join_type_list,std::string& unique_id);
     bool Match(ScalingInfo* scale_info);
     const std::string& UniqueId(){return unique_id_;}
     int JoinTypeScore(){return join_type_score_;}
 private:
-    std::vector<std::string> join_type_list_;
+    //std::vector<std::string,SharedMemoryAllocator<std::string>> join_type_list_;
+    SMVector<std::string> join_type_list_;
     int join_type_score_ = -1;
     std::string unique_id_;
 };
@@ -107,13 +114,16 @@ public:
     bool Insert(LevelManager* level_mgr);
     bool Serach(LevelManager* level_mgr,int id);
     bool Remove(LevelManager* level_mgr);
-    std::vector<std::string> findChildren();
 private:
     std::shared_mutex rw_mutex_;
     /* from join_type_score to scaling_list id map */
-    std::map<int,std::unordered_set<std::string>> scaling_idx_;
+    SMMap<int,SMUnorderedSet<std::string>>scaling_idx_;
+    // std::map<int,std::unordered_set<std::string,std::hash<std::string>,
+    //     SharedMemoryAllocator<std::string>>,std::less<int>,SharedMemoryAllocator<int>> scaling_idx_;
     /* from scaling_list id map to child node*/
-    std::unordered_map<std::string,std::pair<std::shared_ptr<ScalingInfo>,HistoryQueryIndexNode*>>child_map_;
+    SMUnorderedMap<std::string,std::pair<std::shared_ptr<ScalingInfo>,HistoryQueryIndexNode*>> child_map_;
+    // std::unordered_map<std::string,std::pair<std::shared_ptr<ScalingInfo>,HistoryQueryIndexNode*>,
+    //     std::hash<std::string>,std::equal_to<std::string>,SharedMemoryAllocator<std::string>>child_map_;
 };
 
 class LevelAggStrategy : public LevelStrategy{
@@ -124,10 +134,9 @@ public:
     bool Insert(LevelManager* level_mgr);
     bool Serach(LevelManager* level_mgr,int id);
     bool Remove(LevelManager* level_mgr);   
-    std::vector<std::string> findChildren();
 private:
     std::shared_ptr<InvertedIndex<PostingList>> inverted_idx_;
-    tbb::concurrent_hash_map<uint32_t,std::shared_ptr<HistoryQueryIndexNode>> child_map_;
+    SMConcurrentHashMap<uint32_t,std::shared_ptr<HistoryQueryIndexNode>>child_map_;
 };
 
 class LevelSortStrategy : public LevelStrategy{
@@ -138,10 +147,9 @@ public:
     bool Insert(LevelManager* level_mgr);
     bool Serach(LevelManager* level_mgr,int id);
     bool Remove(LevelManager* level_mgr);   
-    std::vector<std::string> findChildren();
-private:
+private:    
     std::shared_ptr<InvertedIndex<PostingList>> inverted_idx_;
-    tbb::concurrent_hash_map<uint32_t,std::shared_ptr<HistoryQueryIndexNode>> child_map_;
+    SMConcurrentHashMap<uint32_t,std::shared_ptr<HistoryQueryIndexNode>>child_map_;
 };
 
 class LevelRangeStrategy : public LevelStrategy{
@@ -152,10 +160,9 @@ public:
     bool Insert(LevelManager* level_mgr);
     bool Serach(LevelManager* level_mgr,int id);
     bool Remove(LevelManager* level_mgr);
-    std::vector<std::string> findChildren();
 private:
     std::shared_ptr<InvertedIndex<PostingList>> inverted_idx_;
-    std::unordered_map<SET,std::unordered_map<LevelPredEquivlences *,std::shared_ptr<HistoryQueryIndexNode>>,SetHasher> child_map_;
+    SMUnorderedMap<SET,SMUnorderedMap<LevelPredEquivlences*,std::shared_ptr<HistoryQueryIndexNode>>,SetHasher> child_map_;
     std::shared_mutex rw_mutex_;
     size_t s_level_;
 };
@@ -168,10 +175,10 @@ public:
     bool Insert(LevelManager* level_mgr);
     bool Serach(LevelManager* level_mgr,int id);
     bool Remove(LevelManager* level_mgr);
-    std::vector<std::string> findChildren();
 private:
     std::shared_ptr<InvertedIndex<PostingList>> inverted_idx_;
-    std::unordered_map<SET,std::unordered_map<LevelPredEquivlences *,std::shared_ptr<HistoryQueryIndexNode>>,SetHasher> child_map_;
+    SMUnorderedMap<SET,SMUnorderedMap<LevelPredEquivlences*,std::shared_ptr<HistoryQueryIndexNode>>,SetHasher> child_map_;
+
     std::shared_mutex rw_mutex_;
     size_t s_level_;
 };
@@ -189,8 +196,6 @@ public:
     bool Insert(LevelManager* level_mgr);
     bool Serach(LevelManager* level_mgr,int id);
     bool Remove(LevelManager* level_mgr);
-
-    std::vector<std::string> findChildren(){}
 private:
     bool SerachAgg(LevelManager* src_mgr,int h,int id);
     bool SerachSort(LevelManager* src_mgr,int h,int id);
@@ -198,7 +203,7 @@ private:
     bool SerachResidual(LevelManager* src_mgr,int h,int id);
 private:
     std::shared_ptr<LevelManager> level_mgr_;
-    std::vector<std::shared_ptr<LevelManager>> historys_;
+    SMVector<std::shared_ptr<LevelManager>>historys_;
 };
 
 /**

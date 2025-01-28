@@ -34,6 +34,9 @@ extern long defaultTTLSeconds;
 
 extern bool debug;
 
+extern int max_msg_size;
+extern const char* queue_name;
+
 // extern const struct config_enum_entry format_options[];
 
 // extern const struct config_enum_entry loglevel_options[];

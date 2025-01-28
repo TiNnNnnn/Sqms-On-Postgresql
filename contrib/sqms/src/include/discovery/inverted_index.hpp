@@ -9,15 +9,20 @@
 #include <shared_mutex>
 #include <boost/bimap.hpp>
 #include <mutex>
+#include <iostream>
+
+#include "common/util.hpp"
 
 extern "C" {
+    #include "postgres.h"
     #include "common/config.h"
+    #include "storage/shmem.h"
 }
 
 /**
  * TODO: a temp implemetaion of postingList,it will be replaced by another one 
  */
-typedef std::vector<std::string> SET;
+typedef SMVector<std::string> SET;
 static std::string EncodingSets(const SET&sets){
     std::string encoding;
     for(size_t i=0;i<sets.size();i++){
@@ -46,7 +51,6 @@ struct SetHasher {
 
 class PostingList{
 public:
-    typedef std::vector<std::string> SET;
     void Insert(const SET &set,int id){
         list_.insert(set);
         bit_set_.set(id,1);
@@ -57,8 +61,8 @@ public:
         bit_set_.set(id,0);
     }
 
-    std::vector<SET> SubSets(const SET &set){
-        std::vector<SET> result;
+    SMVector<SET> SubSets(const SET &set){
+        SMVector<SET> result;
         for (const auto& list_set : list_) {
             if(list_set.size() > set.size())continue;
             if (IsSubset(list_set, set)) {
@@ -83,13 +87,13 @@ private:
     }
 
 private:
-    std::unordered_set<SET,SetHasher> list_;
+    SMUnorderedSet<SET,SetHasher>list_;
+    //std::unordered_set<SET,SetHasher,std::equal_to<SET>,SharedMemoryAllocator<SET>> list_;
     std::bitset<bit_map_size> bit_set_;
 };
 
 template<typename PostingList>
 class InvertedIndex{
-    typedef std::vector<std::string> SET;
 public:
     /*insert a set into inverted index*/
     void Insert(const SET& set){
@@ -124,9 +128,9 @@ public:
     }
 
     /*find superset of <set>*/
-    std::unordered_set<SET,SetHasher> SuperSets(const SET&set){
+    SMUnorderedSet<SET,SetHasher> SuperSets(const SET&set){
         std::shared_lock<std::shared_mutex> lock(rw_mutex_);
-        std::unordered_set<SET,SetHasher> set_list;
+        SMUnorderedSet<SET,SetHasher>set_list;
         auto map = inverted_map_[set[0]].GetBitSet();
         for(size_t i=1;i<set.size();i++){
             map &= inverted_map_[set[i]].GetBitSet();
@@ -141,9 +145,9 @@ public:
     }
 
     /*find subsets of <set>*/
-    std::unordered_set<SET,SetHasher> SubSets(const SET&set){
+    SMUnorderedSet<SET,SetHasher> SubSets(const SET&set){
         std::shared_lock<std::shared_mutex> lock(rw_mutex_);
-        std::unordered_set<SET,SetHasher> set_list;
+        SMUnorderedSet<SET,SetHasher> set_list;
         for(auto item : set){
             auto temp_sets = inverted_map_[item].SubSets(set);
             for(auto set: temp_sets){
@@ -160,12 +164,11 @@ public:
     }
 
 private:
-    std::unordered_map<std::string, PostingList> inverted_map_;
-
+    SMUnorderedMap<std::string,PostingList>inverted_map_;
     /* item in set,such as A,B,C,D....*/
     /* set such as {A,B},{A,B,C},{B,C,D,E} to their id*/
-    std::unordered_map<std::vector<std::string>,int,SetHasher> sets2id_; 
-    std::unordered_map<int,std::vector<std::string>> id2sets_; 
+    SMUnorderedMap<SET,int,SetHasher>sets2id_; 
+    SMUnorderedMap<int,SET> id2sets_; 
     /*id generate for the set id*/
     std::atomic<long long> set_cnt_{-1}; 
     std::atomic<int>items_cnt_{0};

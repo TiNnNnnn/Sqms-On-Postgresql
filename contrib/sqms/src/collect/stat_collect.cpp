@@ -15,6 +15,8 @@ extern "C" {
 	void StmtExecutorFinish(QueryDesc *queryDesc);
 	void StmtExecutorEnd(QueryDesc *queryDesc);
 
+	void RegisterQueryIndex();
+
     void		_PG_init(void);
     void		_PG_fini(void);
 
@@ -45,7 +47,7 @@ extern "C" {
         ExecutorEnd_hook = StmtExecutorEnd;
 
 		/* create index in pg shared_memory */
-		
+		RegisterQueryIndex();
     }
 
     void _PG_fini(void){
@@ -155,6 +157,10 @@ void StatCollecter::StmtExecutorEndWrapper(QueryDesc *queryDesc)
 	}else{
 		standard_ExecutorEnd(queryDesc);
 	}
+}
+
+extern "C" void RegisterQueryIndex(){
+	QueryIndexManager::RegisterQueryIndex();
 }
 
 

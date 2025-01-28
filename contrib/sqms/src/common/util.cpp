@@ -1,9 +1,10 @@
-#include"common/util.hpp"
+
 #include <string.h>
 #include <sys/syscall.h>
 #include <unistd.h>
 #include <chrono>
 #include <iomanip>
+#include"common/util.hpp"
 
 uint64_t GetCurrentTime() {
   const auto& now = std::chrono::high_resolution_clock::now();
@@ -11,6 +12,7 @@ uint64_t GetCurrentTime() {
       now.time_since_epoch());
   return d.count();
 }
+
 void GetCurrentTimeString(std::string& output) {
   const auto& now = std::chrono::system_clock::now();
   const auto& tp = std::chrono::time_point_cast<std::chrono::seconds>(now);
@@ -63,4 +65,16 @@ int64_t Next2Power(int64_t value) {
   value |= value >> 32;
   value++;
   return value;
+}
+
+uint32_t hash_array(const std::vector<int>& array) {
+    size_t len = array.size() * sizeof(int);
+    const void* data = static_cast<const void*>(array.data());
+    return SimMurMurHash((const char*)data,len);
+}
+
+uint32_t hash_array(const SMVector<int>& array) {
+    size_t len = array.size() * sizeof(int);
+    const void* data = static_cast<const void*>(array.data());
+    return SimMurMurHash((const char*)data,len);
 }
