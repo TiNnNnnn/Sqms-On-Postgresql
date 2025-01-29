@@ -15,6 +15,7 @@
 
 extern "C" {
     #include "collect/format.pb-c.h"
+    #include <pthread.h>
 }
 
 class LevelStrategyContext;
@@ -22,9 +23,7 @@ class HistoryQueryIndexNode{
     typedef std::vector<std::string> SET;
 public:
     HistoryQueryIndexNode(int l,int total_height);
-    ~HistoryQueryIndexNode(){
-        free(level_strategy_context_);
-    };
+    ~HistoryQueryIndexNode(){};
     
     std::shared_ptr<HistoryQueryIndexNode> Child(size_t l,HistorySlowPlanStat* hsps);
     size_t Level(){return level_;}
@@ -38,7 +37,6 @@ private:
     /*current node level*/
     size_t level_;
 };
-
 
 class HistoryQueryIndexNodeContext{
 public:
@@ -73,7 +71,6 @@ public:
     bool Remove(LevelManager* level_mgr);
 private:
     SMConcurrentHashMap<std::string,HistoryQueryIndexNode*>set_map_;
-    //tbb::concurrent_hash_map<std::string,HistoryQueryIndexNode*,std::hash<std::string>,SharedMemoryAllocator<std::string>>set_map_;
 };
 
 /**
@@ -118,12 +115,7 @@ private:
     std::shared_mutex rw_mutex_;
     /* from join_type_score to scaling_list id map */
     SMMap<int,SMUnorderedSet<std::string>>scaling_idx_;
-    // std::map<int,std::unordered_set<std::string,std::hash<std::string>,
-    //     SharedMemoryAllocator<std::string>>,std::less<int>,SharedMemoryAllocator<int>> scaling_idx_;
-    /* from scaling_list id map to child node*/
     SMUnorderedMap<std::string,std::pair<std::shared_ptr<ScalingInfo>,HistoryQueryIndexNode*>> child_map_;
-    // std::unordered_map<std::string,std::pair<std::shared_ptr<ScalingInfo>,HistoryQueryIndexNode*>,
-    //     std::hash<std::string>,std::equal_to<std::string>,SharedMemoryAllocator<std::string>>child_map_;
 };
 
 class LevelAggStrategy : public LevelStrategy{
@@ -207,32 +199,68 @@ private:
 };
 
 /**
+ * DeBugStrategy: only for debug
+ */
+class DeBugStrategy : public LevelStrategy{
+public:
+    DeBugStrategy(size_t total_height)
+        :LevelStrategy(total_height){}
+    std::string Name() {return "DebugStrategy";}
+    bool Insert(LevelManager* level_mgr){
+        std::unique_lock<std::shared_mutex> lock(rw_mutex_);
+        list_.push_back(1);
+        return true;
+    }
+    bool Serach(LevelManager* level_mgr,int id){
+        std::shared_lock<std::shared_mutex> lock(rw_mutex_);
+        std::cout<<"["<<pthread_self()<<"]: "<<list_.back()<<std::endl;
+        return true;
+    }
+    bool Remove(LevelManager* level_mgr){
+        std::unique_lock<std::shared_mutex> lock(rw_mutex_);
+        list_.pop_back();
+        return true;
+    }
+private:
+    std::shared_mutex rw_mutex_;
+    SMVector<int> list_;
+};
+
+/**
  * LevelStrategyContext
  */
 class LevelStrategyContext{
 public:
     void SetStrategy(int l,int total_height){
+        bool found = true;
         switch(l){
+            case 0: {
+                //std::cout<<"DeBugStrategy"<<std::endl;
+                strategy_ = (DeBugStrategy*)ShmemInitStruct("DeBugStrategy",sizeof(DeBugStrategy),&found);
+                if(!found){
+                    new (strategy_) DeBugStrategy(total_height);
+                }
+            }break;
             case 1 :{
-                strategy_ =  std::make_shared<LevelHashStrategy>(total_height);
+                strategy_ =  new LevelHashStrategy(total_height);
             }break;
             case 2 :{
-                strategy_ =  std::make_shared<LevelScalingStrategy>(total_height);
+                strategy_ =  new LevelScalingStrategy(total_height);
             }break;
             case 3 :{
-                strategy_ = std::make_shared<LevelRangeStrategy>(total_height);
+                strategy_ = new LevelRangeStrategy(total_height);
             }break;
             case 4 :{
-                strategy_ = std::make_shared<LevelSortStrategy>(total_height);
+                strategy_ = new LevelSortStrategy(total_height);
             }break;
             case 5 :{
-                strategy_ =  std::make_shared<LevelAggStrategy>(total_height);
+                strategy_ =  new LevelAggStrategy(total_height);
             }break;
             case 6 :{
-                strategy_ = std::make_shared<LevelResidualStrategy>(total_height);
+                strategy_ = new LevelResidualStrategy(total_height);
             }break;
             case 7: {
-                strategy_ = std::make_shared<LeafStrategy>(total_height);
+                strategy_ = new LeafStrategy(total_height);
             }break;
             default :{
                 std::cerr<<"unknon level strategy"<<std::endl;
@@ -246,5 +274,5 @@ public:
     bool Search(LevelManager* level_mgr,int id);
 
 private:
-    std::shared_ptr<LevelStrategy> strategy_;
+    LevelStrategy* strategy_;
 };

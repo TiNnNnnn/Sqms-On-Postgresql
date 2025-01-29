@@ -9,6 +9,7 @@ extern "C" {
 	static ExecutorRun_hook_type prev_ExecutorRun = NULL;
 	static ExecutorFinish_hook_type prev_ExecutorFinish = NULL;
 	static ExecutorEnd_hook_type prev_ExecutorEnd = NULL;
+	static shmem_startup_hook_type prev_shmem_startup_hook = NULL;
 
 	void StmtExecutorStart(QueryDesc *queryDesc, int eflags);
 	void StmtExecutorRun(QueryDesc *queryDesc, ScanDirection direction, uint64 count, bool execute_once);
@@ -47,7 +48,10 @@ extern "C" {
         ExecutorEnd_hook = StmtExecutorEnd;
 
 		/* create index in pg shared_memory */
-		RegisterQueryIndex();
+		RequestAddinShmemSpace(1024 * 1024);
+		prev_shmem_startup_hook = shmem_startup_hook;
+		shmem_startup_hook = RegisterQueryIndex;
+		//RegisterQueryIndex();
     }
 
     void _PG_fini(void){
@@ -55,6 +59,8 @@ extern "C" {
         ExecutorRun_hook = prev_ExecutorRun;
         ExecutorFinish_hook = prev_ExecutorFinish;
         ExecutorEnd_hook = prev_ExecutorEnd;       
+
+		shmem_startup_hook = prev_shmem_startup_hook;
     }
 };
 
@@ -75,6 +81,10 @@ void StatCollecter::StmtExecutorStartWrapper(QueryDesc *queryDesc, int eflags){
 			queryDesc->instrument_options |= INSTRUMENT_BUFFERS;
 			queryDesc->instrument_options |= INSTRUMENT_WAL;
 		}
+
+		/*analyse query whether a slow query or not*/
+		PlanStatFormat& es = PlanStatFormat::getInstance();
+		
 		
         if (prev_ExecutorStart)
             prev_ExecutorStart(queryDesc, eflags);
@@ -160,7 +170,22 @@ void StatCollecter::StmtExecutorEndWrapper(QueryDesc *queryDesc)
 }
 
 extern "C" void RegisterQueryIndex(){
-	QueryIndexManager::RegisterQueryIndex();
+	std::cout<<"begin building history query index..."<<std::endl;
+	bool found = true;
+	auto shared_index = (HistoryQueryLevelTree*)ShmemInitStruct(shared_index_name, sizeof(HistoryQueryLevelTree), &found);
+	if (!shared_index) {
+        elog(ERROR, "Failed to allocate shared memory for root node.");
+        return;
+    }
+	if(!found){
+		new (shared_index) HistoryQueryLevelTree(0);
+	}
+	/**
+	 * TODO: here we should load history slow queries in redis into shared_index
+	 */
+	std::cout<<"finish building history query index..."<<std::endl;
+	// shared_index->Insert(nullptr,0);
+	// shared_index->Search(nullptr,0);
 }
 
 

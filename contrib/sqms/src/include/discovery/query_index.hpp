@@ -17,7 +17,7 @@
  */
 class HistoryQueryLevelTree{
 public:
-    HistoryQueryLevelTree();
+    HistoryQueryLevelTree(int origin_height = 1);
     
     bool Insert(LevelManager* level_mgr,int l = 0);
     bool Remove(LevelManager* level_mgr,int l = 0);
@@ -30,7 +30,7 @@ public:
     void ShowAllNodeTypes();
 
 private:
-    std::shared_ptr<HistoryQueryIndexNode> root_;
+    HistoryQueryIndexNode* root_;
     size_t height_ = 7;
 };
 

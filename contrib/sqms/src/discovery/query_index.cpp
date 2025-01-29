@@ -1,8 +1,14 @@
 #include "discovery/query_index.hpp"
 
  /* rebuild the history query level tree */
-HistoryQueryLevelTree::HistoryQueryLevelTree(){
-    root_ = std::make_shared<HistoryQueryIndexNode>(1,height_);
+HistoryQueryLevelTree::HistoryQueryLevelTree(int origin_height){
+    bool found = true;
+    root_ = (HistoryQueryIndexNode*)ShmemInitStruct("0",sizeof(HistoryQueryIndexNode),&found);
+    if(!found){
+        //std::cout<<"HistoryQueryIndexNode"<<std::endl;
+        new (root_) HistoryQueryIndexNode(origin_height,height_);
+    }    
+    //root_ = new HistoryQueryIndexNode(1,height_);
 }
 
 bool HistoryQueryLevelTree::Insert(LevelManager* level_mgr,int l){
@@ -31,7 +37,13 @@ bool HistoryQueryLevelTree::Search(NodeCollector* node_collector){
  * HistoryQueryIndexNode
  */
 HistoryQueryIndexNode::HistoryQueryIndexNode(int l,int total_height)
-    :level_(l),level_strategy_context_(new LevelStrategyContext()){
+    :level_(l){
+    bool found = false;
+    level_strategy_context_ = (LevelStrategyContext*)ShmemInitStruct("LevelStrategyContext",sizeof(LevelStrategyContext),&found);
+    if(!found){
+        //std::cout<<"LevelStrategyContext"<<std::endl;
+        new (level_strategy_context_) LevelStrategyContext();
+    }
     level_strategy_context_->SetStrategy(l,total_height);
 }
 

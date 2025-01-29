@@ -35,7 +35,8 @@ public:
     void Deserialization();
 
     bool Preprocessing(QueryDesc* qd);
-    bool ProcQueryDesc(QueryDesc* qd);
+    /* precess slow queries */
+    bool ProcQueryDesc(QueryDesc* qd,bool slow = true);
 private:
     std::string HashCanonicalPlan(char *json_plan);
     

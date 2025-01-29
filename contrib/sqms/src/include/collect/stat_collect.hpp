@@ -11,7 +11,27 @@ extern "C"{
     #include "executor/instrument.h"
     #include "jit/jit.h"
     #include "utils/guc.h"
-    #include "common/config.h" 
+    #include "common/config.h"
+    
+    #include "catalog/pg_authid.h"
+    #include "common/hashfn.h"
+    #include "executor/instrument.h"
+    #include "funcapi.h"
+    #include "mb/pg_wchar.h"
+    #include "miscadmin.h"
+    #include "optimizer/planner.h"
+    #include "parser/analyze.h"
+    #include "parser/parsetree.h"
+    #include "parser/scanner.h"
+    #include "parser/scansup.h"
+    #include "pgstat.h"
+    #include "storage/fd.h"
+    #include "storage/ipc.h"
+    #include "storage/spin.h"
+    #include "tcop/utility.h"
+    #include "utils/acl.h"
+    #include "utils/builtins.h"
+    #include "utils/memutils.h"
 }
 
 //extern HistoryQueryLevelTree* history_idx;

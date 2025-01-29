@@ -19,7 +19,7 @@ PlanStatFormat::PlanStatFormat(int psize)
     storage_ = std::make_shared<RedisSlowPlanStatProvider>(std::string(redis_host),redis_port,totalFetchTimeoutMillis,totalSetTimeMillis,defaultTTLSeconds); 
 }
 
-bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd){
+bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, bool slow){
     Preprocessing(qd);
     if(!&hsps_){
         std::cout<<"hsps is nullptr"<<std::endl;
@@ -34,9 +34,8 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd){
     }
     history_slow_plan_stat__pack(&hsps_,buffer);
     
-    pool_->submit([msg_size,buffer,this]() -> bool {
+    pool_->submit([msg_size,buffer,slow,this]() -> bool {
 
-        ExcavateContext *context = new ExcavateContext();
         std::cout<<"Thread: "<<ThreadPool::GetTid()<<" Begin Working..."<<std::endl;
         /**
          * Due to the use of thread separation to ensure the main thread flow, we need 
@@ -46,51 +45,54 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd){
         if(!hsps){
             std::cerr<<"history_slow_plan_stat__unpack failed in thered: "<<ThreadPool::GetTid()<<std::endl;
         }
+        if(slow){
+            ExcavateContext *context = new ExcavateContext();
+            /*execute core slow query execavate strategy*/
+            context->setStrategy(std::make_shared<NoProcessedExcavateStrategy>(hsps));
+            std::vector<HistorySlowPlanStat*> list;
+            context->executeStrategy(list);
+            
+            PlanFormatContext* pf_context = new PlanFormatContext();
+            for(const auto& p : list){
+                /*format strategy 1*/
+                SlowPlanStat *sps= new SlowPlanStat();
+                auto level_mgr = std::make_shared<LevelManager>(p,sps);
+                pf_context->SetStrategy(level_mgr);
+                pf_context->executeStrategy();
+                level_mgr->ShowTotalPredClass();
 
-        /*execute core slow query execavate strategy*/
-        context->setStrategy(std::make_shared<NoProcessedExcavateStrategy>(hsps));
-        std::vector<HistorySlowPlanStat*> list;
-        context->executeStrategy(list);
-        
-        PlanFormatContext* pf_context = new PlanFormatContext();
-        for(const auto& p : list){
-            /*format strategy 1*/
-            SlowPlanStat *sps= new SlowPlanStat();
-            auto level_mgr = std::make_shared<LevelManager>(p,sps);
-            pf_context->SetStrategy(level_mgr);
-            pf_context->executeStrategy();
-            level_mgr->ShowTotalPredClass();
+                if(debug){
+                    auto node_collect_map = level_mgr->GetNodeCollector();
+                    ShowAllNodeCollect(hsps,node_collect_map);
+                }
 
-            if(debug){
-                auto node_collect_map = level_mgr->GetNodeCollector();
-                ShowAllNodeCollect(hsps,node_collect_map);
+                /*format strategt 2*/
+                pf_context->SetStrategy(std::make_shared<NodeManager>(p,level_mgr));
+                pf_context->executeStrategy();
             }
 
-            /*format strategt 2*/
-            pf_context->SetStrategy(std::make_shared<NodeManager>(p,level_mgr));
-            pf_context->executeStrategy();
+            /**
+             * build fast filter tree, here need ensure thread safe,moreover,we
+             * need rebuild it after db restarting
+            */
+
+            /**
+             * TODO: 11-23 storage the slow sub query
+             */
+            // for(auto q : list){
+            //     std::string hash_val = HashCanonicalPlan(q->json_plan);
+            //     storage_->PutStat(hash_val,hsps);
+            // }
+
+            history_slow_plan_stat__free_unpacked(hsps,NULL);
+            std::cout<<"Thread: "<<ThreadPool::GetTid()<<" Finish Working..."<<std::endl;
+            return true;
+        }else{
+            
         }
-
-        /**
-         * build fast filter tree, here need ensure thread safe,moreover,we
-         * need rebuild it after db restarting
-        */
-
-        /**
-         * TODO: 11-23 storage the slow sub query
-         */
-        // for(auto q : list){
-        //     std::string hash_val = HashCanonicalPlan(q->json_plan);
-        //     storage_->PutStat(hash_val,hsps);
-        // }
-
-        history_slow_plan_stat__free_unpacked(hsps,NULL);
-        std::cout<<"Thread: "<<ThreadPool::GetTid()<<" Finish Working..."<<std::endl;
-        return true;
     });
     return true;
 }
-
 /**
  *Preprocessing: parse all sub query (include itself) into json format 
  */
