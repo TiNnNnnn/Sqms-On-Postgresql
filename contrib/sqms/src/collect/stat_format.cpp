@@ -2,7 +2,9 @@
 #include <cstdlib>
 #include <vector>
 #include <functional>
+#include <queue>
 #include "collect/node_mgr.hpp"
+#include "discovery/query_index.hpp"
 
 static std::hash<std::string> hash_fn;
 
@@ -25,7 +27,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, bool slow){
         std::cout<<"hsps is nullptr"<<std::endl;
         return -1;
     }
-
+ 
     size_t msg_size = history_slow_plan_stat__get_packed_size(&hsps_);
     uint8_t *buffer = (uint8_t*)malloc(msg_size);
     if (buffer == NULL) {
@@ -33,9 +35,9 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, bool slow){
         return 1;
     }
     history_slow_plan_stat__pack(&hsps_,buffer);
+    pid_t pid = getpid();
     
-    pool_->submit([msg_size,buffer,slow,this]() -> bool {
-
+    pool_->submit([msg_size,buffer,slow,pid,this]() -> bool {
         std::cout<<"Thread: "<<ThreadPool::GetTid()<<" Begin Working..."<<std::endl;
         /**
          * Due to the use of thread separation to ensure the main thread flow, we need 
@@ -45,7 +47,16 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, bool slow){
         if(!hsps){
             std::cerr<<"history_slow_plan_stat__unpack failed in thered: "<<ThreadPool::GetTid()<<std::endl;
         }
+
+        bool found = true;
+        auto shared_index = (HistoryQueryLevelTree*)ShmemInitStruct(shared_index_name, sizeof(HistoryQueryLevelTree), &found);
+        if(!found || !shared_index){
+            std::cerr<<"shared_index not exist!"<<std::endl;
+            exit(-1);
+        }
+
         if(slow){
+            std::cout<<"begin process slow query..."<<std::endl;
             ExcavateContext *context = new ExcavateContext();
             /*execute core slow query execavate strategy*/
             context->setStrategy(std::make_shared<NoProcessedExcavateStrategy>(hsps));
@@ -69,6 +80,11 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, bool slow){
                 /*format strategt 2*/
                 pf_context->SetStrategy(std::make_shared<NodeManager>(p,level_mgr));
                 pf_context->executeStrategy();
+
+                if(!shared_index->Insert(level_mgr.get(),0)){
+                    std::cerr<<"shared_index insert error"<<std::endl;
+                    exit(-1);
+                }
             }
 
             /**
@@ -83,16 +99,56 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, bool slow){
             //     std::string hash_val = HashCanonicalPlan(q->json_plan);
             //     storage_->PutStat(hash_val,hsps);
             // }
-
-            history_slow_plan_stat__free_unpacked(hsps,NULL);
-            std::cout<<"Thread: "<<ThreadPool::GetTid()<<" Finish Working..."<<std::endl;
-            return true;
+            std::cout<<"finish process slow query..."<<std::endl;
         }else{
-            
+            std::cout<<"begin process comming query..."<<std::endl;
+            /*check all subuqueries in plan*/
+            std::vector<HistorySlowPlanStat*>sub_list;
+            LevelOrder(hsps,sub_list); 
+            std::cout<<"subplan size : "<<sub_list.size()<<std::endl;
+            for(const auto& p : sub_list){
+                size_t msg_size = history_slow_plan_stat__get_packed_size(p);
+                uint8_t *buffer = (uint8_t*)malloc(msg_size);
+                if (buffer == NULL) {
+                    perror("Failed to allocate memory");
+                    return 1;
+                }
+                history_slow_plan_stat__pack(p,buffer);
+                pool_->submit([shared_index,msg_size,buffer,pid,this]()->bool{
+                    HistorySlowPlanStat *p = history_slow_plan_stat__unpack(NULL, msg_size, buffer);
+                    if(!p){
+                        std::cerr<<"history_slow_plan_stat__unpack failed in thered: "<<ThreadPool::GetTid()<<std::endl;
+                    }
+                    SlowPlanStat *sps= new SlowPlanStat();
+                    PlanFormatContext* pf_context = new PlanFormatContext();
+                    auto level_mgr = std::make_shared<LevelManager>(p,sps);
+                    pf_context->SetStrategy(level_mgr);
+                    pf_context->executeStrategy();
+                    level_mgr->ShowTotalPredClass();
+
+                    if(debug){
+                        auto node_collect_map = level_mgr->GetNodeCollector();
+                        ShowAllNodeCollect(p,node_collect_map);
+                    }
+                    /*format strategt 2*/
+                    pf_context->SetStrategy(std::make_shared<NodeManager>(p,level_mgr));
+                    pf_context->executeStrategy();
+                    
+                    if(shared_index->Search(level_mgr.get(),0)){
+                        CancelQuery();
+                    }
+                    return true;
+                });
+            }
+            std::cout<<"finish process comming query..."<<std::endl;
         }
+        history_slow_plan_stat__free_unpacked(hsps,NULL);
+        std::cout<<"Thread: "<<ThreadPool::GetTid()<<" Finish Working..."<<std::endl;
+        return true;
     });
     return true;
 }
+
 /**
  *Preprocessing: parse all sub query (include itself) into json format 
  */
@@ -118,6 +174,36 @@ bool PlanStatFormat::Preprocessing(QueryDesc* qd){
 
 std::string PlanStatFormat::HashCanonicalPlan(char *json_plan){
     return std::to_string(hash_fn(std::string(json_plan)));
+}
+
+void PlanStatFormat::LevelOrder(HistorySlowPlanStat* hsps,std::vector<HistorySlowPlanStat*>& sub_list){
+    std::queue<HistorySlowPlanStat*>q;
+    int level_size = 1;
+    q.push(hsps);
+    while(!q.empty()){
+        std::vector<HistorySlowPlanStat*>v;
+        while(level_size--){
+            auto front = q.front();
+            q.pop();
+            sub_list.push_back(front);
+            v.push_back(front);
+            for(size_t i=0;i<front->n_childs;++i){
+                q.push(front->childs[i]);
+            }
+        }
+        level_size = q.size();
+    }
+}
+
+bool PlanStatFormat::CancelQuery(){
+    if(QueryCancelPending){
+        elog(WARNING, "Query already pending cancellation.");
+        return false;
+    }
+    QueryCancelPending = true;
+    InterruptPending = true;
+    ProcessInterrupts();
+    return true;
 }
 
 void PlanStatFormat::PrintIndent(int depth) {

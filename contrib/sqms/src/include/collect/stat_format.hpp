@@ -14,6 +14,8 @@ extern "C"{
     #include <stdio.h>
     #include <stdlib.h>
     #include <string.h>
+    #include "miscadmin.h"
+    #include "tcop/tcopprot.h"
 };
 
 /** 
@@ -30,23 +32,20 @@ public:
 
     PlanStatFormat(const PlanStatFormat&) = delete;
     PlanStatFormat& operator=(const PlanStatFormat&) = delete;
-
     void Serialization();
     void Deserialization();
-
     bool Preprocessing(QueryDesc* qd);
-    /* precess slow queries */
-    bool ProcQueryDesc(QueryDesc* qd,bool slow = true);
+    bool ProcQueryDesc(QueryDesc* qd, bool slow = false);
 private:
     std::string HashCanonicalPlan(char *json_plan);
+    void LevelOrder(HistorySlowPlanStat* hsps,std::vector<HistorySlowPlanStat*>& sub_list);
+    bool CancelQuery();
     
     /* debug tools */
     void ShowAllHspsTree(HistorySlowPlanStat* hsps,int hdepth = 0);
     void ShowAllPredTree(HistorySlowPlanStat* hsps,int depth = 0);
-    
     void ShowAllNodeCollect(HistorySlowPlanStat* hsps,std::unordered_map<HistorySlowPlanStat*, NodeCollector*> map,int h_depth = 0);
     void ShowNodeCollect(NodeCollector *nc ,int depth = 0);
-    
     void ShowPredTree(PredExpression* p_expr, int depth = 0);
     void ShowSubPlansTree(HistorySlowPlanStat* hsps,int depth = 0);
     void PrintIndent(int depth);
@@ -59,7 +58,10 @@ private:
     /* HistorySlowPlanStat is a protobuf format structrue,it will be encoding and stored in kv engine*/
     HistorySlowPlanStat hsps_;
     std::shared_ptr<RedisSlowPlanStatProvider> storage_;
-    //std::shared_ptr<HistoryQueryLevelTree> history_index_;
+    /*Serach Flag*/
+    std::mutex search_mutex_;
+    bool search_found_ =false; 
+    std::condition_variable search_cv_; 
 };
 
 /**

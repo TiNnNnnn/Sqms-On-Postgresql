@@ -1602,6 +1602,8 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		}
 		hsp.subplans =(HistorySlowPlanStat**)malloc(sizeof(HistorySlowPlanStat*)*sub_plan_size);
 		hsp.n_subplans = sub_plan_size;
+	}else{
+		hsp.n_childs = 0;
 	}
 
 	hsp.child_idx = 0;

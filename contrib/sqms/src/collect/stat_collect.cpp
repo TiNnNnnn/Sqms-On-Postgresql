@@ -81,15 +81,15 @@ void StatCollecter::StmtExecutorStartWrapper(QueryDesc *queryDesc, int eflags){
 			queryDesc->instrument_options |= INSTRUMENT_BUFFERS;
 			queryDesc->instrument_options |= INSTRUMENT_WAL;
 		}
-
-		/*analyse query whether a slow query or not*/
-		PlanStatFormat& es = PlanStatFormat::getInstance();
-		
 		
         if (prev_ExecutorStart)
             prev_ExecutorStart(queryDesc, eflags);
         else
             standard_ExecutorStart(queryDesc, eflags);
+		
+		/*analyse query whether a slow query or not*/
+		PlanStatFormat& es = PlanStatFormat::getInstance();
+		es.ProcQueryDesc(queryDesc,false);
         
         if (auto_explain_enabled())
         {
@@ -157,7 +157,7 @@ void StatCollecter::StmtExecutorEndWrapper(QueryDesc *queryDesc)
 		msec = queryDesc->totaltime->total * 1000.0;
 		if (msec >= query_min_duration){
 		   PlanStatFormat& es = PlanStatFormat::getInstance();
-		   es.ProcQueryDesc(queryDesc);
+		   es.ProcQueryDesc(queryDesc,true);
 		}
 		MemoryContextSwitchTo(oldcxt);
 	}

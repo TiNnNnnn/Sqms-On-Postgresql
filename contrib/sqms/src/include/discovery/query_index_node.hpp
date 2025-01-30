@@ -213,7 +213,11 @@ public:
     }
     bool Serach(LevelManager* level_mgr,int id){
         std::shared_lock<std::shared_mutex> lock(rw_mutex_);
-        std::cout<<"["<<pthread_self()<<"]: "<<list_.back()<<std::endl;
+        if(list_.size())
+            std::cout<<"["<<pthread_self()<<"]: "<<list_.back()<<std::endl;
+        else{
+            return false;
+        }
         return true;
     }
     bool Remove(LevelManager* level_mgr){
