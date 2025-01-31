@@ -17,6 +17,7 @@ extern "C"{
     #include "common/hashfn.h"
     #include "executor/instrument.h"
     #include "funcapi.h"
+    #include <time.h>
     #include "mb/pg_wchar.h"
     #include "miscadmin.h"
     #include "optimizer/planner.h"
@@ -32,6 +33,7 @@ extern "C"{
     #include "utils/acl.h"
     #include "utils/builtins.h"
     #include "utils/memutils.h"
+    #include "utils/elog.h"
 }
 
 //extern HistoryQueryLevelTree* history_idx;

@@ -56,7 +56,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, bool slow){
         }
 
         if(slow){
-            std::cout<<"begin process slow query..."<<std::endl;
+            ereport(LOG, errmsg("begin process slow query..."),errhint("SLOW"));
             ExcavateContext *context = new ExcavateContext();
             /*execute core slow query execavate strategy*/
             context->setStrategy(std::make_shared<NoProcessedExcavateStrategy>(hsps));
@@ -99,9 +99,9 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, bool slow){
             //     std::string hash_val = HashCanonicalPlan(q->json_plan);
             //     storage_->PutStat(hash_val,hsps);
             // }
-            std::cout<<"finish process slow query..."<<std::endl;
+            ereport(LOG, errmsg("finish process slow query..."),errhint("SLOW"));
         }else{
-            std::cout<<"begin process comming query..."<<std::endl;
+            ereport(LOG, errmsg("begin process comming query..."),errhint("NEW"));
             /*check all subuqueries in plan*/
             std::vector<HistorySlowPlanStat*>sub_list;
             LevelOrder(hsps,sub_list); 
@@ -140,7 +140,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, bool slow){
                     return true;
                 });
             }
-            std::cout<<"finish process comming query..."<<std::endl;
+            ereport(LOG, errmsg("finish process comming query..."),errhint("NEW"));
         }
         history_slow_plan_stat__free_unpacked(hsps,NULL);
         std::cout<<"Thread: "<<ThreadPool::GetTid()<<" Finish Working..."<<std::endl;

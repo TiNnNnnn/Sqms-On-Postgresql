@@ -34,7 +34,8 @@ extern long defaultTTLSeconds;
 
 extern bool debug;
 
-extern int max_msg_size;
+extern const int max_msg_size;
+extern const int shared_mem_size;
 extern const char* queue_name;
 extern const char* shared_index_name;
 

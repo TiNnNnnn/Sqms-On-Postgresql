@@ -10,13 +10,14 @@ extern "C" {
 	static ExecutorFinish_hook_type prev_ExecutorFinish = NULL;
 	static ExecutorEnd_hook_type prev_ExecutorEnd = NULL;
 	static shmem_startup_hook_type prev_shmem_startup_hook = NULL;
+	static emit_log_hook_type prev_log_hook = NULL;
 
 	void StmtExecutorStart(QueryDesc *queryDesc, int eflags);
 	void StmtExecutorRun(QueryDesc *queryDesc, ScanDirection direction, uint64 count, bool execute_once);
 	void StmtExecutorFinish(QueryDesc *queryDesc);
 	void StmtExecutorEnd(QueryDesc *queryDesc);
-
 	void RegisterQueryIndex();
+	void ShuntLog(ErrorData *edata);
 
     void		_PG_init(void);
     void		_PG_fini(void);
@@ -47,11 +48,13 @@ extern "C" {
         prev_ExecutorEnd = ExecutorEnd_hook;
         ExecutorEnd_hook = StmtExecutorEnd;
 
+		prev_log_hook = emit_log_hook;
+		emit_log_hook = ShuntLog;
+
 		/* create index in pg shared_memory */
-		RequestAddinShmemSpace(1024 * 1024);
+		RequestAddinShmemSpace(shared_mem_size);
 		prev_shmem_startup_hook = shmem_startup_hook;
 		shmem_startup_hook = RegisterQueryIndex;
-		//RegisterQueryIndex();
     }
 
     void _PG_fini(void){
@@ -61,6 +64,7 @@ extern "C" {
         ExecutorEnd_hook = prev_ExecutorEnd;       
 
 		shmem_startup_hook = prev_shmem_startup_hook;
+		emit_log_hook = prev_log_hook;
     }
 };
 
@@ -203,4 +207,52 @@ extern "C" void StmtExecutorFinish(QueryDesc *queryDesc) {
 
 extern "C" void StmtExecutorEnd(QueryDesc *queryDesc) {
     StatCollecter::StmtExecutorEndWrapper(queryDesc);
+}
+
+static const char* error_severity(int elevel)
+{
+    if (elevel >= ERROR)
+        return "ERROR";
+    else if (elevel >= WARNING)
+        return "WARNING";
+    else if (elevel >= NOTICE)
+        return "NOTICE";
+    else if (elevel >= INFO)
+        return "INFO";
+    else
+        return "DEBUG";
+}
+
+extern "C" void ShuntLog(ErrorData *edata){
+   FILE *log_file = NULL;
+    char log_filename[MAXPGPATH] = {0};
+    /*timestamp str */
+	char time_str[20];
+	/*default prefix str */ 
+    char log_prefix[32] = "DEFAULT"; 
+
+    /* fetch current timestamp */
+    time_t now = time(NULL);
+    struct tm *tm_info = localtime(&now);
+    strftime(time_str, sizeof(time_str), "%Y%m%d_%H%M%S", tm_info);
+
+    /* parse hint，use hint as prefix of log name */
+    if (edata->hint && strlen(edata->hint) > 0)
+    {
+        snprintf(log_prefix, sizeof(log_prefix), "%s", edata->hint);
+    }
+
+    /* generate log file name */
+    snprintf(log_filename, sizeof(log_filename), "%s/%s_%s.log", DataDir, log_prefix, time_str);
+
+	/*write log*/
+    log_file = fopen(log_filename, "a");
+    if (log_file)
+    {
+        fprintf(log_file, "[%s] %s\n", error_severity(edata->elevel), edata->message);
+        fclose(log_file);
+    }
+
+    if (prev_log_hook)
+        prev_log_hook(edata);
 }
