@@ -23,7 +23,7 @@ class HistoryQueryIndexNode{
     typedef std::vector<std::string> SET;
 public:
     HistoryQueryIndexNode(int l,int total_height);
-    ~HistoryQueryIndexNode(){};
+    ~HistoryQueryIndexNode();
     
     std::shared_ptr<HistoryQueryIndexNode> Child(size_t l,HistorySlowPlanStat* hsps);
     size_t Level(){return level_;}
@@ -128,7 +128,7 @@ public:
     bool Remove(LevelManager* level_mgr);   
 private:
     std::shared_ptr<InvertedIndex<PostingList>> inverted_idx_;
-    SMConcurrentHashMap<uint32_t,std::shared_ptr<HistoryQueryIndexNode>>child_map_;
+    SMConcurrentHashMap<uint32_t, HistoryQueryIndexNode*>child_map_;
 };
 
 class LevelSortStrategy : public LevelStrategy{
@@ -141,7 +141,7 @@ public:
     bool Remove(LevelManager* level_mgr);   
 private:    
     std::shared_ptr<InvertedIndex<PostingList>> inverted_idx_;
-    SMConcurrentHashMap<uint32_t,std::shared_ptr<HistoryQueryIndexNode>>child_map_;
+    SMConcurrentHashMap<uint32_t,HistoryQueryIndexNode*>child_map_;
 };
 
 class LevelRangeStrategy : public LevelStrategy{
@@ -154,7 +154,7 @@ public:
     bool Remove(LevelManager* level_mgr);
 private:
     std::shared_ptr<InvertedIndex<PostingList>> inverted_idx_;
-    SMUnorderedMap<SET,SMUnorderedMap<LevelPredEquivlences*,std::shared_ptr<HistoryQueryIndexNode>>,SetHasher> child_map_;
+    SMUnorderedMap<SET,SMUnorderedMap<LevelPredEquivlences*,HistoryQueryIndexNode*>,SetHasher> child_map_;
     std::shared_mutex rw_mutex_;
     size_t s_level_;
 };
@@ -194,8 +194,8 @@ private:
     bool SerachRange(LevelManager* src_mgr,int h,int id);
     bool SerachResidual(LevelManager* src_mgr,int h,int id);
 private:
-    std::shared_ptr<LevelManager> level_mgr_;
-    SMVector<std::shared_ptr<LevelManager>>historys_;
+    LevelManager* level_mgr_;
+    SMVector<LevelManager*>historys_;
 };
 
 /**
@@ -240,31 +240,59 @@ public:
         switch(l){
             case 0: {
                 //std::cout<<"DeBugStrategy"<<std::endl;
-                strategy_ = (DeBugStrategy*)ShmemInitStruct("DeBugStrategy",sizeof(DeBugStrategy),&found);
-                if(!found){
-                    new (strategy_) DeBugStrategy(total_height);
-                }
+                strategy_ = (DeBugStrategy*)ShmemAlloc(sizeof(DeBugStrategy));
+                if (!strategy_)
+                    elog(ERROR, "ShmemAlloc failed: not enough shared memory");
+                new (strategy_) DeBugStrategy(total_height);
             }break;
             case 1 :{
-                strategy_ =  new LevelHashStrategy(total_height);
+                //strategy_ =  new LevelHashStrategy(total_height);
+                strategy_ = (LevelHashStrategy*)ShmemAlloc(sizeof(LevelHashStrategy));
+                if (!strategy_)
+                    elog(ERROR, "ShmemAlloc failed: not enough shared memory");
+                new (strategy_)LevelHashStrategy(total_height);
             }break;
             case 2 :{
-                strategy_ =  new LevelScalingStrategy(total_height);
+                //strategy_ =  new LevelScalingStrategy(total_height);
+                strategy_ = (LevelScalingStrategy*)ShmemAlloc(sizeof(LevelScalingStrategy));
+                if (!strategy_)
+                    elog(ERROR, "ShmemAlloc failed: not enough shared memory");
+                new (strategy_)LevelScalingStrategy(total_height);
             }break;
             case 3 :{
-                strategy_ = new LevelRangeStrategy(total_height);
+                //strategy_ = new LevelRangeStrategy(total_height);
+                strategy_ = (LevelRangeStrategy*)ShmemAlloc(sizeof(LevelRangeStrategy));
+                if (!strategy_)
+                    elog(ERROR, "ShmemAlloc failed: not enough shared memory");
+                new (strategy_)LevelRangeStrategy(total_height);
             }break;
             case 4 :{
-                strategy_ = new LevelSortStrategy(total_height);
+                //strategy_ = new LevelSortStrategy(total_height);
+                strategy_ = (LevelSortStrategy*)ShmemAlloc(sizeof(LevelSortStrategy));
+                if (!strategy_)
+                    elog(ERROR, "ShmemAlloc failed: not enough shared memory");
+                new (strategy_)LevelSortStrategy(total_height);
             }break;
             case 5 :{
-                strategy_ =  new LevelAggStrategy(total_height);
+                //strategy_ =  new LevelAggStrategy(total_height);
+                strategy_ = (LevelAggStrategy*)ShmemAlloc(sizeof(LevelAggStrategy));
+                if (!strategy_)
+                    elog(ERROR, "ShmemAlloc failed: not enough shared memory");                
+                new (strategy_)LevelAggStrategy(total_height);
             }break;
             case 6 :{
-                strategy_ = new LevelResidualStrategy(total_height);
+                //strategy_ = new LevelResidualStrategy(total_height);
+                strategy_ = (LevelResidualStrategy*)ShmemAlloc(sizeof(LevelResidualStrategy));
+                if (!strategy_)
+                    elog(ERROR, "ShmemAlloc failed: not enough shared memory");    
+                new (strategy_)LevelResidualStrategy(total_height);
             }break;
             case 7: {
-                strategy_ = new LeafStrategy(total_height);
+                //strategy_ = new LeafStrategy(total_height);
+                strategy_ = (LeafStrategy*)ShmemAlloc(sizeof(LeafStrategy));
+                if (!strategy_)
+                    elog(ERROR, "ShmemAlloc failed: not enough shared memory");    
+                new (strategy_)LeafStrategy(total_height);
             }break;
             default :{
                 std::cerr<<"unknon level strategy"<<std::endl;

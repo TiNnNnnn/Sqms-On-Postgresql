@@ -18,7 +18,13 @@ bool LevelHashStrategy::Insert(LevelManager* level_mgr){
     }else{
         /*create a new child node*/
         size_t next_level = FindNextInsertLevel(level_mgr,1);
-        HistoryQueryIndexNode* new_idx_node = new HistoryQueryIndexNode(next_level,total_height_);
+        //HistoryQueryIndexNode* new_idx_node = new HistoryQueryIndexNode(next_level,total_height_);
+        HistoryQueryIndexNode* new_idx_node = (HistoryQueryIndexNode*)ShmemAlloc(sizeof(HistoryQueryIndexNode));
+        if(!new_idx_node){
+            elog(ERROR, "ShmemAlloc failed: not enough shared memory");
+            exit(-1);
+        }
+        new (new_idx_node) HistoryQueryIndexNode(next_level,total_height_);
         if(!new_idx_node->Insert(level_mgr)){
             return false;
         }
@@ -114,7 +120,14 @@ bool LevelScalingStrategy::Insert(LevelManager* level_mgr){
         }else{
             /*create a new child node*/
             size_t next_level = FindNextInsertLevel(level_mgr,2);
-            HistoryQueryIndexNode* new_idx_node = new HistoryQueryIndexNode(next_level,total_height_);
+
+            HistoryQueryIndexNode* new_idx_node = (HistoryQueryIndexNode*)ShmemAlloc(sizeof(HistoryQueryIndexNode));
+            if(!new_idx_node){
+                elog(ERROR, "ShmemAlloc failed: not enough shared memory");
+                exit(-1);
+            }
+            new (new_idx_node) HistoryQueryIndexNode(next_level,total_height_);
+            
             if(!new_idx_node->Insert(level_mgr)){
                 return false;
             }
@@ -173,13 +186,20 @@ bool LevelAggStrategy::Insert(LevelManager* level_mgr){
         }
         std::sort(agg_vec_id_list.begin(),agg_vec_id_list.end());
         auto hash_value =  hash_array(agg_vec_id_list);
-        SMConcurrentHashMap<uint32_t,std::shared_ptr<HistoryQueryIndexNode>>::const_accessor acc;
+        SMConcurrentHashMap<uint32_t,HistoryQueryIndexNode*>::const_accessor acc;
         if(child_map_.find(acc,hash_value)){
             auto child = acc->second;
             return child->Insert(level_mgr);
         }else{
             size_t next_level = FindNextInsertLevel(level_mgr,4);
-            auto new_idx_node = std::make_shared<HistoryQueryIndexNode>(next_level,total_height_);
+            //auto new_idx_node = std::make_shared<HistoryQueryIndexNode>(next_level,total_height_);
+            HistoryQueryIndexNode* new_idx_node = (HistoryQueryIndexNode*)ShmemAlloc(sizeof(HistoryQueryIndexNode));
+            if(!new_idx_node){
+                elog(ERROR, "ShmemAlloc failed: not enough shared memory");
+                exit(-1);
+            }
+            new (new_idx_node) HistoryQueryIndexNode(next_level,total_height_);
+
             if(!new_idx_node->Insert(level_mgr)){
                 return false;
             }
@@ -223,7 +243,7 @@ bool LevelAggStrategy::Serach(LevelManager* level_mgr,int id){
 
     for(const auto& c_id_list : combination){
         auto hash_value = hash_array(c_id_list);
-        SMConcurrentHashMap<uint32_t,std::shared_ptr<HistoryQueryIndexNode>>::const_accessor acc;
+        SMConcurrentHashMap<uint32_t,HistoryQueryIndexNode*>::const_accessor acc;
         if(child_map_.find(acc,hash_value)){
             auto child = acc->second;
             if(child->Search(level_mgr,id)){
@@ -270,13 +290,21 @@ bool LevelSortStrategy::Insert(LevelManager* level_mgr){
         std::sort(sort_vec_id_list.begin(),sort_vec_id_list.end());
         auto hash_value =  hash_array(sort_vec_id_list);
         
-        SMConcurrentHashMap<uint32_t,std::shared_ptr<HistoryQueryIndexNode>>::const_accessor acc;
+        SMConcurrentHashMap<uint32_t,HistoryQueryIndexNode*>::const_accessor acc;
         if(child_map_.find(acc,hash_value)){
             auto child = acc->second;
             return child->Insert(level_mgr);
         }else{
             size_t next_level = FindNextInsertLevel(level_mgr,4);
-            auto new_idx_node = std::make_shared<HistoryQueryIndexNode>(next_level,total_height_);
+            //auto new_idx_node = std::make_shared<HistoryQueryIndexNode>(next_level,total_height_);
+            
+            HistoryQueryIndexNode* new_idx_node = (HistoryQueryIndexNode*)ShmemAlloc(sizeof(HistoryQueryIndexNode));
+            if(!new_idx_node){
+                elog(ERROR, "ShmemAlloc failed: not enough shared memory");
+                exit(-1);
+            }
+            new (new_idx_node) HistoryQueryIndexNode(next_level,total_height_);            
+            
             if(!new_idx_node->Insert(level_mgr)){
                 return false;
             }
@@ -318,7 +346,7 @@ bool LevelSortStrategy::Serach(LevelManager* level_mgr,int id){
 
     for(const auto& c_id_list : combination){
         auto hash_value = hash_array(c_id_list);
-        SMConcurrentHashMap<uint32_t,std::shared_ptr<HistoryQueryIndexNode>>::const_accessor acc;
+        SMConcurrentHashMap<uint32_t,HistoryQueryIndexNode*>::const_accessor acc;
         if(child_map_.find(acc,hash_value)){
             auto child = acc->second;
             if(child->Search(level_mgr,id)){
@@ -341,7 +369,7 @@ bool LevelRangeStrategy::Insert(LevelManager* level_mgr){
     assert(level_mgr->GetTotalEquivlences().size());
 
     bool child_exist = false;
-    std::shared_ptr<HistoryQueryIndexNode> child_node = nullptr;
+    HistoryQueryIndexNode* child_node = nullptr;
     
     auto top_eqs = level_mgr->GetTotalEquivlences().back();
     /**we just build index on single attribute*/
@@ -372,7 +400,14 @@ bool LevelRangeStrategy::Insert(LevelManager* level_mgr){
                         continue;
                     }
                     size_t next_level = FindNextInsertLevel(level_mgr,3);
-                    auto new_idx_node = std::make_shared<HistoryQueryIndexNode>(next_level,total_height_);
+                    //auto new_idx_node = std::make_shared<HistoryQueryIndexNode>(next_level,total_height_);
+                    HistoryQueryIndexNode* new_idx_node = (HistoryQueryIndexNode*)ShmemAlloc(sizeof(HistoryQueryIndexNode));
+                    if(!new_idx_node){
+                        elog(ERROR, "ShmemAlloc failed: not enough shared memory");
+                        exit(-1);
+                    }
+                    new (new_idx_node) HistoryQueryIndexNode(next_level,total_height_);   
+                    
                     if(!new_idx_node->Insert(level_mgr)){
                         return false;
                     }
@@ -383,7 +418,7 @@ bool LevelRangeStrategy::Insert(LevelManager* level_mgr){
                 }
             }else{
                 inverted_idx_->Insert(pe_vecs);
-                SMUnorderedMap<LevelPredEquivlences *, std::shared_ptr<HistoryQueryIndexNode>>new_remind_list;
+                SMUnorderedMap<LevelPredEquivlences *, HistoryQueryIndexNode*>new_remind_list;
                 if(child_exist){
                     new_remind_list[lpes] = child_node;
                     child_map_[pe_vecs] = new_remind_list;
@@ -391,7 +426,15 @@ bool LevelRangeStrategy::Insert(LevelManager* level_mgr){
                 }
 
                 size_t next_level = FindNextInsertLevel(level_mgr,3);
-                auto new_idx_node = std::make_shared<HistoryQueryIndexNode>(next_level,total_height_);
+                //auto new_idx_node = std::make_shared<HistoryQueryIndexNode>(next_level,total_height_);
+                
+                HistoryQueryIndexNode* new_idx_node = (HistoryQueryIndexNode*)ShmemAlloc(sizeof(HistoryQueryIndexNode));
+                if(!new_idx_node){
+                    elog(ERROR, "ShmemAlloc failed: not enough shared memory");
+                    exit(-1);
+                }
+                new (new_idx_node) HistoryQueryIndexNode(next_level,total_height_);  
+                
                 if(!new_idx_node->Insert(level_mgr)){
                     return false;
                 }
@@ -469,11 +512,13 @@ bool LevelResidualStrategy::Remove(LevelManager* level_mgr){
 }
 
 bool LeafStrategy::Insert(LevelManager* level_mgr){
-    //if(level_mgr_)return true;
     if(level_mgr){
         historys_.insert(historys_.begin(),level_mgr_);
     }
-    level_mgr_ = std::shared_ptr<LevelManager>(level_mgr);
+    /**
+     * TODO:we should deep copy level_mgr from local-thread mem to shared-mem
+     */
+    level_mgr_ = level_mgr;
     return true;
 }
 

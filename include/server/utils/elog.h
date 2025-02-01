@@ -397,7 +397,6 @@ extern char *GetErrorContextStack(void);
 typedef void (*emit_log_hook_type) (ErrorData *edata);
 extern PGDLLIMPORT emit_log_hook_type emit_log_hook;
 
-
 /* GUC-configurable parameters */
 
 typedef enum

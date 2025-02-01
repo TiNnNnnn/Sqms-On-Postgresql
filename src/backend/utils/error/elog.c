@@ -104,6 +104,7 @@ extern bool redirection_done;
  */
 emit_log_hook_type emit_log_hook = NULL;
 
+
 /* GUC parameters */
 int			Log_error_verbosity = PGERROR_VERBOSE;
 char	   *Log_line_prefix = NULL; /* format for extra log line info */
@@ -3012,7 +3013,6 @@ send_message_to_server_log(ErrorData *edata)
 				syslog_level = LOG_CRIT;
 				break;
 		}
-
 		write_syslog(syslog_level, buf.data);
 	}
 #endif							/* HAVE_SYSLOG */

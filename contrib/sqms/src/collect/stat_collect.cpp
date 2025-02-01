@@ -48,8 +48,8 @@ extern "C" {
         prev_ExecutorEnd = ExecutorEnd_hook;
         ExecutorEnd_hook = StmtExecutorEnd;
 
-		prev_log_hook = emit_log_hook;
-		emit_log_hook = ShuntLog;
+		//prev_log_hook = emit_log_hook;
+		//emit_log_hook = ShuntLog;
 
 		/* create index in pg shared_memory */
 		RequestAddinShmemSpace(shared_mem_size);
@@ -64,7 +64,7 @@ extern "C" {
         ExecutorEnd_hook = prev_ExecutorEnd;       
 
 		shmem_startup_hook = prev_shmem_startup_hook;
-		emit_log_hook = prev_log_hook;
+		//emit_log_hook = prev_log_hook;
     }
 };
 
@@ -224,7 +224,7 @@ static const char* error_severity(int elevel)
 }
 
 extern "C" void ShuntLog(ErrorData *edata){
-   FILE *log_file = NULL;
+    FILE *log_file = NULL;
     char log_filename[MAXPGPATH] = {0};
     /*timestamp str */
 	char time_str[20];
@@ -253,6 +253,8 @@ extern "C" void ShuntLog(ErrorData *edata){
         fclose(log_file);
     }
 
+	//edata->filename = log_filename;
+
     if (prev_log_hook)
-        prev_log_hook(edata);
+          prev_log_hook(edata);
 }

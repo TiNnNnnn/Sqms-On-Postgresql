@@ -2,13 +2,10 @@
 
  /* rebuild the history query level tree */
 HistoryQueryLevelTree::HistoryQueryLevelTree(int origin_height){
-    bool found = true;
-    root_ = (HistoryQueryIndexNode*)ShmemInitStruct("0",sizeof(HistoryQueryIndexNode),&found);
-    if(!found){
-        //std::cout<<"HistoryQueryIndexNode"<<std::endl;
-        new (root_) HistoryQueryIndexNode(origin_height,height_);
-    }    
-    //root_ = new HistoryQueryIndexNode(1,height_);
+    root_ = (HistoryQueryIndexNode*)ShmemAlloc(sizeof(HistoryQueryIndexNode));
+    if (!root_)
+        elog(ERROR, "ShmemAlloc failed: not enough shared memory");
+    new (root_) HistoryQueryIndexNode(origin_height,height_);
 }
 
 bool HistoryQueryLevelTree::Insert(LevelManager* level_mgr,int l){
@@ -38,13 +35,16 @@ bool HistoryQueryLevelTree::Search(NodeCollector* node_collector){
  */
 HistoryQueryIndexNode::HistoryQueryIndexNode(int l,int total_height)
     :level_(l){
-    bool found = false;
-    level_strategy_context_ = (LevelStrategyContext*)ShmemInitStruct("LevelStrategyContext",sizeof(LevelStrategyContext),&found);
-    if(!found){
-        //std::cout<<"LevelStrategyContext"<<std::endl;
-        new (level_strategy_context_) LevelStrategyContext();
-    }
+    level_strategy_context_ = (LevelStrategyContext*)ShmemAlloc(sizeof(LevelStrategyContext));
+    if (!level_strategy_context_)
+        elog(ERROR, "ShmemAlloc failed: not enough shared memory");
     level_strategy_context_->SetStrategy(l,total_height);
+}
+
+HistoryQueryIndexNode:: ~HistoryQueryIndexNode(){
+    if (level_strategy_context_) {
+        level_strategy_context_->~LevelStrategyContext();
+    }
 }
 
 bool HistoryQueryIndexNode::Insert(LevelManager* level_mgr){
