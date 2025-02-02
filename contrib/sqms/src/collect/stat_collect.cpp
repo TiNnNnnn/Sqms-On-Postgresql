@@ -1,7 +1,9 @@
 #include "collect/stat_collect.hpp"
 #include "collect/stat_format.hpp"
-#include <threads.h>
 
+#include <threads.h>
+#include <sys/file.h>  // for flock
+#include <time.h>      // for time functions
 extern "C" {
 	PG_MODULE_MAGIC;
 
@@ -11,6 +13,7 @@ extern "C" {
 	static ExecutorEnd_hook_type prev_ExecutorEnd = NULL;
 	static shmem_startup_hook_type prev_shmem_startup_hook = NULL;
 	static emit_log_hook_type prev_log_hook = NULL;
+	static char time_str[20];
 
 	void StmtExecutorStart(QueryDesc *queryDesc, int eflags);
 	void StmtExecutorRun(QueryDesc *queryDesc, ScanDirection direction, uint64 count, bool execute_once);
@@ -50,7 +53,7 @@ extern "C" {
 
 		//prev_log_hook = emit_log_hook;
 		//emit_log_hook = ShuntLog;
-
+		
 		/* create index in pg shared_memory */
 		RequestAddinShmemSpace(shared_mem_size);
 		prev_shmem_startup_hook = shmem_startup_hook;
@@ -188,8 +191,27 @@ extern "C" void RegisterQueryIndex(){
 	 * TODO: here we should load history slow queries in redis into shared_index
 	 */
 	std::cout<<"finish building history query index..."<<std::endl;
-	// shared_index->Insert(nullptr,0);
-	// shared_index->Search(nullptr,0);
+
+	time_t now = time(NULL);
+	struct tm *tm_info = localtime(&now);
+	strftime(time_str, sizeof(time_str), "%Y%m%d_%H%M%S", tm_info);\
+	
+	char log_filename[MAXPGPATH] = {0};
+	const char* log_directory = "/home/yyk/Sqms-On-Postgresql/log";
+	snprintf(log_filename, sizeof(log_filename), "%s/%s_%s.log", log_directory, "SQMS_", time_str);
+
+	std::cout<<"begin building sqms logger..."<<std::endl;
+	found = false;
+	auto sqms_logger = (spdlog::logger*)
+		ShmemInitStruct("SqmsLogger", sizeof(spdlog::logger), &found);
+	
+	if (!found) {
+		auto sink_ptr = (spdlog::sinks::sink*)ShmemAlloc(sizeof(spdlog::sinks::basic_file_sink_mt));
+		new (sink_ptr) spdlog::sinks::basic_file_sink_mt(log_filename, true);
+		new (sqms_logger) spdlog::logger("sqms_logger", std::shared_ptr<spdlog::sinks::sink>(sink_ptr));
+		sqms_logger->set_level(spdlog::level::info);
+	}
+	std::cout<<"finsh building sqms logger..."<<std::endl;
 }
 
 
@@ -225,36 +247,42 @@ static const char* error_severity(int elevel)
 
 extern "C" void ShuntLog(ErrorData *edata){
     FILE *log_file = NULL;
+    int fd;
     char log_filename[MAXPGPATH] = {0};
-    /*timestamp str */
-	char time_str[20];
-	/*default prefix str */ 
+    
+    /* timestamp str */
+    const char* log_directory = "/home/yyk/Sqms-On-Postgresql/log";
     char log_prefix[32] = "DEFAULT"; 
-
-    /* fetch current timestamp */
-    time_t now = time(NULL);
-    struct tm *tm_info = localtime(&now);
-    strftime(time_str, sizeof(time_str), "%Y%m%d_%H%M%S", tm_info);
 
     /* parse hint，use hint as prefix of log name */
     if (edata->hint && strlen(edata->hint) > 0)
     {
         snprintf(log_prefix, sizeof(log_prefix), "%s", edata->hint);
     }
-
+    
     /* generate log file name */
-    snprintf(log_filename, sizeof(log_filename), "%s/%s_%s.log", DataDir, log_prefix, time_str);
+    snprintf(log_filename, sizeof(log_filename), "%s/%s_%s.log", log_directory, log_prefix, time_str);
 
-	/*write log*/
-    log_file = fopen(log_filename, "a");
+    /* open file with file descriptor */
+    fd = open(log_filename, O_WRONLY | O_APPEND | O_CREAT, 0644);
+    if (fd < 0) return; 
+
+    /* acquire lock */
+    flock(fd, LOCK_EX);
+
+    /* write log */
+    log_file = fdopen(fd, "a");
     if (log_file)
     {
         fprintf(log_file, "[%s] %s\n", error_severity(edata->elevel), edata->message);
         fclose(log_file);
     }
 
-	//edata->filename = log_filename;
+    /* release lock */
+    flock(fd, LOCK_UN);
+    close(fd);
 
+    /* call previous log hook */
     if (prev_log_hook)
-          prev_log_hook(edata);
+        prev_log_hook(edata);
 }

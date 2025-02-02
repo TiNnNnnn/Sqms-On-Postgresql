@@ -1451,6 +1451,7 @@ EmitErrorReport(void)
 	 */
 	if (edata->output_to_server && emit_log_hook)
 		(*emit_log_hook) (edata);
+		
 
 	/* Send to server log, if enabled */
 	if (edata->output_to_server)

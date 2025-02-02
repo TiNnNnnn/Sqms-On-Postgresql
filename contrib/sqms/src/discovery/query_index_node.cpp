@@ -9,9 +9,9 @@
  */
 bool LevelHashStrategy::Insert(LevelManager* level_mgr){
     assert(level_mgr);
-    auto json_sub_plan = std::string(level_mgr->GetHsps()->canonical_json_plan);
+    auto json_sub_plan = SMString(level_mgr->GetHsps()->canonical_json_plan);
 
-    SMConcurrentHashMap<std::string,HistoryQueryIndexNode*>::const_accessor acc;
+    SMConcurrentHashMap<SMString,HistoryQueryIndexNode*>::const_accessor acc;
     if(set_map_.find(acc ,json_sub_plan)){
         auto child = acc->second;
         return child->Insert(level_mgr);
@@ -39,8 +39,8 @@ bool LevelHashStrategy::Insert(LevelManager* level_mgr){
  */
 bool LevelHashStrategy::Serach(LevelManager* level_mgr,int id){
     assert(level_mgr);
-    auto json_sub_plan = std::string(level_mgr->GetHsps()->canonical_json_plan);
-    SMConcurrentHashMap<std::string,HistoryQueryIndexNode*>::const_accessor acc;
+    auto json_sub_plan = SMString(level_mgr->GetHsps()->canonical_json_plan);
+    SMConcurrentHashMap<SMString,HistoryQueryIndexNode*>::const_accessor acc;
     if(set_map_.find(acc ,json_sub_plan)){
         auto child = acc->second;
         return child->Search(level_mgr,-1);
@@ -57,9 +57,9 @@ bool LevelHashStrategy::Remove(LevelManager* level_mgr){
     return false;
 }
 
-int ScalingInfo::CalJoinTypeScore(const SMVector<std::string>& join_type_list,std::string& unique_id){
+int ScalingInfo::CalJoinTypeScore(const SMVector<SMString>& join_type_list,SMString& unique_id){
     int score = 0;
-    std::string id;
+    SMString id;
     for(const auto& join_type : join_type_list){  
         if (!std::strcmp(join_type.c_str(),"Semi") || !std::strcmp(join_type.c_str(),"Anti")){
             score += 1;
@@ -99,7 +99,10 @@ bool ScalingInfo::Match(ScalingInfo* scale_info){
 bool LevelScalingStrategy::Insert(LevelManager* level_mgr){
     assert(level_mgr);
     assert(level_mgr->GetJoinTypeList().size());
-    auto new_scaling_info = std::make_shared<ScalingInfo>(level_mgr->GetJoinTypeList());
+    auto new_scaling_info =  (ScalingInfo*) ShmemAlloc (sizeof(ScalingInfo));   
+    assert(new_scaling_info);
+    new (new_scaling_info) ScalingInfo(level_mgr->GetJoinTypeList());
+
     bool exist = true;
     {
         std::unique_lock<std::shared_mutex> lock(rw_mutex_);

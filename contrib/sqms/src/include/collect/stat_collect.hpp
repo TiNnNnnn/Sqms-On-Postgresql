@@ -4,7 +4,6 @@
 #include "discovery/query_index.hpp"
 
 extern "C"{
-    #include "postgres.h"
     #include "access/parallel.h"
     #include "collect/format.h"
     #include "executor/executor.h"
@@ -56,5 +55,3 @@ public:
     static bool current_query_sampled;
     static std::shared_ptr<HistoryQueryLevelTree> history_index_;
 };
-
-

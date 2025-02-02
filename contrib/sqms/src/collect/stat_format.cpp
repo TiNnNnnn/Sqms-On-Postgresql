@@ -1,10 +1,11 @@
+#include "discovery/query_index.hpp"
 #include "collect/stat_format.hpp"
 #include <cstdlib>
 #include <vector>
 #include <functional>
 #include <queue>
 #include "collect/node_mgr.hpp"
-#include "discovery/query_index.hpp"
+
 
 static std::hash<std::string> hash_fn;
 
@@ -19,6 +20,10 @@ PlanStatFormat::PlanStatFormat(int psize)
     : pool_(std::make_shared<ThreadPool>(psize)),pool_size_(psize){
     history_slow_plan_stat__init(&hsps_);
     storage_ = std::make_shared<RedisSlowPlanStatProvider>(std::string(redis_host),redis_port,totalFetchTimeoutMillis,totalSetTimeMillis,defaultTTLSeconds); 
+
+    bool found = false;
+    logger_ = (spdlog::logger*)ShmemInitStruct("SqmsLogger", sizeof(spdlog::logger), &found);
+    assert(found);
 }
 
 bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, bool slow){
@@ -56,7 +61,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, bool slow){
         }
 
         if(slow){
-            ereport(LOG, errmsg("begin process slow query..."),errhint("SLOW"));
+            logger_->log(spdlog::level::level_enum::debug,"begin process comming query...\n");
             ExcavateContext *context = new ExcavateContext();
             /*execute core slow query execavate strategy*/
             context->setStrategy(std::make_shared<NoProcessedExcavateStrategy>(hsps));
@@ -81,16 +86,11 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, bool slow){
                 pf_context->SetStrategy(std::make_shared<NodeManager>(p,level_mgr));
                 pf_context->executeStrategy();
 
-                if(!shared_index->Insert(level_mgr.get(),0)){
+                if(!shared_index->Insert(level_mgr.get(),1)){
                     std::cerr<<"shared_index insert error"<<std::endl;
                     exit(-1);
                 }
             }
-
-            /**
-             * build fast filter tree, here need ensure thread safe,moreover,we
-             * need rebuild it after db restarting
-            */
 
             /**
              * TODO: 11-23 storage the slow sub query
@@ -99,13 +99,13 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, bool slow){
             //     std::string hash_val = HashCanonicalPlan(q->json_plan);
             //     storage_->PutStat(hash_val,hsps);
             // }
-            ereport(LOG, errmsg("finish process slow query..."),errhint("SLOW"));
+            //ereport(LOG, errmsg("finish process slow query..."),errhint("SLOW"));
         }else{
-            ereport(LOG, errmsg("begin process comming query..."),errhint("NEW"));
+            logger_->log(spdlog::level::level_enum::debug,"begin process comming query...\n");
             /*check all subuqueries in plan*/
             std::vector<HistorySlowPlanStat*>sub_list;
             LevelOrder(hsps,sub_list); 
-            std::cout<<"subplan size : "<<sub_list.size()<<std::endl;
+            //std::cout<<"subplan size : "<<sub_list.size()<<std::endl;
             for(const auto& p : sub_list){
                 size_t msg_size = history_slow_plan_stat__get_packed_size(p);
                 uint8_t *buffer = (uint8_t*)malloc(msg_size);
@@ -134,13 +134,13 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, bool slow){
                     pf_context->SetStrategy(std::make_shared<NodeManager>(p,level_mgr));
                     pf_context->executeStrategy();
                     
-                    if(shared_index->Search(level_mgr.get(),0)){
+                    if(shared_index->Search(level_mgr.get(),1)){
                         CancelQuery();
                     }
                     return true;
                 });
             }
-            ereport(LOG, errmsg("finish process comming query..."),errhint("NEW"));
+            //ereport(LOG, errmsg("finish process comming query..."),errhint("NEW"));
         }
         history_slow_plan_stat__free_unpacked(hsps,NULL);
         std::cout<<"Thread: "<<ThreadPool::GetTid()<<" Finish Working..."<<std::endl;

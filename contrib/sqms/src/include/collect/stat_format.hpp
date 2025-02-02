@@ -1,4 +1,5 @@
 #pragma once
+#include "common/util.hpp"
 #include <string>
 #include "excavate/ExcavateContext.hpp"
 #include "common/thread_pool.hpp"
@@ -6,7 +7,6 @@
 #include <memory>
 
 extern "C"{
-    #include "postgres.h"
     #include "nodes/execnodes.h"
     #include "format.h"
     #include "format.pb-c.h"
@@ -17,7 +17,6 @@ extern "C"{
     #include "miscadmin.h"
     #include "tcop/tcopprot.h"
 };
-
 /** 
  * TODO: the name of HistorySlowPanStat and SlowPlanStat is simlar, we need rename 
  * one of them to keep readilty of codes
@@ -55,6 +54,7 @@ private:
 private:
     std::shared_ptr<ThreadPool> pool_;
     size_t pool_size_ = 10;
+    spdlog::logger* logger_;
     /* HistorySlowPlanStat is a protobuf format structrue,it will be encoding and stored in kv engine*/
     HistorySlowPlanStat hsps_;
     std::shared_ptr<RedisSlowPlanStatProvider> storage_;

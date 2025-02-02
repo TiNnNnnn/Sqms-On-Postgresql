@@ -1,4 +1,5 @@
 #pragma once
+#include "common/util.hpp"
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -11,13 +12,6 @@
 #include <mutex>
 #include <iostream>
 
-#include "common/util.hpp"
-
-extern "C" {
-    #include "postgres.h"
-    #include "common/config.h"
-    #include "storage/shmem.h"
-}
 
 /**
  * TODO: a temp implemetaion of postingList,it will be replaced by another one 
@@ -48,6 +42,13 @@ struct SetHasher {
         return lhs == rhs;
     }
 };
+
+struct SMStringHash {
+    std::size_t operator()(const SMString &s) const {
+        return std::hash<std::string_view>{}(std::string_view(s.data(), s.size()));
+    }
+};
+
 
 class PostingList{
 public:

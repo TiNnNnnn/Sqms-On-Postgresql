@@ -1,5 +1,4 @@
-#ifndef UTILS_UTIL_H_
-#define UTILS_UTIL_H_
+#pragma once
 #include <stdint.h>
 #include <vector>
 #include <string>
@@ -7,12 +6,17 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <map>
+#include "spdlog/spdlog.h"
+#include "spdlog/sinks/sink.h"
+#include "spdlog/sinks/basic_file_sink.h"
+
 
 extern "C" {
     #include "postgres.h"
     #include "common/config.h"
     #include "storage/shmem.h"
 }
+
 //单位是ms
 uint64_t GetCurrentTime();
 void GetCurrentTimeString(std::string&output);
@@ -89,6 +93,8 @@ using SMUnorderedSet = std::unordered_set<
 template <typename Key>
 using SMVector = std::vector<Key,SharedMemoryAllocator<Key>>;
 
+using SMString = std::basic_string<char, std::char_traits<char>, SharedMemoryAllocator<char>>;
+
 
 template <typename T>
 void generateCombinations(const std::vector<std::vector<T>>& arrays, 
@@ -134,5 +140,3 @@ void generateCombinations(const SMVector<SMVector<T>>& arrays,
 
 uint32_t hash_array(const std::vector<int>& array);
 uint32_t hash_array(const SMVector<int>& array);
-
-#endif
