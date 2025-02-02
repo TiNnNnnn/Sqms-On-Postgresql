@@ -22,7 +22,7 @@ PlanStatFormat::PlanStatFormat(int psize)
     storage_ = std::make_shared<RedisSlowPlanStatProvider>(std::string(redis_host),redis_port,totalFetchTimeoutMillis,totalSetTimeMillis,defaultTTLSeconds); 
 
     bool found = false;
-    logger_ = (spdlog::logger*)ShmemInitStruct("SqmsLogger", sizeof(spdlog::logger), &found);
+    logger_ = (SqmsLogger*)ShmemInitStruct("SqmsLogger", sizeof(SqmsLogger), &found);
     assert(found);
 }
 
@@ -61,7 +61,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, bool slow){
         }
 
         if(slow){
-            logger_->log(spdlog::level::level_enum::debug,"begin process comming query...\n");
+            logger_->Logger("slow","begin process comming query...\n");
             ExcavateContext *context = new ExcavateContext();
             /*execute core slow query execavate strategy*/
             context->setStrategy(std::make_shared<NoProcessedExcavateStrategy>(hsps));
@@ -101,7 +101,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, bool slow){
             // }
             //ereport(LOG, errmsg("finish process slow query..."),errhint("SLOW"));
         }else{
-            logger_->log(spdlog::level::level_enum::debug,"begin process comming query...\n");
+            logger_->Logger("comming","begin process comming query...\n");
             /*check all subuqueries in plan*/
             std::vector<HistorySlowPlanStat*>sub_list;
             LevelOrder(hsps,sub_list); 

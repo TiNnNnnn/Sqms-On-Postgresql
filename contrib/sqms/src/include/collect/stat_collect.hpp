@@ -1,6 +1,7 @@
 #pragma once
 #include <limits.h>
 #include <unordered_set>
+#include "common/logger.hpp"
 #include "discovery/query_index.hpp"
 
 extern "C"{

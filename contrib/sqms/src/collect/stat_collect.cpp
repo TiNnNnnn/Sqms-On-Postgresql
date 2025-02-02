@@ -1,6 +1,5 @@
 #include "collect/stat_collect.hpp"
 #include "collect/stat_format.hpp"
-
 #include <threads.h>
 #include <sys/file.h>  // for flock
 #include <time.h>      // for time functions
@@ -194,7 +193,7 @@ extern "C" void RegisterQueryIndex(){
 
 	time_t now = time(NULL);
 	struct tm *tm_info = localtime(&now);
-	strftime(time_str, sizeof(time_str), "%Y%m%d_%H%M%S", tm_info);\
+	strftime(time_str, sizeof(time_str), "%Y%m%d_%H%M%S", tm_info);
 	
 	char log_filename[MAXPGPATH] = {0};
 	const char* log_directory = "/home/yyk/Sqms-On-Postgresql/log";
@@ -202,15 +201,12 @@ extern "C" void RegisterQueryIndex(){
 
 	std::cout<<"begin building sqms logger..."<<std::endl;
 	found = false;
-	auto sqms_logger = (spdlog::logger*)
-		ShmemInitStruct("SqmsLogger", sizeof(spdlog::logger), &found);
-	
-	if (!found) {
-		auto sink_ptr = (spdlog::sinks::sink*)ShmemAlloc(sizeof(spdlog::sinks::basic_file_sink_mt));
-		new (sink_ptr) spdlog::sinks::basic_file_sink_mt(log_filename, true);
-		new (sqms_logger) spdlog::logger("sqms_logger", std::shared_ptr<spdlog::sinks::sink>(sink_ptr));
-		sqms_logger->set_level(spdlog::level::info);
+
+	auto logger = (SqmsLogger*)ShmemInitStruct("SqmsLogger", sizeof(SqmsLogger), &found);
+	if(!found){
+		new (logger) SqmsLogger();
 	}
+
 	std::cout<<"finsh building sqms logger..."<<std::endl;
 }
 

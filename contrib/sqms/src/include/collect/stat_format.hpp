@@ -1,5 +1,5 @@
 #pragma once
-#include "common/util.hpp"
+#include "common/logger.hpp"
 #include <string>
 #include "excavate/ExcavateContext.hpp"
 #include "common/thread_pool.hpp"
@@ -54,7 +54,7 @@ private:
 private:
     std::shared_ptr<ThreadPool> pool_;
     size_t pool_size_ = 10;
-    spdlog::logger* logger_;
+    SqmsLogger* logger_;
     /* HistorySlowPlanStat is a protobuf format structrue,it will be encoding and stored in kv engine*/
     HistorySlowPlanStat hsps_;
     std::shared_ptr<RedisSlowPlanStatProvider> storage_;

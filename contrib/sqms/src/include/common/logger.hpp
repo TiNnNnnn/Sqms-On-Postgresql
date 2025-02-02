@@ -1,71 +1,66 @@
-// /**
-//  * TODO: sqms need a sepearte log system spearte from postgresql
-//  */
-// #include "spdlog/spdlog.h"
-// #include "spdlog/sinks/sink.h"
-// #include <fstream>
-// #include <map>
-// #include <mutex>
-// #include <memory>
-// #include <iostream>
-// #include "util.hpp"
-// class TaggedFileSink : public spdlog::sinks::sink {
-// public:
-//     void log(const spdlog::details::log_msg &msg) override {
-//         std::lock_guard<std::mutex> lock(mutex);
+#pragma once
+#include "spdlog/spdlog.h"
+#include "spdlog/sinks/sink.h"
+#include <fstream>
+#include <map>
+#include <mutex>
+#include <memory>
+#include <iostream>
+#include "util.hpp"
 
-//         // fetch log msg
-//         SMString log_message(msg.payload.begin(), msg.payload.end());
+#include "spdlog/spdlog.h"
+#include "spdlog/sinks/sink.h"
+#include <fstream>
+#include <map>
+#include <mutex>
+#include <memory>
+#include <iostream>
+#include <filesystem>
+#include "util.hpp"
 
-//         /* fetch tag（format："[TAG] message..."）*/
-//         SMString tag = extract_tag(log_message);
+class TaggedFileSink {
+public:
+    TaggedFileSink(const SMString& log_dir,const SMString& time_str)
+        :log_dir_(log_dir),time_str_(time_str){}
 
-//         /*fetch target log file*/
-//         if (log_files.find(tag) == log_files.end()) {
-//             log_files[tag].open((tag + SMString(".log")).c_str(), std::ios::app);
-//         }
+    void log(const SMString& tag, const SMString& message) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if(log_files_.find(tag) == log_files_.end()){
+            auto log_filename = log_dir_ + "/" + time_str_ + "_" + tag + ".log";
+            auto sink_ptr = (spdlog::sinks::sink*)ShmemAlloc(sizeof(spdlog::sinks::basic_file_sink_mt));
+            new (sink_ptr) spdlog::sinks::basic_file_sink_mt(log_filename.c_str(), true);
+            
+            log_files_[tag] = (spdlog::logger*)ShmemAlloc(sizeof(spdlog::logger));
+            new (log_files_[tag]) spdlog::logger(tag.c_str(), std::shared_ptr<spdlog::sinks::sink>(sink_ptr));
+            log_files_[tag]->set_level(spdlog::level::info);
+        }
+        log_files_[tag]->info(message);
+        log_files_[tag]->flush();
+    }
+private:
+    SMMap<SMString, spdlog::logger*> log_files_;
+    SMString log_dir_;
+    SMString time_str_;
+    std::mutex mutex_;
+};
 
-//         /*write logs*/
-//         if (log_files[tag].is_open()) {
-//             log_files[tag] << log_message << std::endl;
-//         }
-//     }
+class SqmsLogger {
+public:
+    SqmsLogger(){
+        static char time_str[20];
+        time_t now = time(NULL);
+        struct tm *tm_info = localtime(&now);
+        strftime(time_str, sizeof(time_str), "%Y%m%d_%H%M%S", tm_info);
 
-//     void flush() override {
-//         std::lock_guard<std::mutex> lock(mutex);
-//         for (auto &entry : log_files) {
-//             entry.second.flush();
-//         }
-//     }
+        tagged_sink_ = (TaggedFileSink*)ShmemAlloc(sizeof(TaggedFileSink));
+        assert(tagged_sink_);
+        new (tagged_sink_) TaggedFileSink(log_dir,SMString(time_str));
+    }
 
-// private:
-//     SMString extract_tag(SMString &message) {
-//         size_t start = message.find("[");
-//         size_t end = message.find("]");
-//         if (start != SMString::npos && end != SMString::npos && end > start) {
-//             SMString tag = message.substr(start + 1, end - start - 1);
-//             message = message.substr(end + 2); 
-//             return tag;
-//         }
-//         return "default";
-//     }
-// private:
-//     SMMap<SMString, std::ofstream> log_files;
-//     std::mutex mutex;
-//     SMString default_filename = "default.log";
-// };
-
-// // int main() {
-// //     auto tagged_sink = std::make_shared<TaggedFileSink>();
-
-// //     // 绑定到 SPDLOG
-// //     spdlog::logger logger("tagged_logger", tagged_sink);
-// //     logger.set_level(spdlog::level::info);
-
-// //     // 记录不同类别的日志
-// //     logger.info("[SQL] Executing query: SELECT * FROM users;");
-// //     logger.info("[Network] Received packet from 192.168.1.1");
-// //     logger.info("[Auth] User login success");
-
-// //     return 0;
-// // }
+    void Logger(const char* tag, const char* msg) {
+        tagged_sink_->log(SMString(tag),SMString(msg));
+    }
+private:
+    TaggedFileSink* tagged_sink_;
+    SMString log_dir = "/home/yyk/Sqms-On-Postgresql/log";
+};
