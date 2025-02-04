@@ -61,7 +61,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, bool slow){
         }
 
         if(slow){
-            logger_->Logger("slow","begin process comming query...\n");
+            logger_->Logger("slow","begin process comming query...");
             ExcavateContext *context = new ExcavateContext();
             /*execute core slow query execavate strategy*/
             context->setStrategy(std::make_shared<NoProcessedExcavateStrategy>(hsps));
@@ -72,7 +72,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, bool slow){
             for(const auto& p : list){
                 /*format strategy 1*/
                 SlowPlanStat *sps= new SlowPlanStat();
-                auto level_mgr = std::make_shared<LevelManager>(p,sps);
+                auto level_mgr = std::make_shared<LevelManager>(p,sps,logger_,"slow");
                 pf_context->SetStrategy(level_mgr);
                 pf_context->executeStrategy();
                 level_mgr->ShowTotalPredClass();
@@ -87,7 +87,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, bool slow){
                 pf_context->executeStrategy();
 
                 if(!shared_index->Insert(level_mgr.get(),1)){
-                    std::cerr<<"shared_index insert error"<<std::endl;
+                    logger_->Logger("slow","shared_index insert error");
                     exit(-1);
                 }
             }
@@ -99,9 +99,9 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, bool slow){
             //     std::string hash_val = HashCanonicalPlan(q->json_plan);
             //     storage_->PutStat(hash_val,hsps);
             // }
-            //ereport(LOG, errmsg("finish process slow query..."),errhint("SLOW"));
+            logger_->Logger("slow","finish process slow query...");
         }else{
-            logger_->Logger("comming","begin process comming query...\n");
+            logger_->Logger("comming","begin process comming query...");
             /*check all subuqueries in plan*/
             std::vector<HistorySlowPlanStat*>sub_list;
             LevelOrder(hsps,sub_list); 
@@ -111,7 +111,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, bool slow){
                 uint8_t *buffer = (uint8_t*)malloc(msg_size);
                 if (buffer == NULL) {
                     perror("Failed to allocate memory");
-                    return 1;
+                    exit(-1);
                 }
                 history_slow_plan_stat__pack(p,buffer);
                 pool_->submit([shared_index,msg_size,buffer,pid,this]()->bool{
@@ -121,7 +121,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, bool slow){
                     }
                     SlowPlanStat *sps= new SlowPlanStat();
                     PlanFormatContext* pf_context = new PlanFormatContext();
-                    auto level_mgr = std::make_shared<LevelManager>(p,sps);
+                    auto level_mgr = std::make_shared<LevelManager>(p,sps,logger_,"comming");
                     pf_context->SetStrategy(level_mgr);
                     pf_context->executeStrategy();
                     level_mgr->ShowTotalPredClass();
@@ -140,7 +140,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, bool slow){
                     return true;
                 });
             }
-            //ereport(LOG, errmsg("finish process comming query..."),errhint("NEW"));
+            logger_->Logger("comming","finish process comming query...");
         }
         history_slow_plan_stat__free_unpacked(hsps,NULL);
         std::cout<<"Thread: "<<ThreadPool::GetTid()<<" Finish Working..."<<std::endl;

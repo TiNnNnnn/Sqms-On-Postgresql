@@ -191,14 +191,6 @@ extern "C" void RegisterQueryIndex(){
 	 */
 	std::cout<<"finish building history query index..."<<std::endl;
 
-	time_t now = time(NULL);
-	struct tm *tm_info = localtime(&now);
-	strftime(time_str, sizeof(time_str), "%Y%m%d_%H%M%S", tm_info);
-	
-	char log_filename[MAXPGPATH] = {0};
-	const char* log_directory = "/home/yyk/Sqms-On-Postgresql/log";
-	snprintf(log_filename, sizeof(log_filename), "%s/%s_%s.log", log_directory, "SQMS_", time_str);
-
 	std::cout<<"begin building sqms logger..."<<std::endl;
 	found = false;
 

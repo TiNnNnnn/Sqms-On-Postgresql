@@ -106,6 +106,7 @@ public:
     bool Serach(PredEquivlenceRange* range);
 
     void PrintPredEquivlenceRange(int depth = 0);
+    std::string PrintPredEquivlenceRange(int depth,std::string tag,SqmsLogger* logger);
 
 private:
     PType type_;
@@ -155,7 +156,10 @@ public:
     bool Copy(PredEquivlence* pe);
 
     void ShowPredEquivlence(int depth = 0);
+    std::string ShowPredEquivlence(int depth,std::string tag,SqmsLogger* logger);
+
     void ShowPredEquivlenceSets(int depth = 0);
+    std::string ShowPredEquivlenceSets(int depth,std::string tag,SqmsLogger* logger);
 
     std::set<std::string>& GetPredSet(){return set_;}
     void SetPredSet(std::set<std::string> set){set_ = set;}
@@ -222,6 +226,7 @@ public:
     bool MergePredEquivlences(const std::vector<PredEquivlence*>& merge_pe_list,bool pre_merged = false);
 
     void ShowLevelPredEquivlences(int depth = 0);
+    std::string ShowLevelPredEquivlences(int depth,std::string tag, SqmsLogger* logger);
 
     std::unordered_set<PredEquivlence*>& LevelPeList(){return level_pe_sets_;};
 
@@ -271,6 +276,7 @@ public:
     std::vector<LevelPredEquivlences*>& GetLpesList(){return lpes_list_;}
 
     void ShowLevelPredEquivlencesList(int depth);
+    std::string ShowLevelPredEquivlencesList(int depth, std::string tag, SqmsLogger* logger);
     int DistributeId(){
         int ret = lpes_id_creator_;
         lpes_id_creator_++;
@@ -299,7 +305,9 @@ class LevelOutputList{
 public:
     void Insert(LevelPredEquivlencesList* lpes_list,HistorySlowPlanStat* hsps);
     void Insert(LevelOutputList* lo_list);
+
     void ShowLevelOutputList(int depth = 0);
+    std::string ShowLevelOutputList(int depth,std::string tag,SqmsLogger* logger);
 
     const std::vector<UMAP>& GetOutput2PeList(){return output2pe_list_;}
     const std::vector<USET>& GetOutputExtendList(){return output_extend_list_;}
@@ -327,7 +335,10 @@ public:
         :tag_(tag)
     {}
     void Init(HistorySlowPlanStat* hsps,LevelPredEquivlences* lpes = nullptr);
+
     void ShowAggEquivlence(int depth = 0);
+    std::string ShowAggEquivlence(int depth,std::string tag,SqmsLogger* logger);
+
     const std::map<std::string, PredEquivlence*>& GetKey2Pe(){return key2pe_;}
     const std::set<std::string>& GetExtends(){return extends_;}
 private:
@@ -345,7 +356,10 @@ class LevelAggAndSortEquivlences{
 public:
     void Insert(AggAndSortEquivlence* ae);
     void Insert(LevelAggAndSortEquivlences* level_ae);
+
     void ShowLevelAggEquivlence(int depth = 0);
+    std::string ShowLevelAggEquivlence(int depth,std::string tag, SqmsLogger* logger);
+
     size_t Size(){return level_agg_sets_.size();}
     const std::vector<AggAndSortEquivlence*>& GetLevelAggSets(){return level_agg_sets_;}
 
@@ -368,7 +382,9 @@ public:
     {}
     void Insert(HistorySlowPlanStat* hsps, std::string label);
     void Insert(LevelAggAndSortList* la_list);
+
     void ShowLevelAggAndSortList(int depth = 0);
+    std::string ShowLevelAggAndSortList(int depth,std::string tag, SqmsLogger* logger);
 
     size_t Size(){return level_agg_list_.size();}
     void Copy(LevelAggAndSortList* lal);
@@ -389,7 +405,10 @@ class LevelTblList{
 public:
     void Insert(const std::string& tbl_name){tbl_set_.insert(tbl_name);}
     void Insert(LevelTblList* lt_list);
+    
     void ShowLevelTblList(int depth = 0);
+    std::string ShowLevelTblList(int depth,std::string tag,SqmsLogger* logger);
+
     const std::set<std::string>& GetTblSet(){return tbl_set_;}
 private:
     std::set<std::string> tbl_set_;
@@ -417,15 +436,19 @@ public:
  */
 class LevelManager : public AbstractFormatStrategy{
 public:
-    LevelManager(HistorySlowPlanStat* hsps, SlowPlanStat*sps,MatchStrategy ms = C_DEFALUT)
-        :hsps_(hsps),sps_(sps),ms_(ms)
+    LevelManager(HistorySlowPlanStat* hsps, SlowPlanStat*sps, SqmsLogger* logger,std::string log_tag = "slow")
+        :hsps_(hsps),sps_(sps),logger_(logger),log_tag_(log_tag)
     {}
 
     virtual bool Format();
     virtual bool PrintPredEquivlences();
     void ComputeTotalClass(); 
-    void ShowPredClass(int height,int depth = 0);
+
+    void ShowPredClass(int height,std::string tag,int depth = 0);
+    std::string GetPredClassStr(int height,std::string tag,int depth = 0);
+
     void ShowTotalPredClass(int depth = 0);
+    std::string GetTotalPredClassStr(int depth = 0);
 
     /*for index*/
     const std::vector<std::string>& GetJoinTypeList(){return join_type_list_;}
@@ -484,6 +507,10 @@ private:
     std::vector<std::string> join_type_list_;
 
     std::vector<LevelPredEquivlencesList*> total_residual_equivlences_;
+
+    std::string log_tag_;
+
+    SqmsLogger* logger_;
 };
 
 class PredOperatorWrap: public AbstractPredNode{

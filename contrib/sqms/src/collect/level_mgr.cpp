@@ -190,11 +190,27 @@ void PrintIndent(int depth) {
     }
 }
 
+std::string PrintIndent(int depth, std::string tag){
+	std::string str;
+	for(int i = 0; i<depth; ++i) {
+		str += "  ";
+	}
+	return str;
+}
+
 void PrintLine(int len){
 	for(int i=0;i<len;++i){
 		std::cout << "-";
 	}
 	std::cout<<std::endl;
+}
+
+std::string PrintLine(int len,std::string tag){
+	std::string str;
+	for(int i=0;i<len;++i){
+		str += "-";
+	}
+	return str;
 }
 
 /**
@@ -383,6 +399,34 @@ void LevelOutputList::ShowLevelOutputList(int depth){
 	}
 }
 
+std::string  LevelOutputList::ShowLevelOutputList(int depth,std::string tag,SqmsLogger* logger){
+	std::string str;
+	for(size_t i = 0; i < output2pe_list_.size(); i++){
+		str += PrintIndent(depth,tag);
+		str += "[id:" + std::to_string(lpe_id_list_[i]) + "]->(";
+		int j = 0;	
+		for(const auto& e : output2pe_list_[i]){
+			if(j) str +=",";
+			if(e.second == nullptr){
+				str += e.first;
+			}else{
+				str += e.first+"->";
+				e.second->ShowPredEquivlenceSets(depth,tag,logger);
+			}
+			j++;
+		}
+		str += "), extend_list: (";
+		j = 0;
+		for(const auto& e : output_extend_list_[i]){
+			if(j) str += ",";
+			str += e;
+			j++;
+		}
+		str += ")\n";
+	}
+	return str;
+}
+
 void LevelManager::SortKeyDecompase(HistorySlowPlanStat* hsps){
 	assert(total_equivlences_[cur_height_]);
 
@@ -563,6 +607,31 @@ void AggAndSortEquivlence::ShowAggEquivlence(int depth){
 	std::cout<<")";
 }
 
+std::string AggAndSortEquivlence::ShowAggEquivlence(int depth,std::string tag,SqmsLogger* logger){
+	std::string str;
+	str += tag_ +":(";
+	int j = 0;
+	for(const auto& e : key2pe_){
+		if(j) str += ",";
+		if(e.second == nullptr){
+			str += e.first;
+		}else{
+			str += e.first + "->";
+			str += e.second->ShowPredEquivlenceSets(depth,tag,logger);
+		}
+		j++;
+	}
+	str += "), extends: (";
+	j = 0;
+	for(const auto& e : extends_){
+		if(j) str += ",";
+		str += e;
+		j++;
+	}
+	str += ")";
+	return str;
+}
+
 void LevelAggAndSortEquivlences::Insert(AggAndSortEquivlence* ae){
 	level_agg_sets_.push_back(ae);
 }
@@ -583,6 +652,19 @@ void LevelAggAndSortEquivlences::ShowLevelAggEquivlence(int depth){
 		idx++;
 	}
 	std::cout<<"}\n";
+}
+
+std::string LevelAggAndSortEquivlences::ShowLevelAggEquivlence(int depth,std::string tag, SqmsLogger* logger){
+	std::string str = PrintIndent(depth,tag);
+	str += "[id:" + std::to_string(lpe_id_) + "]->{";
+	int idx = 0;
+	for(const auto& ae : level_agg_sets_){
+		if(idx)str += ",";
+		str += ae->ShowAggEquivlence(depth+1,tag,logger);
+		idx++;
+	}
+	str += "}\n";
+	return str;
 }
 
 void LevelAggAndSortList::Insert(HistorySlowPlanStat* hsps,std::string label){
@@ -644,6 +726,14 @@ void LevelAggAndSortList::ShowLevelAggAndSortList(int depth){
 	}	
 }
 
+std::string LevelAggAndSortList::ShowLevelAggAndSortList(int depth,std::string tag, SqmsLogger* logger){
+	std::string str;
+	for(const auto& lae: level_agg_list_){
+		str += lae->ShowLevelAggEquivlence(depth+1,tag,logger);
+	}
+	return str;
+}
+
 
 void LevelTblList::Insert(LevelTblList* lt_list){
 	assert(lt_list);
@@ -660,6 +750,18 @@ void LevelTblList::ShowLevelTblList(int depth){
 		std::cout<<name;
 	}
 	std::cout<<"}\n";
+}
+
+std::string LevelTblList::ShowLevelTblList(int depth,std::string tag,SqmsLogger* logger){
+	std::string str;
+	str += "{";
+	int idx = 0;
+	for(const auto& name: tbl_set_){
+		if(idx++)str += ",";
+		str += name;
+	}
+	str += "}\n";
+	return str;	
 }
 
 /**
@@ -1031,6 +1133,53 @@ void PredEquivlenceRange::PrintPredEquivlenceRange(int depth){
 	std::cout<<output;
 }
 
+std::string PredEquivlenceRange::PrintPredEquivlenceRange(int depth,std::string tag,SqmsLogger* logger){
+	std::string output;
+	auto ll = lower_limit_ == LOWER_LIMIT?"-∞":lower_limit_;
+	auto ul = upper_limit_ == UPPER_LIMIT?"+∞":upper_limit_;
+	switch(type_){
+		case PType::EQUAL:{
+			output += "=";
+			output += ll;
+		}break;
+		case PType::NOT_EQUAL:{
+			output += "<>";
+			output += ll;
+		}break;
+		case PType::RANGE:{
+			if(boundary_constraint_.first){
+				output+="[";
+			}else{
+				output+="(";
+			}
+			output += ll;
+			output += ",";
+			output += ul;
+			if(boundary_constraint_.second){
+				output+="]";
+			}else{
+				output+=")";
+			}
+		}break;
+		case PType::LIST:{
+			output+="[";
+			for(size_t i=0;i<list_.size();i++){
+				output += list_[i];
+				if(i != list_.size()-1) output +=",";
+			}
+			output+="]";
+		}break;
+		case PType::SUBQUERY:{
+			output+="SUBQUERY";
+		}break;
+		default:{
+			std::cerr<<"unknow type of pe_range: "<<int(type_)<<std::endl;
+			exit(-1);
+		}
+	}
+	return output;
+}
+
 PredEquivlence::PredEquivlence(Quals* qual){
 	assert(qual);
 	PType type = QualType(qual);
@@ -1103,9 +1252,14 @@ PredEquivlence::PredEquivlence(Quals* qual){
 			}
 			assert(qual->hsps);
 			PlanFormatContext* pf_context = new PlanFormatContext();
+			
+			bool found = false;
+			auto logger = (SqmsLogger*)ShmemInitStruct("SqmsLogger", sizeof(SqmsLogger), &found);
+			assert(found);
+			
 			/*calualate pred equivlence here*/
 			for(size_t i = 0; i < qual->hsps->n_subplans; i++){
-				auto sub_level_mgr = std::make_shared<LevelManager>(qual->hsps->subplans[i],nullptr);
+				auto sub_level_mgr = std::make_shared<LevelManager>(qual->hsps->subplans[i],nullptr,logger);
 				pf_context->SetStrategy(sub_level_mgr);
 				pf_context->executeStrategy();
 				sublink_level_pe_lists_[qual->hsps->subplans[i]->sub_plan_name] = sub_level_mgr; 
@@ -1120,9 +1274,14 @@ PredEquivlence::PredEquivlence(Quals* qual){
 			}
 			assert(qual->hsps);
 			PlanFormatContext* pf_context = new PlanFormatContext();
+
+			bool found = false;
+			auto logger = (SqmsLogger*)ShmemInitStruct("SqmsLogger", sizeof(SqmsLogger), &found);
+			assert(found);
+
 			/*calualate pred equivlence here*/
 			for(size_t i = 0; i < qual->hsps->n_subplans; i++){
-				auto sub_level_mgr = std::make_shared<LevelManager>(qual->hsps->subplans[i],nullptr);
+				auto sub_level_mgr = std::make_shared<LevelManager>(qual->hsps->subplans[i],nullptr,logger);
 				pf_context->SetStrategy(sub_level_mgr);
 				pf_context->executeStrategy();
 				sublink_level_pe_lists_[qual->hsps->subplans[i]->sub_plan_name] = sub_level_mgr; 
@@ -1534,6 +1693,44 @@ void PredEquivlence::ShowPredEquivlence(int depth){
 	}
 }
 
+std::string PredEquivlence::ShowPredEquivlence(int depth,std::string tag,SqmsLogger* logger){
+	std::string str;
+	str += "(name_sets: [";
+	int idx = 0;
+	for(auto iter = set_.begin();iter != set_.end();iter++){
+		if (idx) 
+			str += ",";
+		str += *iter;
+		idx++;
+	}
+	
+	str += "] , ";
+	idx = 0;
+
+	str += "range_sets:[";
+	for(const auto& range : ranges_){
+		if(idx)
+			str += ",";
+		str += range->PrintPredEquivlenceRange(depth,tag,logger);
+		idx++;
+	}
+
+	if(sublink_level_pe_lists_.empty()){
+		str += "])";
+	}else{
+		str += "] , sublinks: [\n";
+		str += PrintIndent(depth+1,tag);
+		for(const auto& subklink : sublink_level_pe_lists_){
+			str += subklink.first + "\n";
+			str += PrintIndent(depth+1,tag);
+			str += subklink.second->GetTotalPredClassStr(depth+3);
+		}
+		str += PrintIndent(depth,tag);
+		str += "])";
+	}
+	return str;
+}
+
 void PredEquivlence::ShowPredEquivlenceSets(int depth){
 	std::cout<<"[";
 	int idx = 0;
@@ -1544,6 +1741,20 @@ void PredEquivlence::ShowPredEquivlenceSets(int depth){
 		idx++;
 	}
 	std::cout<<"]";
+}
+
+std::string PredEquivlence::ShowPredEquivlenceSets(int depth,std::string tag,SqmsLogger* logger){
+	std::string str;
+	str += "[";
+	int idx = 0;
+	for(auto iter = set_.begin();iter != set_.end();iter++){
+		if (idx) 
+			str +=",";
+		str += *iter;
+		idx++;
+	}
+	str += "]";
+	return str;
 }
 
 /**
@@ -1737,6 +1948,19 @@ void LevelPredEquivlences::ShowLevelPredEquivlences(int depth){
 	std::cout<<"}\n";
 }
 
+std::string LevelPredEquivlences::ShowLevelPredEquivlences(int depth,std::string tag, SqmsLogger* logger){
+	std::string str;
+	int idx = 0;
+	for(const auto& pe : level_pe_sets_){
+		if(idx)
+			str += ",";
+		str += pe->ShowPredEquivlence(depth+1,tag,logger);
+		idx++;
+	}
+	str += "}\n";
+	return str;
+}
+
 void LevelPredEquivlences::BuildKey2PeMap(){
 	assert(!key2pe_.size());
 	for(const auto& pe : level_pe_sets_){
@@ -1861,6 +2085,21 @@ void LevelPredEquivlencesList::ShowLevelPredEquivlencesList(int depth){
 	}
 }
 
+std::string LevelPredEquivlencesList::ShowLevelPredEquivlencesList(int depth, std::string tag, SqmsLogger* logger){
+	std::string str;
+	for(size_t i = 0; i < lpes_list_.size();++i){
+		str += PrintIndent(depth+1,tag);
+		str += "[id:"+ std::to_string(i) + ", childs:";
+		for(const auto& child : child_lpes_map_[i]){
+			str += child + ",";
+		}
+		str += "early_stop:" + std::string(lpes_list_[i]->EarlyStop() == true? "ture":"false");
+		str += "]->";
+		str +=  lpes_list_[i]->ShowLevelPredEquivlences(depth+1,tag,logger);
+	}
+	return str;
+}
+
 /**
  * LevelCollect: For exprs in node such as join_cond,filter,one_time_filter....
  */
@@ -1930,41 +2169,67 @@ void LevelManager::ReSetAllPreProcessd(){
 	}
 }
 
-void LevelManager::ShowPredClass(int height,int depth){
+void LevelManager::ShowPredClass(int height,std::string tag,int depth){
 	assert(height>=0);
 	
 	PrintIndent(depth);
-	std::cout << "level<"+ std::to_string(height) <<">pred_equivelnces: "<<std::endl;
+	std::cout << "level<" << height << ">pred_equivelnces: "<<std::endl;
 	total_equivlences_[height]->ShowLevelPredEquivlencesList(depth+1);
 	
 	PrintIndent(depth);
-	std::cout<<"output cols: "<<std::endl;
+	std::cout << "output cols:" << std::endl;
 	total_outputs_[height]->ShowLevelOutputList(depth+1);
 
 	PrintIndent(depth);
-	std::cout<<"tables: ";
+	std::cout << "tables: " << std::endl;
 	total_tbls_[height]->ShowLevelTblList(depth+1);
 
 	PrintIndent(depth);
-	std::cout<<"groupby keys: "<<std::endl;
+	std::cout<<"groupby keys:"<<std::endl;
 	total_aggs_[height]->ShowLevelAggAndSortList(depth+1);
 
 	PrintIndent(depth);
-	std::cout<<"sort keys: "<<std::endl;
+	std::cout<<"sort keys:"<<std::endl;
 	total_sorts_[height]->ShowLevelAggAndSortList(depth+1);
 	
 	PrintIndent(depth);
 	PrintLine(50-depth);
 }
 
+std::string LevelManager::GetPredClassStr(int height,std::string tag,int depth){
+	assert(height>=0);
+	std::string str;
+	
+	str += PrintIndent(depth,log_tag_) + "level<" + std::to_string(height) +">pred_equivelnces: \n";
+	str += total_equivlences_[height]->ShowLevelPredEquivlencesList(depth+1,tag,logger_);
+	
+	str += PrintIndent(depth,log_tag_) + std::string("output cols: \n");
+	str += total_outputs_[height]->ShowLevelOutputList(depth+1,tag,logger_);
+	
+	str += PrintIndent(depth,log_tag_) + std::string("tables:");
+	str += total_tbls_[height]->ShowLevelTblList(depth+1,tag,logger_);
+	
+	str += PrintIndent(depth,log_tag_) + std::string("groupby keys: \n");
+	str += total_aggs_[height]->ShowLevelAggAndSortList(depth+1,tag,logger_);
+
+	str += PrintIndent(depth,log_tag_)+std::string("sort keys: \n");
+	str += total_sorts_[height]->ShowLevelAggAndSortList(depth+1,tag,logger_);
+
+	str += PrintIndent(depth,log_tag_);
+	str += PrintLine(50-depth,log_tag_);
+
+	return str;
+}
+
 void LevelManager::ShowTotalPredClass(int depth){
-	std::cout<<"Total Pred Class: "<<std::endl;
-	// std::reverse(total_equivlences_.begin(),total_equivlences_.end());
-	// std::reverse(total_outputs_.begin(),total_outputs_.end());
-	// std::reverse(total_aggs_.begin(),total_aggs_.end());
-	// std::reverse(total_sorts_.begin(),total_sorts_.end()); 
-	// std::reverse(total_tbls_.begin(),total_tbls_.end());
+	logger_->Logger(log_tag_.c_str(),GetTotalPredClassStr(depth).c_str());
+}
+
+std::string LevelManager::GetTotalPredClassStr(int depth){
+	std::string str;
+	str += "Total Pred Class: \n";
 	for(int i = total_equivlences_.size()-1;i>=0;--i){
-		ShowPredClass(i,depth+1);
+		str += GetPredClassStr(i,log_tag_,depth+1);
 	}
+	return str;
 }
