@@ -79,7 +79,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, bool slow){
 
                 if(debug){
                     auto node_collect_map = level_mgr->GetNodeCollector();
-                    ShowAllNodeCollect(hsps,node_collect_map);
+                    logger_->Logger("slow",ShowAllNodeCollect(hsps,node_collect_map,"slow").c_str());
                 }
 
                 /*format strategt 2*/
@@ -128,7 +128,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, bool slow){
 
                     if(debug){
                         auto node_collect_map = level_mgr->GetNodeCollector();
-                        ShowAllNodeCollect(p,node_collect_map);
+                        logger_->Logger("comming",ShowAllNodeCollect(p,node_collect_map,"comming").c_str());
                     }
                     /*format strategt 2*/
                     pf_context->SetStrategy(std::make_shared<NodeManager>(p,level_mgr));
@@ -197,12 +197,15 @@ void PlanStatFormat::LevelOrder(HistorySlowPlanStat* hsps,std::vector<HistorySlo
 
 bool PlanStatFormat::CancelQuery(){
     if(QueryCancelPending){
-        elog(WARNING, "Query already pending cancellation.");
+        // elog(WARNING, "Query already pending cancellation.");
+        // logger_->Logger("comming","Query already pending cancellation.");
         return false;
     }
     QueryCancelPending = true;
     InterruptPending = true;
     ProcessInterrupts();
+    elog(WARNING, "Query is canceled by sqms.");
+    logger_->Logger("comming","Query is canceled by sqms.");
     return true;
 }
 
@@ -210,6 +213,14 @@ void PlanStatFormat::PrintIndent(int depth) {
     for (int i = 0; i < depth; ++i) {
         std::cout << "  ";
     }
+}
+
+std::string PlanStatFormat::GetIndent(int depth){
+    std::string str;
+    for(int i = 0;i < depth; ++i ){
+        str += "  ";
+    }
+    return str;
 }
 
 void PlanStatFormat::ShowAllHspsTree(HistorySlowPlanStat* hsps,int h_depth){
@@ -225,47 +236,53 @@ void PlanStatFormat::ShowAllHspsTree(HistorySlowPlanStat* hsps,int h_depth){
     }
 }
 
-void PlanStatFormat::ShowAllNodeCollect(HistorySlowPlanStat* hsps,std::unordered_map<HistorySlowPlanStat*, NodeCollector*> map,int h_depth){
-    if(!hsps)return;
-    PrintIndent(h_depth);
-    std::cout << "["<<hsps->node_type<<"]:"<<std::endl;
+std::string PlanStatFormat::ShowAllNodeCollect(HistorySlowPlanStat* hsps,
+    std::unordered_map<HistorySlowPlanStat*, NodeCollector*> map,std::string tag,int h_depth){
+    assert(hsps);
+    std::string str = "\n";
+    str += GetIndent(h_depth);
+    str += "[" + std::string(hsps->node_type) + "]:\n";
     
     auto& node_collector = map.at(hsps);
     assert(node_collector);
 
-    ShowNodeCollect(node_collector,h_depth+1);
+    str += ShowNodeCollect(node_collector,tag,h_depth+1);
     
     for(size_t i=0;i<hsps->n_childs;i++){
-        ShowAllNodeCollect(hsps->childs[i],map,h_depth+1);
+        str += ShowAllNodeCollect(hsps->childs[i],map,tag,h_depth+1);
     }
+
+    return str;
 }
 
-void PlanStatFormat::ShowNodeCollect(NodeCollector *nc ,int depth){
+std::string PlanStatFormat::ShowNodeCollect(NodeCollector *nc ,std::string tag,int depth){
+    std::string str;
     if(nc->node_equivlences_){
-        nc->node_equivlences_->ShowLevelPredEquivlencesList(depth);
+        str += nc->node_equivlences_->ShowLevelPredEquivlencesList(depth,tag,logger_);
     }
     
     if(nc->node_tbls_){
-        PrintIndent(depth+1);
-        std::cout<<"tables: ";
-        nc->node_tbls_->ShowLevelTblList(depth);
+        str += GetIndent(depth+1);
+        str += "tables: ";
+        str += nc->node_tbls_->ShowLevelTblList(depth,tag,logger_);
     }
 
     if(nc->node_outputs_){
-        nc->node_outputs_->ShowLevelOutputList(depth+1);
+        str += nc->node_outputs_->ShowLevelOutputList(depth+1,tag,logger_);
     }
 
     if(nc->node_aggs_){
-        PrintIndent(depth+1);
-        std::cout<<"groupby keys:";
-        nc->node_aggs_->ShowLevelAggAndSortList(depth-1);
+        str += GetIndent(depth+1);
+        str += "groupby keys:";
+        str += nc->node_aggs_->ShowLevelAggAndSortList(depth-1,tag,logger_);
     }
 
     if(nc->node_sorts_){
-        PrintIndent(depth+1);
-        std::cout<<"sort keys:";
-        nc->node_sorts_->ShowLevelAggAndSortList(depth-1);
+        str += GetIndent(depth+1);
+        str += "sort keys:";
+        str += nc->node_sorts_->ShowLevelAggAndSortList(depth-1,tag,logger_);
     }
+    return str;
 }
 
 void PlanStatFormat::ShowAllPredTree(HistorySlowPlanStat* hsps,int depth){

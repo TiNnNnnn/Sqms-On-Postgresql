@@ -12,6 +12,7 @@
 #include "inverted_index.hpp"
 #include "collect/level_mgr.hpp"
 #include "tbb/concurrent_hash_map.h"
+#include "sm_level_mgr.hpp"
 
 extern "C" {
     #include "collect/format.pb-c.h"
@@ -194,6 +195,9 @@ private:
  * - node stat
  * - level stat
  */
+class SMLevelPredEquivlences;
+class SMPredEquivlence;
+class SMLevelManager;
 class LeafStrategy : public LevelStrategy{
 public:
     LeafStrategy(size_t total_height)
@@ -207,9 +211,11 @@ private:
     bool SerachSort(LevelManager* src_mgr,int h,int id);
     bool SerachRange(LevelManager* src_mgr,int h,int id);
     bool SerachResidual(LevelManager* src_mgr,int h,int id);
+    bool Match(LevelPredEquivlences* dst_lpes, SMLevelPredEquivlences* lpes);
+    bool SuperSet(PredEquivlence* dst_pe, SMPredEquivlence* pe);
 private:
-    LevelManager* level_mgr_;
-    SMVector<LevelManager*>historys_;
+    SMLevelManager* level_mgr_;
+    SMVector<SMLevelManager*>historys_;
 };
 
 /**
@@ -313,3 +319,5 @@ public:
 private:
     LevelStrategy* strategy_;
 };
+
+

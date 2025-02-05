@@ -320,6 +320,8 @@ public:
 
     void SetLpeId(int id){lpe_id_list_.push_back(id);}
     int GetLpeId(int pos){return lpe_id_list_[pos];}
+
+    const std::vector<int>& GetLpeIdList(){return lpe_id_list_;}
 private:
     std::vector<int> lpe_id_list_;
     std::vector<UMAP> output2pe_list_;
@@ -390,6 +392,7 @@ public:
     void Copy(LevelAggAndSortList* lal);
 
     const std::vector<LevelAggAndSortEquivlences*>& GetLevelAggList(){return level_agg_list_;}
+    LevelPredEquivlencesList* GetLpesList(){return lpes_list_;}
 
 private:
     std::vector<LevelAggAndSortEquivlences*> level_agg_list_;
@@ -512,6 +515,7 @@ private:
 
     SqmsLogger* logger_;
 };
+
 
 class PredOperatorWrap: public AbstractPredNode{
 public:

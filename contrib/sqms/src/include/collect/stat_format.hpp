@@ -43,11 +43,14 @@ private:
     /* debug tools */
     void ShowAllHspsTree(HistorySlowPlanStat* hsps,int hdepth = 0);
     void ShowAllPredTree(HistorySlowPlanStat* hsps,int depth = 0);
-    void ShowAllNodeCollect(HistorySlowPlanStat* hsps,std::unordered_map<HistorySlowPlanStat*, NodeCollector*> map,int h_depth = 0);
-    void ShowNodeCollect(NodeCollector *nc ,int depth = 0);
+    std::string ShowAllNodeCollect(HistorySlowPlanStat* hsps,
+        std::unordered_map<HistorySlowPlanStat*, NodeCollector*> map,std::string tag,int h_depth = 0);
+    std::string ShowNodeCollect(NodeCollector *nc ,std::string tag,int depth = 0);
     void ShowPredTree(PredExpression* p_expr, int depth = 0);
     void ShowSubPlansTree(HistorySlowPlanStat* hsps,int depth = 0);
+
     void PrintIndent(int depth);
+    std::string GetIndent(int depth);
 
     PlanStatFormat(int psize = 10);
     ~PlanStatFormat();

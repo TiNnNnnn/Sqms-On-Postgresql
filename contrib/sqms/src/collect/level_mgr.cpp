@@ -2227,7 +2227,7 @@ void LevelManager::ShowTotalPredClass(int depth){
 
 std::string LevelManager::GetTotalPredClassStr(int depth){
 	std::string str;
-	str += "Total Pred Class: \n";
+	str += "\nTotal Pred Class: \n";
 	for(int i = total_equivlences_.size()-1;i>=0;--i){
 		str += GetPredClassStr(i,log_tag_,depth+1);
 	}

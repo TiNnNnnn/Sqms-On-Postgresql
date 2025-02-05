@@ -517,11 +517,13 @@ bool LevelResidualStrategy::Remove(LevelManager* level_mgr){
 bool LeafStrategy::Insert(LevelManager* level_mgr){
     if(level_mgr){
         historys_.insert(historys_.begin(),level_mgr_);
+    }else{
+        auto new_level_mgr = (SMLevelManager*)ShmemAlloc(sizeof(SMLevelManager));
+        assert(new_level_mgr);
+        new (new_level_mgr) SMLevelManager();
+        new_level_mgr->Copy(level_mgr);
+        level_mgr_ = new_level_mgr;
     }
-    /**
-     * TODO:we should deep copy level_mgr from local-thread mem to shared-mem
-     */
-    level_mgr_ = level_mgr;
     return true;
 }
 
@@ -576,7 +578,7 @@ bool LeafStrategy::SerachAgg(LevelManager* level_mgr,int h,int id){
         auto keys = la_eqs->GetLevelAggSets()[0]->GetExtends();
         bool matched = true;
         for(const auto& src_key :src_keys){
-            if(keys.find(src_key) == keys.end()){
+            if(keys.find(SMString(src_key)) == keys.end()){
                 matched = false;
             }
         }
@@ -610,7 +612,7 @@ bool LeafStrategy::SerachSort(LevelManager* level_mgr,int h,int id){
                     bool matched = true;
                     auto src_extends = src_eq->GetExtends();
                     for(const auto& src_key : src_extends){
-                        if(extends.find(src_key)== extends.end()){
+                        if(extends.find(SMString(src_key))== extends.end()){
                             matched = false;
                         }
                     }
@@ -632,11 +634,77 @@ bool LeafStrategy::SerachRange(LevelManager* src_mgr,int h,int id){
     auto src_lpes = src_mgr->GetTotalEquivlences()[h]->GetLpesList()[id];
     auto dst_lpes_list = level_mgr_->GetTotalEquivlences()[h];
     for(const auto& dst_lpes : *dst_lpes_list){
-        if(src_lpes->Match(dst_lpes)){
+        if(Match(src_lpes,dst_lpes)){
             return true;
         }
     }
     return false;
+}
+
+bool LeafStrategy::Match(LevelPredEquivlences* dst_lpes, SMLevelPredEquivlences* lpes){
+    assert(lpes);
+    for(const auto& pe : *lpes){
+        for(const auto& attr : pe->GetPredSet()){
+            auto key2pe = dst_lpes->GetKey2Pe();
+            if(key2pe.find(std::string(attr)) != key2pe.end()){
+                auto dst_pe = key2pe[std::string(attr)];
+                if(SuperSet(dst_pe,pe)){
+                    continue;
+                }else{
+                    return false;
+                }
+            }
+        }
+    }
+    return true;
+}
+
+bool LeafStrategy::SuperSet(PredEquivlence* dst_pe, SMPredEquivlence* pe){
+    assert(pe);
+    auto range = pe->GetRanges();
+    for(const auto r : dst_pe->GetRanges()){
+        bool match = false;
+        for(const auto src_r : range){
+            bool super = true;
+            /* check lowlimit */
+            if(r->LowerLimit() == LOWER_LIMIT){
+                if(src_r->LowerLimit() != LOWER_LIMIT){
+                    super = false;
+                    continue;
+                }
+            }else{
+                if(src_r->LowerLimit() != LOWER_LIMIT){
+                    if(r->LowerLimit() < std::string(src_r->LowerLimit())){
+                        super = false;
+                        continue;
+                    }
+                }			
+            }
+
+            /* check upperlimit */
+            if(r->UpperLimit() == UPPER_LIMIT){
+                if(src_r->UpperLimit() != UPPER_LIMIT){
+                    super = false;
+                    continue;
+                }
+            }else{
+                if(src_r->UpperLimit() != UPPER_LIMIT){
+                    if(r->UpperLimit() > std::string(src_r->UpperLimit())){
+                        super = false;
+                        continue;
+                    }
+                }			
+            }
+            if(super){
+                match = true;
+                break;
+            }
+        }
+        if(!match){
+            return false;
+        }
+    }
+    return true;
 }
 
 bool LeafStrategy::SerachResidual(LevelManager* src_mgr,int h,int id){

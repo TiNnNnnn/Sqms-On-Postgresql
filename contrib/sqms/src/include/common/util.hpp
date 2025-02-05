@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <map>
+#include <set>
 #include "spdlog/spdlog.h"
 #include "spdlog/sinks/sink.h"
 #include "spdlog/sinks/basic_file_sink.h"
@@ -89,6 +90,12 @@ using SMUnorderedSet = std::unordered_set<
     SharedMemoryAllocator<Key>
 >;
 
+template <typename Key, typename Compare = std::less<Key>>
+using SMSet = std::set<
+    Key,
+    Compare,
+    SharedMemoryAllocator<Key>
+>;
 
 template <typename Key>
 using SMVector = std::vector<Key,SharedMemoryAllocator<Key>>;
