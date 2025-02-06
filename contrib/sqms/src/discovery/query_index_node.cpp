@@ -194,7 +194,7 @@ bool LevelAggStrategy::Insert(LevelManager* level_mgr){
             auto child = acc->second;
             return child->Insert(level_mgr);
         }else{
-            size_t next_level = FindNextInsertLevel(level_mgr,4);
+            size_t next_level = FindNextInsertLevel(level_mgr,5);
             //auto new_idx_node = std::make_shared<HistoryQueryIndexNode>(next_level,total_height_);
             HistoryQueryIndexNode* new_idx_node = (HistoryQueryIndexNode*)ShmemAlloc(sizeof(HistoryQueryIndexNode));
             if(!new_idx_node){
@@ -219,7 +219,14 @@ bool LevelAggStrategy::Serach(LevelManager* level_mgr,int id){
     assert(level_mgr);
     assert(level_mgr->GetTotalAggs().size());
     auto top_aggs = level_mgr->GetTotalAggs().back();
-    auto la_eq = top_aggs->GetLevelAggList()[id];
+    
+    LevelAggAndSortEquivlences * la_eq = nullptr;
+    if(id != -1){
+        la_eq = top_aggs->GetLevelAggList()[id];
+    }else{
+        assert(top_aggs->Size() == 1);
+        la_eq = top_aggs->GetLevelAggList()[0];
+    }
     
     SMVector<SMVector<int>> agg_vec_id_list;
     for(const auto& agg : la_eq->GetLevelAggSets()){
@@ -322,7 +329,15 @@ bool LevelSortStrategy::Serach(LevelManager* level_mgr,int id){
     assert(level_mgr);
     assert(level_mgr->GetTotalSorts().size());
     auto top_sorts = level_mgr->GetTotalSorts().back();
-    auto la_eq = top_sorts->GetLevelAggList()[id];
+
+    LevelAggAndSortEquivlences* la_eq = nullptr;
+    if(id != -1){
+        la_eq = top_sorts->GetLevelAggList()[id];
+    }else{
+        assert(top_sorts->Size() == 1);
+        la_eq = top_sorts->GetLevelAggList()[0];
+    }
+    
     
     SMVector<SMVector<int>> sort_vec_id_list;
     for(const auto& sort : la_eq->GetLevelAggSets()){
@@ -515,7 +530,7 @@ bool LevelResidualStrategy::Remove(LevelManager* level_mgr){
 }
 
 bool LeafStrategy::Insert(LevelManager* level_mgr){
-    if(level_mgr){
+    if(level_mgr_){
         historys_.insert(historys_.begin(),level_mgr_);
     }else{
         auto new_level_mgr = (SMLevelManager*)ShmemAlloc(sizeof(SMLevelManager));
@@ -530,8 +545,14 @@ bool LeafStrategy::Insert(LevelManager* level_mgr){
 bool LeafStrategy::Serach(LevelManager* level_mgr,int id){
     auto total_lpes_list = level_mgr->GetTotalEquivlences();
     /*check lpes from top to down*/
-    int h = total_height_-1;
+    int h = total_lpes_list.size() -1;
     int lpe_id = id;
+
+    if(lpe_id == -1){
+        assert(!total_lpes_list[h]->GetLpesList().size());
+        return true;
+    }
+
     while(h >= 0){
         auto lpes = total_lpes_list[h]->GetLpesList()[lpe_id];
         if(lpes->EarlyStop()){
@@ -713,41 +734,31 @@ bool LeafStrategy::SerachResidual(LevelManager* src_mgr,int h,int id){
 
 size_t LevelStrategy::FindNextInsertLevel(LevelManager* level_mgr, size_t cur_level){
     assert(cur_level>=1);
-    for(size_t h = cur_level+1; h< total_height_; ){
-        switch(h){
-            case 2:{
-                if(level_mgr->GetJoinTypeList().size()){
-                    return h;
-                }
-            }break;
-            case 3:{
-                if(level_mgr->GetTotalEquivlences().back()->Size()){
-                    return h;
-                }
-            }break;
-            case 4:{
-                if(level_mgr->GetTotalSorts().back()->Size()){
-                    return h;
-                }
-            }break;
-            case 5:{
-                if(level_mgr->GetTotalAggs().back()->Size()){
-                    return h;
-                }
-            }break;
-            case 6:{
-                // if(level_mgr->GetTotalResidualEquivlences().back()->Size()){
-                //     return h;
-                // }
-            }break;
-            case 7:{
+    for(size_t h = cur_level+1; h <= total_height_; ){
+        if(h == 2){
+            if(level_mgr->GetJoinTypeList().size()){
                 return h;
-            }break;
-            default:{
-                std::cerr<<"error height"<<std::endl;
             }
-            ++h;
+        }else if(h == 3){
+            if(level_mgr->GetTotalEquivlences().back()->Size()){
+                return h;
+            }
+        }else if(h == 4){
+            if(level_mgr->GetTotalSorts().back()->Size()){
+                return h;
+            }
+        }else if(h == 5){
+            if(level_mgr->GetTotalAggs().back()->Size()){
+                return h;
+            }
+        }else if(h == 6){
+        }else if(h == 7){
+            return h;
+        }else{
+            std::cerr<<"error height"<<std::endl;
+            exit(-1);
         }
+        ++h;
     }
     return -1;
 }

@@ -73,6 +73,7 @@ public:
         for(const auto& item : lpes->GetKey2Pe()){
             SMPredEquivlence* sm_pe = (SMPredEquivlence*)ShmemAlloc(sizeof(SMPredEquivlence));
             assert(sm_pe);
+            assert(item.second);
             new (sm_pe) SMPredEquivlence();
             sm_pe->Copy(item.second);
             key2pe_[SMString(item.first)] = sm_pe; 
@@ -132,10 +133,13 @@ public:
         for(const auto& map : lo_list->GetOutput2PeList()){
             UMAP sm_umap;
             for(const auto& item : map){
-                auto sm_pe = (SMPredEquivlence*)ShmemAlloc(sizeof(SMPredEquivlence));
-                assert(sm_pe);
-                new (sm_pe) SMPredEquivlence();
-                sm_pe->Copy(item.second);
+                SMPredEquivlence* sm_pe = nullptr;
+                if(item.second){
+                    sm_pe = (SMPredEquivlence*)ShmemAlloc(sizeof(SMPredEquivlence));
+                    assert(sm_pe);
+                    new (sm_pe) SMPredEquivlence();
+                    sm_pe->Copy(item.second);
+                }
                 sm_umap[SMString(item.first)] = sm_pe;
             }
             output2pe_list_.push_back(sm_umap);
@@ -176,10 +180,13 @@ public:
     const SMSet<SMString>& GetExtends(){return extends_;}
     void Copy(AggAndSortEquivlence* aas_eq){
         for(const auto& item : aas_eq->GetKey2Pe()){
-            SMPredEquivlence* sm_pe = (SMPredEquivlence*)ShmemAlloc(sizeof(SMPredEquivlence));
-            assert(sm_pe);
-            new (sm_pe) SMPredEquivlence();
-            sm_pe->Copy(item.second);
+            SMPredEquivlence* sm_pe = nullptr;
+            if(item.second){
+                sm_pe = (SMPredEquivlence*)ShmemAlloc(sizeof(SMPredEquivlence));
+                assert(sm_pe);
+                new (sm_pe) SMPredEquivlence();
+                sm_pe->Copy(item.second);
+            }
             key2pe_[SMString(item.first)] = sm_pe;
         }
         for(const auto& item : aas_eq->GetExtends()){

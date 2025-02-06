@@ -2,6 +2,7 @@
 
 
 void SMPredEquivlence::Copy(PredEquivlence* pe){
+    assert(pe);
     for(const auto& attr : pe->GetPredSet()){
         set_.insert(SMString(attr));
     }
@@ -15,6 +16,7 @@ void SMPredEquivlence::Copy(PredEquivlence* pe){
     for(const auto& item : pe->GetSubLinkLevelPeLists()){
         SMLevelManager* sm_level_mgr = (SMLevelManager*)ShmemAlloc(sizeof(SMLevelManager));
         assert(sm_level_mgr);
+        assert(item.second);
         new (sm_level_mgr) SMLevelManager();
         sm_level_mgr->Copy(item.second.get());
         sublink_level_pe_lists_[SMString(item.first)] = sm_level_mgr;

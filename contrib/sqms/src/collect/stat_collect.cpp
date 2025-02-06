@@ -184,7 +184,7 @@ extern "C" void RegisterQueryIndex(){
         return;
     }
 	if(!found){
-		new (shared_index) HistoryQueryLevelTree(0);
+		new (shared_index) HistoryQueryLevelTree(1);
 	}
 	/**
 	 * TODO: here we should load history slow queries in redis into shared_index
