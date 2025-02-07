@@ -46,10 +46,14 @@ public:
         : hsps_(hsps),level_mgr_(level_mgr){}
     virtual bool Format() override;
     virtual bool PrintPredEquivlences() override;
+
+    std::vector<NodeCollector*>& GetNodeCollectorList(){return node_collector_list_;}
 private:
-    void ComputeTotalNodes();
+    void ComputeTotalNodes(HistorySlowPlanStat* hsps,std::unordered_map<HistorySlowPlanStat*, NodeCollector*> nodes_collector_map);
+    void PlanPartition(HistorySlowPlanStat* hsps);
 private:
     int branch_num_;
     HistorySlowPlanStat* hsps_ = nullptr;
-    std::shared_ptr<LevelManager> level_mgr_ = nullptr;  
+    std::shared_ptr<LevelManager> level_mgr_ = nullptr;
+    std::vector<NodeCollector*> node_collector_list_;
 };

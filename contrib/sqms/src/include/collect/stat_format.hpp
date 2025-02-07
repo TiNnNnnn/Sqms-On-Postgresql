@@ -102,6 +102,22 @@ public:
             std::cerr << "No excavate strategy set!" << std::endl;
         }
     }
+
+    // bool Insert(HistoryQueryLevelTree* shared_idx) const {
+    //     if(strategy_){
+    //         return strategy_->Insert(shared_idx);
+    //     }else{
+    //         std::cerr << "No excavate strategy set!" << std::endl;
+    //     }
+    // }
+
+    // bool Search(HistoryQueryLevelTree* shared_idx) const {
+    //     if(strategy_){
+    //         return strategy_->Search(shared_idx);
+    //     }else{
+    //         std::cerr << "No excavate strategy set!" << std::endl;
+    //     }
+    // }
 private:
     std::shared_ptr<AbstractFormatStrategy> strategy_;
 };

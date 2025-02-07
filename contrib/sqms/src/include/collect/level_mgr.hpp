@@ -440,6 +440,7 @@ public:
 /**
  * LevelManager
  */
+class HistoryQueryLevelTree;
 class LevelManager : public AbstractFormatStrategy{
 public:
     LevelManager(HistorySlowPlanStat* hsps, SlowPlanStat*sps, SqmsLogger* logger,std::string log_tag = "slow")
@@ -448,6 +449,9 @@ public:
 
     virtual bool Format();
     virtual bool PrintPredEquivlences();
+    //virtual bool Insert(HistoryQueryLevelTree *shared_index);
+    //virtual bool Search(HistoryQueryLevelTree *shared_index);
+
     void ComputeTotalClass(); 
 
     void ShowPredClass(int height,std::string tag,int depth = 0);
@@ -484,6 +488,7 @@ private:
     bool GetPreProcessed(PreProcessLabel label){return pre_processed_map_[label];}
     void SetPreProcessed(PreProcessLabel label,bool b){pre_processed_map_[label] = b;}
     void ReSetAllPreProcessd();
+    bool CancelQuery();
 private:
     HistorySlowPlanStat* hsps_ = nullptr; /*plan we need to process to sps_*/
     HistorySlowPlanStat* cur_hsps_ = nullptr;

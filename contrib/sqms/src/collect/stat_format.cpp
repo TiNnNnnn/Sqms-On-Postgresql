@@ -68,13 +68,14 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, bool slow){
             std::vector<HistorySlowPlanStat*> list;
             context->executeStrategy(list);
             
-            PlanFormatContext* pf_context = new PlanFormatContext();
             for(const auto& p : list){
                 /*format strategy 1*/
                 SlowPlanStat *sps= new SlowPlanStat();
                 auto level_mgr = std::make_shared<LevelManager>(p,sps,logger_,"slow");
-                pf_context->SetStrategy(level_mgr);
-                pf_context->executeStrategy();
+
+                PlanFormatContext* pf_context_1 = new PlanFormatContext();
+                pf_context_1->SetStrategy(level_mgr);
+                pf_context_1->executeStrategy();
                 level_mgr->ShowTotalPredClass();
 
                 if(debug){
@@ -83,18 +84,22 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, bool slow){
                 }
 
                 /*format strategt 2*/
-                pf_context->SetStrategy(std::make_shared<NodeManager>(p,level_mgr));
-                pf_context->executeStrategy();
-
-                
-
+                PlanFormatContext* pf_context_2 = new PlanFormatContext();
+                auto node_manager = std::make_shared<NodeManager>(p,level_mgr);
+                pf_context_2->SetStrategy(node_manager);
+                pf_context_2->executeStrategy();
 
                 if(!shared_index->Insert(level_mgr.get(),1)){
-                    logger_->Logger("slow","shared_index insert error");
+                    logger_->Logger("slow","shared_index insert error in strategy 1");
                     exit(-1);
                 }
+                for(const auto& node_collector : node_manager->GetNodeCollectorList()){
+                    if(!shared_index->Insert(node_collector)){
+                        logger_->Logger("slow","shared_index insert error in strategy 2");
+                        exit(-1);
+                    }
+                }
             }
-
             /**
              * TODO: 11-23 storage the slow sub query
              */
@@ -123,10 +128,10 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, bool slow){
                         std::cerr<<"history_slow_plan_stat__unpack failed in thered: "<<ThreadPool::GetTid()<<std::endl;
                     }
                     SlowPlanStat *sps= new SlowPlanStat();
-                    PlanFormatContext* pf_context = new PlanFormatContext();
+                    PlanFormatContext* pf_context_1 = new PlanFormatContext();
                     auto level_mgr = std::make_shared<LevelManager>(p,sps,logger_,"comming");
-                    pf_context->SetStrategy(level_mgr);
-                    pf_context->executeStrategy();
+                    pf_context_1->SetStrategy(level_mgr);
+                    pf_context_1->executeStrategy();
                     level_mgr->ShowTotalPredClass();
 
                     if(debug){
@@ -134,8 +139,9 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, bool slow){
                         logger_->Logger("comming",ShowAllNodeCollect(p,node_collect_map,"comming").c_str());
                     }
                     /*format strategt 2*/
-                    pf_context->SetStrategy(std::make_shared<NodeManager>(p,level_mgr));
-                    pf_context->executeStrategy();
+                    PlanFormatContext* pf_context_2 = new PlanFormatContext();
+                    pf_context_2->SetStrategy(std::make_shared<NodeManager>(p,level_mgr));
+                    pf_context_2->executeStrategy();
                     
                     if(shared_index->Search(level_mgr.get(),1)){
                         CancelQuery();
@@ -200,8 +206,6 @@ void PlanStatFormat::LevelOrder(HistorySlowPlanStat* hsps,std::vector<HistorySlo
 
 bool PlanStatFormat::CancelQuery(){
     if(QueryCancelPending){
-        // elog(WARNING, "Query already pending cancellation.");
-        // logger_->Logger("comming","Query already pending cancellation.");
         return false;
     }
     QueryCancelPending = true;

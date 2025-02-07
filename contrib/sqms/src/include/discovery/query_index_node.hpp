@@ -215,11 +215,10 @@ public:
 
     bool Insert(NodeCollector* node_collector);
     bool Remove(NodeCollector* node_collector);
-    bool Serach(NodeCollector* node_collector);
+    bool Search(NodeCollector* node_collector);
 private:
     InvertedIndex<PostingList>* inverted_idx_;
     SMUnorderedMap<SET,SMUnorderedMap<LevelPredEquivlences*,std::shared_ptr<HistoryQueryIndexNode>>,SetHasher> child_map_;
-
     std::shared_mutex rw_mutex_;
     size_t s_level_;
 };
@@ -243,7 +242,7 @@ public:
 
     bool Insert(NodeCollector* node_collector);
     bool Remove(NodeCollector* node_collector);
-    bool Serach(NodeCollector* node_collector);
+    bool Search(NodeCollector* node_collector);
 
 private:
     bool SerachAgg(LevelManager* src_mgr,int h,int id);

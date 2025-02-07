@@ -960,12 +960,13 @@ bool LevelResidualStrategy::Remove(LevelManager* level_mgr){
 }
 
 bool LevelResidualStrategy::Insert(NodeCollector* node_collector){
+
     return true;
 }
 bool LevelResidualStrategy::Remove(NodeCollector* node_collector){
     return true;
 }
-bool LevelResidualStrategy::Serach(NodeCollector* node_collector){
+bool LevelResidualStrategy::Search(NodeCollector* node_collector){
     return true;
 }
 
@@ -1016,14 +1017,13 @@ bool LeafStrategy::Serach(LevelManager* level_mgr,int id){
 bool LeafStrategy::Remove(LevelManager* level_mgr){
     return true;
 }
-
 bool LeafStrategy::Insert(NodeCollector* node_collector){
     return true;
 }
 bool LeafStrategy::Remove(NodeCollector* node_collector){
     return true;
 }
-bool LeafStrategy::Serach(NodeCollector* node_collector){
+bool LeafStrategy::Search(NodeCollector* node_collector){
     return true;
 }
 

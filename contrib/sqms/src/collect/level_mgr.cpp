@@ -17,6 +17,24 @@ bool LevelManager::PrintPredEquivlences(){
 	 	ShowTotalPredClass();
 }
 
+// bool LevelManager::Insert(HistoryQueryLevelTree *shared_index){
+// 	assert(shared_index);
+// 	if(!shared_index->Insert(this,1)){
+//         logger_->Logger("slow","shared_index insert error");
+//         exit(-1);
+//     }
+// 	return true;
+// }
+
+// bool LevelManager::Search(HistoryQueryLevelTree *shared_index){
+// 	assert(shared_index);
+// 	if(shared_index->Search(this,1)){
+//         CancelQuery();
+// 		return true;
+//     }
+// 	return false;
+// }
+
 /**
  * ComputeEquivlenceClass: calulate the equivelence class and its containment for
  * each level for plan
@@ -2167,6 +2185,18 @@ void LevelManager::ReSetAllPreProcessd(){
 	for (const auto& label : p_labels) {
 		pre_processed_map_[label] = false;
 	}
+}
+
+bool LevelManager::CancelQuery(){
+    if(QueryCancelPending){
+        return false;
+    }
+    QueryCancelPending = true;
+    InterruptPending = true;
+    ProcessInterrupts();
+    elog(WARNING, "Query is canceled by sqms.");
+    logger_->Logger("comming","Query is canceled by sqms.");
+    return true;
 }
 
 void LevelManager::ShowPredClass(int height,std::string tag,int depth){
