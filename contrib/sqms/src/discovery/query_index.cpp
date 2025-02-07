@@ -21,13 +21,13 @@ bool HistoryQueryLevelTree::Search(LevelManager* level_mgr,int l){
 }
 
 bool HistoryQueryLevelTree::Insert(NodeCollector* node_collector){
-    return true;
+    return root_->Insert(node_collector);
 }
 bool HistoryQueryLevelTree::Remove(NodeCollector* node_collector){
-    return true;
+    return root_->Remove(node_collector);
 }
 bool HistoryQueryLevelTree::Search(NodeCollector* node_collector){
-    return true;
+    return root_->Serach(node_collector);
 }
 
 /**
@@ -57,7 +57,20 @@ bool HistoryQueryIndexNode::Remove(LevelManager* level_mgr){
 
 bool HistoryQueryIndexNode::Search(LevelManager* level_mgr,int id){
     return level_strategy_context_->Search(level_mgr,id);
-} 
+}
+
+bool HistoryQueryIndexNode::Insert(NodeCollector* node_collector){
+    return level_strategy_context_->Insert(node_collector);
+}
+
+bool HistoryQueryIndexNode::Remove(NodeCollector* node_collector){
+    return level_strategy_context_->Remove(node_collector);
+}
+
+bool HistoryQueryIndexNode::Serach(NodeCollector* node_collector){
+    return level_strategy_context_->Search(node_collector);
+}
+
 
 void QueryIndexManager::RegisterQueryIndex(){
     std::thread([](){

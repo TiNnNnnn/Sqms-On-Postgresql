@@ -432,6 +432,9 @@ public:
     LevelAggAndSortList* node_sorts_ = nullptr;
     /* total sets for tables */
     LevelTblList* node_tbls_ = nullptr;
+
+    const char * json_sub_plan = nullptr;
+    std::vector<std::string> join_type_list;
 };
 
 /**

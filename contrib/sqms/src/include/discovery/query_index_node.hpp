@@ -31,17 +31,16 @@ public:
     bool Insert(LevelManager* level_mgr);
     bool Remove(LevelManager* level_mgr);
     bool Search(LevelManager* level_mgr,int id);
+
+    bool Insert(NodeCollector* node_collector);
+    bool Remove(NodeCollector* node_collector);
+    bool Serach(NodeCollector* node_collector);
+
 private: 
     /*use context to operate node*/
     LevelStrategyContext* level_strategy_context_;
     /*current node level*/
     size_t level_;
-};
-
-class HistoryQueryIndexNodeContext{
-public:
-    int id_;
-    int mid_;
 };
 
 class LevelStrategy{
@@ -52,7 +51,13 @@ public:
     virtual bool Insert(LevelManager* level_mgr) = 0;
     virtual bool Serach(LevelManager* level_mgr,int id) = 0;
     virtual bool Remove(LevelManager* level_mgr) = 0;
+
+    virtual bool Insert(NodeCollector* node_collector) = 0;
+    virtual bool Remove(NodeCollector* node_collector) = 0;
+    virtual bool Search(NodeCollector* node_collector) = 0;
+    
     size_t FindNextInsertLevel(LevelManager* level_mgr, size_t cur_level);
+    size_t FindNextInsertLevel(NodeCollector* node_collector, size_t cur_level);
 
     size_t total_height_;
 };
@@ -69,6 +74,11 @@ public:
     bool Insert(LevelManager* level_mgr);
     bool Serach(LevelManager* level_mgr,int id);
     bool Remove(LevelManager* level_mgr);
+
+    bool Insert(NodeCollector* node_collector);
+    bool Remove(NodeCollector* node_collector);
+    bool Search(NodeCollector* node_collector);
+
 private:
     SMConcurrentHashMap<SMString,HistoryQueryIndexNode*>set_map_;
 };
@@ -110,6 +120,11 @@ public:
     bool Insert(LevelManager* level_mgr);
     bool Serach(LevelManager* level_mgr,int id);
     bool Remove(LevelManager* level_mgr);
+
+    bool Insert(NodeCollector* node_collector);
+    bool Remove(NodeCollector* node_collector);
+    bool Search(NodeCollector* node_collector);
+
 private:
     std::shared_mutex rw_mutex_;
     /* from join_type_score to scaling_list id map */
@@ -128,7 +143,12 @@ public:
     SMString Name(){return "PlanGroupKeyStrategy";}
     bool Insert(LevelManager* level_mgr);
     bool Serach(LevelManager* level_mgr,int id);
-    bool Remove(LevelManager* level_mgr);   
+    bool Remove(LevelManager* level_mgr); 
+
+    bool Insert(NodeCollector* node_collector);
+    bool Remove(NodeCollector* node_collector);
+    bool Search(NodeCollector* node_collector);
+  
 private:
     InvertedIndex<PostingList>* inverted_idx_;
     SMConcurrentHashMap<uint32_t, HistoryQueryIndexNode*>child_map_;
@@ -146,6 +166,11 @@ public:
     bool Insert(LevelManager* level_mgr);
     bool Serach(LevelManager* level_mgr,int id);
     bool Remove(LevelManager* level_mgr);   
+
+    bool Insert(NodeCollector* node_collector);
+    bool Remove(NodeCollector* node_collector);
+    bool Search(NodeCollector* node_collector);
+
 private:    
     InvertedIndex<PostingList>* inverted_idx_;
     SMConcurrentHashMap<uint32_t,HistoryQueryIndexNode*>child_map_;
@@ -163,6 +188,11 @@ public:
     bool Insert(LevelManager* level_mgr);
     bool Serach(LevelManager* level_mgr,int id);
     bool Remove(LevelManager* level_mgr);
+
+    bool Insert(NodeCollector* node_collector);
+    bool Remove(NodeCollector* node_collector);
+    bool Search(NodeCollector* node_collector);
+
 private:
     InvertedIndex<PostingList>* inverted_idx_;
     SMUnorderedMap<SET,SMUnorderedMap<LevelPredEquivlences*,HistoryQueryIndexNode*>,SetHasher> child_map_;
@@ -182,6 +212,10 @@ public:
     bool Insert(LevelManager* level_mgr);
     bool Serach(LevelManager* level_mgr,int id);
     bool Remove(LevelManager* level_mgr);
+
+    bool Insert(NodeCollector* node_collector);
+    bool Remove(NodeCollector* node_collector);
+    bool Serach(NodeCollector* node_collector);
 private:
     InvertedIndex<PostingList>* inverted_idx_;
     SMUnorderedMap<SET,SMUnorderedMap<LevelPredEquivlences*,std::shared_ptr<HistoryQueryIndexNode>>,SetHasher> child_map_;
@@ -206,6 +240,11 @@ public:
     bool Insert(LevelManager* level_mgr);
     bool Serach(LevelManager* level_mgr,int id);
     bool Remove(LevelManager* level_mgr);
+
+    bool Insert(NodeCollector* node_collector);
+    bool Remove(NodeCollector* node_collector);
+    bool Serach(NodeCollector* node_collector);
+
 private:
     bool SerachAgg(LevelManager* src_mgr,int h,int id);
     bool SerachSort(LevelManager* src_mgr,int h,int id);
@@ -245,6 +284,16 @@ public:
         list_.pop_back();
         return true;
     }
+    bool Insert(NodeCollector* node_collector){
+        return true;
+    }
+    bool Remove(NodeCollector* node_collector){
+        return true;
+    }
+    bool Search(NodeCollector* node_collector){
+        return true;
+    }
+    
 private:
     std::shared_mutex rw_mutex_;
     SMVector<int> list_;
@@ -315,6 +364,10 @@ public:
     bool Insert(LevelManager* level_mgr);
     bool Remove(LevelManager* level_mgr);
     bool Search(LevelManager* level_mgr,int id);
+
+    bool Insert(NodeCollector* node_collector);
+    bool Remove(NodeCollector* node_collector);
+    bool Search(NodeCollector* node_collector);
 
 private:
     LevelStrategy* strategy_;

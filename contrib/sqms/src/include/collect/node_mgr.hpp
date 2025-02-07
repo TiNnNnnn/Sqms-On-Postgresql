@@ -48,8 +48,6 @@ public:
     virtual bool PrintPredEquivlences() override;
 private:
     void ComputeTotalNodes();
-
-
 private:
     int branch_num_;
     HistorySlowPlanStat* hsps_ = nullptr;

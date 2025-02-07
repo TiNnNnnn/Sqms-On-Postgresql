@@ -86,6 +86,9 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, bool slow){
                 pf_context->SetStrategy(std::make_shared<NodeManager>(p,level_mgr));
                 pf_context->executeStrategy();
 
+                
+
+
                 if(!shared_index->Insert(level_mgr.get(),1)){
                     logger_->Logger("slow","shared_index insert error");
                     exit(-1);
