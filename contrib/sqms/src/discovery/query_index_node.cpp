@@ -179,6 +179,7 @@ bool LevelScalingStrategy::Insert(LevelManager* level_mgr){
                 return false;
             }
             child_map_.insert({new_scaling_info->UniqueId(),{new_scaling_info,new_idx_node}});
+            return true;
         }
     }
 }
@@ -438,7 +439,7 @@ bool LevelAggStrategy::Search(NodeCollector* node_collector){
     auto top_aggs = node_collector->node_aggs_;
     
     assert(top_aggs->Size() == 1);
-    LevelAggAndSortEquivlences * la_eq = la_eq = top_aggs->GetLevelAggList()[0];
+    LevelAggAndSortEquivlences * la_eq = top_aggs->GetLevelAggList()[0];
     
     SMVector<SMVector<int>> agg_vec_id_list;
     for(const auto& agg : la_eq->GetLevelAggSets()){
@@ -634,7 +635,7 @@ bool LevelSortStrategy::Insert(NodeCollector* node_collector){
     return true;
 }
 bool LevelSortStrategy::Remove(NodeCollector* node_collector){
-
+    return true;
 }
 bool LevelSortStrategy::Search(NodeCollector* node_collector){
     assert(node_collector);
@@ -642,7 +643,7 @@ bool LevelSortStrategy::Search(NodeCollector* node_collector){
     auto top_sorts = node_collector->node_sorts_;
 
     assert(top_sorts->Size() == 1);
-    LevelAggAndSortEquivlences* la_eq = la_eq = top_sorts->GetLevelAggList()[0];
+    LevelAggAndSortEquivlences* la_eq = top_sorts->GetLevelAggList()[0];
     
     SMVector<SMVector<int>> sort_vec_id_list;
     for(const auto& sort : la_eq->GetLevelAggSets()){
@@ -1221,15 +1222,15 @@ size_t LevelStrategy::FindNextInsertLevel(NodeCollector* node_collector, size_t 
                 return h;
             }
         }else if(h == 3){
-            if(node_collector->node_equivlences_->Size()){
+            if(node_collector->node_equivlences_){
                 return h;
             }
         }else if(h == 4){
-            if(node_collector->node_sorts_->Size()){
+            if(node_collector->node_sorts_){
                 return h;
             }
         }else if(h == 5){
-            if(node_collector->node_aggs_->Size()){
+            if(node_collector->node_aggs_){
                 return h;
             }
         }else if(h == 6){

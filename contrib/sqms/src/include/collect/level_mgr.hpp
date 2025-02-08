@@ -435,6 +435,12 @@ public:
 
     const char * json_sub_plan = nullptr;
     std::vector<std::string> join_type_list;
+
+    std::vector<NodeCollector*>childs_;
+    NodeCollector* parent_;
+
+    std::vector<int> inputs;
+    int output;
 };
 
 /**
