@@ -6,13 +6,13 @@
 #include <algorithm>
 
 NodeManager::NodeManager(HistorySlowPlanStat* hsps,std::shared_ptr<LevelManager> level_mgr)
-: hsps_(hsps),level_mgr_(level_mgr),pool_(std::make_shared<ThreadPool>(pool_size_)){
+: hsps_(hsps),level_mgr_(level_mgr),pool_(std::make_shared<ThreadPool>(pool_size_,true)){
     bool found = false;
     logger_ = (SqmsLogger*)ShmemInitStruct("SqmsLogger", sizeof(SqmsLogger), &found);
     assert(logger_ && found);
 
     found = false;
-    auto shared_index = (HistoryQueryLevelTree*)ShmemInitStruct(shared_index_name, sizeof(HistoryQueryLevelTree), &found);
+    shared_index_ = (HistoryQueryLevelTree*)ShmemInitStruct(shared_index_name, sizeof(HistoryQueryLevelTree), &found);
     assert(shared_index_ && found);
 }
 
@@ -26,6 +26,11 @@ bool NodeManager::PrintPredEquivlences(){
 }
 
 bool NodeManager::Search(){
+    double total_time(0);
+    std::mutex time_mtx;
+
+    logger_->Logger("comming",("stitch thread num: "+std::to_string(partition_list.size())).c_str());
+
     std::vector<bool>finish_list(partition_list.size(),0);
     std::vector<std::condition_variable> cv_list(partition_list.size());
     std::vector<std::mutex> mtx_list(partition_list.size());
@@ -34,8 +39,6 @@ bool NodeManager::Search(){
     size_t part_idx;
     for(const auto& part : partition_list){
         pool_->submit([&](){
-            int time = 0;
-            //std::reverse(part.begin(),part.end());
             for(size_t i = 0;i < part.size(); ++i){
                 /*check if need wait*/
                 auto node_collector = part[i];
@@ -43,12 +46,14 @@ bool NodeManager::Search(){
                 auto pos = dependencies_.find(node_collector);
                 if(pos != dependencies_.end()){
                     has_right = true;
-                    std::unique_lock<std::mutex> lock(mtx_list[pos->second]);
-                    cv_list[pos->second].wait(lock, [&] {
-                        if (!finish_list[pos->second]) 
-                            return false;
-                        return true;
-                    });
+                    {
+                        std::unique_lock<std::mutex> lock(mtx_list[pos->second]);
+                        cv_list[pos->second].wait(lock, [&] {
+                            if (!finish_list[pos->second]) 
+                                return false;
+                            return true;
+                        });
+                    }
                 }
                 
                 assert(!node_collector->inputs.size());
@@ -68,10 +73,19 @@ bool NodeManager::Search(){
 
                 /*search*/
                 if(shared_index_->Search(node_collector)){
-                    std::lock_guard<std::mutex> lock(mtx_list[part_idx]);
-                    assert(node_collector->output);
-                    finish_list[part_idx] = true;
-                    cv_list[part_idx].notify_all();
+                    {
+                        std::lock_guard<std::mutex> lock(mtx_list[part_idx]);
+                        assert(node_collector->output);
+                        finish_list[part_idx] = true;
+                        cv_list[part_idx].notify_all();
+                    }
+                    {
+                        std::lock_guard<std::mutex> lock(time_mtx);
+                        total_time += node_collector->time;
+                        if(total_time >= query_min_duration){
+                            CancelQuery();
+                        }
+                    }
                 }else{
                     return false;
                 }
@@ -82,7 +96,6 @@ bool NodeManager::Search(){
     }
 }
     
-
 void NodeManager::ComputeTotalNodes(HistorySlowPlanStat* hsps,std::unordered_map<HistorySlowPlanStat*, NodeCollector*> nodes_collector_map){
     assert(hsps);
     auto node_collector = nodes_collector_map[hsps];
@@ -138,10 +151,14 @@ void NodeManager::PlanPartition(HistorySlowPlanStat* hsps){
     }
 }
 
-// bool Insert(HistoryQueryLevelTree *shared_index){
-//     return true;
-// }
-
-// bool Search(HistoryQueryLevelTree *shared_index){
-//     return true;
-// }
+bool NodeManager::CancelQuery(){
+    if(QueryCancelPending){
+        return false;
+    }
+    QueryCancelPending = true;
+    InterruptPending = true;
+    ProcessInterrupts();
+    elog(WARNING, "Query is canceled by sqms.");
+    logger_->Logger("comming","Query is canceled by sqms.");
+    return true;
+}

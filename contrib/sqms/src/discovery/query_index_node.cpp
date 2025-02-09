@@ -210,6 +210,7 @@ bool LevelScalingStrategy::Remove(LevelManager* level_mgr){
 bool LevelScalingStrategy::Insert(NodeCollector* node_collector){
     assert(node_collector);
     assert(node_collector->join_type_list.size());
+
     auto new_scaling_info =  (ScalingInfo*) ShmemAlloc (sizeof(ScalingInfo));   
     assert(new_scaling_info);
     new (new_scaling_info) ScalingInfo(node_collector->join_type_list);
@@ -255,6 +256,7 @@ bool LevelScalingStrategy::Remove(NodeCollector* node_collector){
 bool LevelScalingStrategy::Search(NodeCollector* node_collector){
     assert(node_collector);
     assert(node_collector->join_type_list.size());
+
     auto new_scaling_info = std::make_shared<ScalingInfo>(node_collector->join_type_list);
     {
         std::shared_lock<std::shared_mutex> lock(rw_mutex_);
@@ -411,7 +413,8 @@ bool LevelAggStrategy::Insert(NodeCollector* node_collector){
             return child->Insert(node_collector);
         }else{
             size_t next_level = FindNextInsertLevel(node_collector,5);
-            //auto new_idx_node = std::make_shared<HistoryQueryIndexNode>(next_level,total_height_);
+            assert(next_level == total_height_);
+
             HistoryQueryIndexNode* new_idx_node = (HistoryQueryIndexNode*)ShmemAlloc(sizeof(HistoryQueryIndexNode));
             if(!new_idx_node){
                 elog(ERROR, "ShmemAlloc failed: not enough shared memory");
@@ -430,7 +433,7 @@ bool LevelAggStrategy::Insert(NodeCollector* node_collector){
 
 bool LevelAggStrategy::Remove(NodeCollector* node_collector){
     assert(node_collector);
-    return false;
+    return true;
 }
 
 bool LevelAggStrategy::Search(NodeCollector* node_collector){
@@ -438,6 +441,9 @@ bool LevelAggStrategy::Search(NodeCollector* node_collector){
     assert(node_collector->node_aggs_);
     auto top_aggs = node_collector->node_aggs_;
     
+    /**
+     * TODO: fix logic error here
+     */
     assert(top_aggs->Size() == 1);
     LevelAggAndSortEquivlences * la_eq = top_aggs->GetLevelAggList()[0];
     

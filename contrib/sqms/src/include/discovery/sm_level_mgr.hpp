@@ -64,6 +64,7 @@ public:
     const SMUnorderedMap<SMString,SMPredEquivlence*,SMStringHash>& GetKey2Pe(){return key2pe_;}
     void Copy(LevelPredEquivlences* lpes){
         for(const auto& pe : lpes->LevelPeList()){
+            assert(pe);
             SMPredEquivlence* sm_pe = (SMPredEquivlence*)ShmemAlloc(sizeof(SMPredEquivlence));
             assert(sm_pe);
             new (sm_pe) SMPredEquivlence();

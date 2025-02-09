@@ -441,6 +441,8 @@ public:
 
     std::vector<int> inputs;
     int output;
+
+    double time;
 };
 
 /**

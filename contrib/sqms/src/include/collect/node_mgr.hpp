@@ -53,6 +53,7 @@ public:
 private:
     void ComputeTotalNodes(HistorySlowPlanStat* hsps,std::unordered_map<HistorySlowPlanStat*, NodeCollector*> nodes_collector_map);
     void PlanPartition(HistorySlowPlanStat* hsps);
+    bool CancelQuery();
 private:
     int branch_num_;
     HistorySlowPlanStat* hsps_ = nullptr;

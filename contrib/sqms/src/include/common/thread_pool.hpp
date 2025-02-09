@@ -17,10 +17,13 @@
  */
 class ThreadPool {
 public:
-    explicit ThreadPool(size_t threadCount) : stopFlag(false) {
+    explicit ThreadPool(size_t threadCount, bool join = false) 
+        : stopFlag(false),join_thread(join) {
         for (size_t i = 0; i < threadCount; ++i) {
             workers.emplace_back(&ThreadPool::workerThread, this);
-            workers.back().detach();
+            if(!join_thread){
+                workers.back().detach();
+            }
         }
     }
 
@@ -60,7 +63,15 @@ public:
             std::lock_guard<std::mutex> lock(queueMutex);
             stopFlag = true;
         }
+
         condition.notify_all();
+        if (join_thread) {  
+            for (std::thread &worker : workers) {
+                if (worker.joinable()) {
+                    worker.join();
+                }
+            }
+        }
     }
 
 private:
@@ -88,6 +99,7 @@ private:
     std::mutex queueMutex;
     std::condition_variable condition;
     std::atomic<bool> stopFlag;
+    bool join_thread;
 };
 
 #endif // THREAD_POOL_HPP

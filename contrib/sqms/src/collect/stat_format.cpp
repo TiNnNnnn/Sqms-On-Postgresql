@@ -93,12 +93,12 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, bool slow){
                     logger_->Logger("slow","shared_index insert error in strategy 1");
                     exit(-1);
                 }
-                for(const auto& node_collector : node_manager->GetNodeCollectorList()){
-                    if(!shared_index->Insert(node_collector)){
-                        logger_->Logger("slow","shared_index insert error in strategy 2");
-                        exit(-1);
-                    }
-                }
+                // for(const auto& node_collector : node_manager->GetNodeCollectorList()){
+                //     if(!shared_index->Insert(node_collector)){
+                //         logger_->Logger("slow","shared_index insert error in strategy 2");
+                //         exit(-1);
+                //     }
+                // }
             }
             /**
              * TODO: 11-23 storage the slow sub query
