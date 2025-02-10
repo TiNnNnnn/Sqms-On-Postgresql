@@ -16,24 +16,11 @@ bool LevelManager::PrintPredEquivlences(){
 	if(debug)
 	 	ShowTotalPredClass();
 }
-
-// bool LevelManager::Insert(HistoryQueryLevelTree *shared_index){
-// 	assert(shared_index);
-// 	if(!shared_index->Insert(this,1)){
-//         logger_->Logger("slow","shared_index insert error");
-//         exit(-1);
-//     }
-// 	return true;
-// }
-
-// bool LevelManager::Search(HistoryQueryLevelTree *shared_index){
-// 	assert(shared_index);
-// 	if(shared_index->Search(this,1)){
-//         CancelQuery();
-// 		return true;
-//     }
-// 	return false;
-// }
+/**
+ * LevelManager::GetSubQueries
+ */
+void LevelManager::GetSubQueries(){
+}
 
 /**
  * ComputeEquivlenceClass: calulate the equivelence class and its containment for
@@ -91,8 +78,12 @@ void LevelManager::ComputeLevelClass(const std::vector<HistorySlowPlanStat*>& li
 	for(const auto& e : *total_equivlences_[cur_height_]){
 		e->SetLpeId(idx++);
 		e->BuildKey2PeMap();
+		if(idx == 0){
+			/*collect all subqueries in predicates,we only need collecet on one of 
+			the level_pe_list in one level*/
+		}
 	}
-	
+
 	/*calulate other attrs based on equivlences*/
 	for(const auto& s : list){
 		cur_hsps_ = s;
@@ -575,6 +566,7 @@ void LevelManager::GroupKeyDecompase(HistorySlowPlanStat* hsps){
 	}
 }
 
+
 void AggAndSortEquivlence::Init(HistorySlowPlanStat* hsps,LevelPredEquivlences* lpes){
 	if(!lpes){
 		for(size_t i=0;i<hsps->n_group_sort_keys;i++){
@@ -702,6 +694,7 @@ void LevelAggAndSortList::Insert(HistorySlowPlanStat* hsps,std::string label){
 
 		level_agg_list_.push_back(new_ae_list);
 	}else{
+		/*here we should keep lpes order equal to ae_list*/
 		for(const auto& lpes: *lpes_list_){			
 			AggAndSortEquivlence* new_agg = new AggAndSortEquivlence(label);
 			new_agg->Init(hsps,lpes);

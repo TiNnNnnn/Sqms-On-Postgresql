@@ -1,6 +1,5 @@
 #include "discovery/sm_level_mgr.hpp"
 
-
 void SMPredEquivlence::Copy(PredEquivlence* pe){
     assert(pe);
     for(const auto& attr : pe->GetPredSet()){

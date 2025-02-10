@@ -125,11 +125,11 @@ private:
 class LevelManager;
 class PredEquivlence {
     struct RangesCompare {
-    bool operator()(const PredEquivlenceRange* per1, const PredEquivlenceRange* per2) const {
-        if (per1->LowerLimit() != per2->LowerLimit())
-            return per1->LowerLimit() < per2->LowerLimit();
-        return per1->UpperLimit() < per2->UpperLimit();
-    }
+        bool operator()(const PredEquivlenceRange* per1, const PredEquivlenceRange* per2) const {
+            if (per1->LowerLimit() != per2->LowerLimit())
+                return per1->LowerLimit() < per2->LowerLimit();
+            return per1->UpperLimit() < per2->UpperLimit();
+        }
     };
 public:
     PredEquivlence(){}
@@ -196,6 +196,10 @@ private:
     /* common attr ranges */
     std::set<PredEquivlenceRange*,RangesCompare>ranges_;
     /* sublink attr ranges */
+    /**
+     * TODO: we should let level_mgr can more easily visit sublink_level_pe_strings_
+     * the key is SUBQUERY1,SUBQUERY2 ... and so on
+     */
     std::unordered_map<std::string, std::shared_ptr<LevelManager>> sublink_level_pe_lists_;
     
     bool early_stop_ = true;
@@ -432,7 +436,6 @@ public:
     LevelAggAndSortList* node_sorts_ = nullptr;
     /* total sets for tables */
     LevelTblList* node_tbls_ = nullptr;
-
     const char * json_sub_plan = nullptr;
     std::vector<std::string> join_type_list;
 
@@ -441,8 +444,10 @@ public:
 
     std::vector<int> inputs;
     int output;
-
     double time;
+
+    int pe_idx = -1;
+
 };
 
 /**
@@ -491,6 +496,8 @@ private:
     void GroupKeyDecompase(HistorySlowPlanStat* hsps);
     void SortKeyDecompase(HistorySlowPlanStat* hsps);
 
+    void GetSubQueries();
+
 private:
     void ExprLevelCollect(PredExpression * tree,std::vector<std::vector<AbstractPredNode*>>& level_collector);
     bool GetPreProcessed(PreProcessLabel label){return pre_processed_map_[label];}
@@ -527,11 +534,10 @@ private:
 
     std::vector<LevelPredEquivlencesList*> total_residual_equivlences_;
 
-    std::string log_tag_;
-
     SqmsLogger* logger_;
-};
 
+    std::string log_tag_;    
+};
 
 class PredOperatorWrap: public AbstractPredNode{
 public:
