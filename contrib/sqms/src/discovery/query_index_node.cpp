@@ -18,7 +18,6 @@ bool LevelHashStrategy::Insert(LevelManager* level_mgr){
     }else{
         /*create a new child node*/
         size_t next_level = FindNextInsertLevel(level_mgr,1);
-        //HistoryQueryIndexNode* new_idx_node = new HistoryQueryIndexNode(next_level,total_height_);
         HistoryQueryIndexNode* new_idx_node = (HistoryQueryIndexNode*)ShmemAlloc(sizeof(HistoryQueryIndexNode));
         if(!new_idx_node){
             elog(ERROR, "ShmemAlloc failed: not enough shared memory");
@@ -68,7 +67,6 @@ bool LevelHashStrategy::Insert(NodeCollector* node_collector){
     }else{
         /*create a new child node*/
         size_t next_level = FindNextInsertLevel(node_collector,1);
-        //HistoryQueryIndexNode* new_idx_node = new HistoryQueryIndexNode(next_level,total_height_);
         HistoryQueryIndexNode* new_idx_node = (HistoryQueryIndexNode*)ShmemAlloc(sizeof(HistoryQueryIndexNode));
         if(!new_idx_node){
             elog(ERROR, "ShmemAlloc failed: not enough shared memory");
@@ -135,7 +133,7 @@ bool ScalingInfo::Match(ScalingInfo* scale_info){
         if(src_id[i] < unique_id_[i]){
             matched = false;
             break;
-        }
+        } 
     }
     return matched;
 }
@@ -167,7 +165,6 @@ bool LevelScalingStrategy::Insert(LevelManager* level_mgr){
         }else{
             /*create a new child node*/
             size_t next_level = FindNextInsertLevel(level_mgr,2);
-
             HistoryQueryIndexNode* new_idx_node = (HistoryQueryIndexNode*)ShmemAlloc(sizeof(HistoryQueryIndexNode));
             if(!new_idx_node){
                 elog(ERROR, "ShmemAlloc failed: not enough shared memory");

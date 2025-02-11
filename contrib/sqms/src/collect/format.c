@@ -951,11 +951,13 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		case T_CteScan:
 		case T_WorkTableScan:
 			ExplainScanTarget((Scan *) plan, es, &hsp);
+			ExplainScanTarget((Scan *) plan, ces, &hsp);
 			break;
 		case T_ForeignScan:
 		case T_CustomScan:
 			if (((Scan *) plan)->scanrelid > 0)
 				ExplainScanTarget((Scan *) plan, es,&hsp);
+				ExplainScanTarget((Scan *) plan, ces,&hsp);
 			break;
 		case T_IndexScan:
 			{
@@ -964,7 +966,12 @@ ExplainNode(PlanState *planstate, List *ancestors,
 				ExplainIndexScanDetails(indexscan->indexid,
 										indexscan->indexorderdir,
 										es,&hsp);
+				ExplainIndexScanDetails(indexscan->indexid,
+										indexscan->indexorderdir,
+										ces,&hsp);				
+
 				ExplainScanTarget((Scan *) indexscan, es,&hsp);
+				ExplainScanTarget((Scan *) indexscan, ces,&hsp);
 			}
 			break;
 		case T_IndexOnlyScan:
@@ -974,7 +981,12 @@ ExplainNode(PlanState *planstate, List *ancestors,
 				ExplainIndexScanDetails(indexonlyscan->indexid,
 										indexonlyscan->indexorderdir,
 										es,&hsp);
+				ExplainIndexScanDetails(indexonlyscan->indexid,
+										indexonlyscan->indexorderdir,
+										ces,&hsp);
+
 				ExplainScanTarget((Scan *) indexonlyscan, es, &hsp);
+				ExplainScanTarget((Scan *) indexonlyscan, ces, &hsp);
 			}
 			break;
 		case T_BitmapIndexScan:
