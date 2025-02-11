@@ -106,6 +106,7 @@ void NodeManager::ComputeTotalNodes(HistorySlowPlanStat* hsps,std::unordered_map
 		|| NodeTag(hsps->node_tag) == T_HashJoin){
 		assert(strlen(hsps->join_type));
 		node_collector->join_type_list.push_back(hsps->join_type);
+        node_collector->output = hsps->actual_rows;
 	}
 
     node_collector_list_.push_back(node_collector);
@@ -113,6 +114,7 @@ void NodeManager::ComputeTotalNodes(HistorySlowPlanStat* hsps,std::unordered_map
     for(size_t i = 0; i< hsps->n_childs; ++i){
         auto child_node_collector = nodes_collector_map[hsps->childs[i]];
         child_node_collector->parent_ = node_collector;
+        child_node_collector->inputs.push_back(hsps->childs[i]->actual_rows);
         node_collector->childs_.push_back(child_node_collector);
         ComputeTotalNodes(hsps->childs[i],nodes_collector_map);
     }

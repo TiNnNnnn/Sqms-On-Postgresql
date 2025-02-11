@@ -94,6 +94,9 @@ public:
     void SetBoundaryConstraint(std::pair<bool,bool> bc){boundary_constraint_ = bc;}
     std::pair<bool,bool>& GetBoundaryConstraint(){return boundary_constraint_;}
 
+    void SetSubqueryName(const std::string& name){subquery_name_ = name;}
+    const std::string& GetSubqueryName(){return subquery_name_;}
+
     void SetLowerBoundaryConstraint(bool b){boundary_constraint_.first = b;}
     void SetUpperBoundaryConstraint(bool b){boundary_constraint_.second = b;}
     bool GetLowerBoundaryConstraint(){return boundary_constraint_.first;}
@@ -110,6 +113,8 @@ public:
 
 private:
     PType type_;
+    /*type == SUBQRUEY or SUBLINK*/
+    std::string subquery_name_;
     std::string lower_limit_ = LOWER_LIMIT;
     std::string upper_limit_ = UPPER_LIMIT;
     std::pair<bool,bool> boundary_constraint_ = std::make_pair(true,true);
@@ -126,9 +131,10 @@ class LevelManager;
 class PredEquivlence {
     struct RangesCompare {
         bool operator()(const PredEquivlenceRange* per1, const PredEquivlenceRange* per2) const {
-            if (per1->LowerLimit() != per2->LowerLimit())
-                return per1->LowerLimit() < per2->LowerLimit();
-            return per1->UpperLimit() < per2->UpperLimit();
+            return true;
+            // if (per1->LowerLimit() != per2->LowerLimit())
+            //     return per1->LowerLimit() < per2->LowerLimit();
+            // return per1->UpperLimit() < per2->UpperLimit();
         }
     };
 public:
@@ -462,8 +468,6 @@ public:
 
     virtual bool Format();
     virtual bool PrintPredEquivlences();
-    //virtual bool Insert(HistoryQueryLevelTree *shared_index);
-    //virtual bool Search(HistoryQueryLevelTree *shared_index);
 
     void ComputeTotalClass(); 
 
@@ -483,6 +487,7 @@ public:
     const std::vector<LevelAggAndSortList*>& GetTotalSorts(){return total_sorts_;}
     const std::vector<LevelPredEquivlencesList*>& GetTotalResidualEquivlences(){return total_residual_equivlences_;}
     std::unordered_map<HistorySlowPlanStat*, NodeCollector*>& GetNodeCollector(){return nodes_collector_map_;}
+    const std::unordered_map <int,std::vector<LevelManager*>>& GetPredSubQueryMap(){return pred_subquery_map_;}
 
 private:
     void ComputeLevelClass(const std::vector<HistorySlowPlanStat*>& list);
@@ -533,6 +538,8 @@ private:
     std::vector<std::string> join_type_list_;
 
     std::vector<LevelPredEquivlencesList*> total_residual_equivlences_;
+
+    std::unordered_map <int,std::vector<LevelManager*>> pred_subquery_map_;
 
     SqmsLogger* logger_;
 

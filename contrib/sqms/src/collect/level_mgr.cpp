@@ -1004,6 +1004,9 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
 	for(const auto& lpes_list : *final_lpes_list){
 		for(const auto& pe : *lpes_list){
 			for(const auto& sublink : pe->GetSubLinkLevelPeLists()){
+
+				pred_subquery_map_[lpes_list->LpeId()].push_back(sublink.second.get());
+
 				auto sub_top_output =  sublink.second->GetTotalOutput()[0];
 				/*each item in output2pelist is or*/
 				for(size_t j = 0; j < sub_top_output->GetOutput2PeList().size(); ++j){
@@ -1026,6 +1029,7 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
 			}
 		}
 	}
+
 	if(sub_final_lpes_list->Size()){
 		//final_lpes_list->Insert(sub_final_lpes_list,false);
 		total_equivlences_[cur_height_]->Insert(sub_final_lpes_list,false);
@@ -1094,6 +1098,7 @@ void PredEquivlenceRange::Copy(PredEquivlenceRange* new_range){
 	new_range->SetLowerLimit(lower_limit_);
 	new_range->SetUpperLimit(upper_limit_);
 	new_range->SetBoundaryConstraint(boundary_constraint_);
+	new_range->SetSubqueryName(subquery_name_);
 	new_range->SetList(list_);
 }
 
@@ -1270,10 +1275,16 @@ PredEquivlence::PredEquivlence(Quals* qual){
 			
 			/*calualate pred equivlence here*/
 			for(size_t i = 0; i < qual->hsps->n_subplans; i++){
-				auto sub_level_mgr = std::make_shared<LevelManager>(qual->hsps->subplans[i],nullptr,logger);
+				auto sub_plan_hsp = qual->hsps->subplans[i];
+
+				PredEquivlenceRange* new_range = new PredEquivlenceRange(); 
+				new_range->SetSubqueryName(sub_plan_hsp->sub_plan_name);
+				ranges_.insert(new_range);
+				
+				auto sub_level_mgr = std::make_shared<LevelManager>(sub_plan_hsp,nullptr,logger);
 				pf_context->SetStrategy(sub_level_mgr);
 				pf_context->executeStrategy();
-				sublink_level_pe_lists_[qual->hsps->subplans[i]->sub_plan_name] = sub_level_mgr; 
+				sublink_level_pe_lists_[sub_plan_hsp->sub_plan_name] = sub_level_mgr; 
 			}
 		}break;
 		case PType::SUBLINK:{
@@ -1292,10 +1303,16 @@ PredEquivlence::PredEquivlence(Quals* qual){
 
 			/*calualate pred equivlence here*/
 			for(size_t i = 0; i < qual->hsps->n_subplans; i++){
-				auto sub_level_mgr = std::make_shared<LevelManager>(qual->hsps->subplans[i],nullptr,logger);
+				auto sub_plan_hsp = qual->hsps->subplans[i];
+				
+				PredEquivlenceRange* new_range = new PredEquivlenceRange(); 
+				new_range->SetSubqueryName(sub_plan_hsp->sub_plan_name);
+				ranges_.insert(new_range);
+
+				auto sub_level_mgr = std::make_shared<LevelManager>(sub_plan_hsp,nullptr,logger);
 				pf_context->SetStrategy(sub_level_mgr);
 				pf_context->executeStrategy();
-				sublink_level_pe_lists_[qual->hsps->subplans[i]->sub_plan_name] = sub_level_mgr; 
+				sublink_level_pe_lists_[sub_plan_hsp->sub_plan_name] = sub_level_mgr; 
 			}
 		}break;
 		default:{
@@ -1474,11 +1491,13 @@ bool PredEquivlence::Insert(PredEquivlence* pe, bool check_can_merged, bool pre_
 			return false;
 		}
 	}
+	
 	/*update pred_name set*/
 	auto pred_set = pe->GetPredSet();
 	for(const auto& pred_name: pred_set){
 		set_.insert(pred_name);
 	}
+
 	/*update ranges*/
 	for(const auto& r : pe->GetRanges()){
 		std::vector<PredEquivlenceRange*> merge_range_list;
@@ -1613,47 +1632,73 @@ bool PredEquivlence::Serach(const std::string& attr){
  */
 bool PredEquivlence::SuperSet(PredEquivlence* pe){
 	assert(pe);
-	auto range = pe->GetRanges();
+	/*here we just compare subquery name,such as SUBQUERY1, SUBQUERY2, we will compare */
+	auto ranges = pe->GetRanges();
+	std::vector<std::string> subquery_names;
 	for(const auto r :ranges_){
 		bool match = false;
-		for(const auto src_r : range){
-			bool super = true;
-			/* check lowlimit */
-			if(r->LowerLimit() == LOWER_LIMIT){
-				if(src_r->LowerLimit() != LOWER_LIMIT){
-					super = false;
-					continue;
-				}
-			}else{
-				if(src_r->LowerLimit() != LOWER_LIMIT){
-					if(r->LowerLimit() < src_r->LowerLimit()){
+		if(r->PredType() == PType::SUBQUERY || r->PredType() == PType::SUBLINK){
+			assert(!r->GetSubqueryName().empty());
+			subquery_names.push_back(r->GetSubqueryName());
+			match = true;
+		}else if(r->PredType() == PType::EQUAL || r->PredType() == PType::NOT_EQUAL || r->PredType() == PType::RANGE){
+			for(const auto& src_r : ranges){
+				bool super = true;
+				/* check lowlimit */
+				if(r->LowerLimit() == LOWER_LIMIT){
+					if(src_r->LowerLimit() != LOWER_LIMIT){
 						super = false;
 						continue;
 					}
-				}			
-			}
+				}else{
+					if(src_r->LowerLimit() != LOWER_LIMIT){
+						if(r->LowerLimit() < src_r->LowerLimit()){
+							super = false;
+							continue;
+						}
+					}			
+				}
 
-			/* check upperlimit */
-			if(r->UpperLimit() == UPPER_LIMIT){
-				if(src_r->UpperLimit() != UPPER_LIMIT){
-					super = false;
-					continue;
-				}
-			}else{
-				if(src_r->UpperLimit() != UPPER_LIMIT){
-					if(r->UpperLimit() > src_r->UpperLimit()){
+				/* check upperlimit */
+				if(r->UpperLimit() == UPPER_LIMIT){
+					if(src_r->UpperLimit() != UPPER_LIMIT){
 						super = false;
 						continue;
 					}
-				}			
+				}else{
+					if(src_r->UpperLimit() != UPPER_LIMIT){
+						if(r->UpperLimit() > src_r->UpperLimit()){
+							super = false;
+							continue;
+						}
+					}			
+				}
+				if(super){
+					match = true;
+					break;
+				}
 			}
-			if(super){
-				match = true;
-				break;
-			}
+		}else{
+			/*not support yet*/
+			match = true;
 		}
+
 		if(!match){
 			return false;
+		}
+	}
+
+	/*check subquery names in pe*/
+	size_t sub_src_idx = 0;
+	for(const auto& r : ranges){
+		if(r->PredType() == PType::SUBQUERY || r->PredType() == PType::SUBLINK){
+			if(sub_src_idx >= subquery_names.size()){
+				return false;
+			}
+			if(r->GetSubqueryName() != subquery_names[sub_src_idx]){
+				return false;
+			}
+			++sub_src_idx;
 		}
 	}
 	return true;
@@ -1863,7 +1908,6 @@ bool LevelPredEquivlences::MergePredEquivlences(const std::vector<PredEquivlence
 	level_pe_sets_.insert(new_pe);
 	return true;
 }
-
 
 /**
  * LevelPredEquivlences::Serach: use before insert new pred_equivlence into level_pred_equivlences,

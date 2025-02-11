@@ -252,7 +252,13 @@ private:
     bool Match(LevelPredEquivlences* dst_lpes, SMLevelPredEquivlences* lpes);
     bool SuperSet(PredEquivlence* dst_pe, SMPredEquivlence* pe);
 private:
+    /*for plan level matching*/
     SMLevelManager* level_mgr_;
+
+    /*for node level matching*/
+    int output_;
+    SMVector<int>inputs_;
+
     SMVector<SMLevelManager*>historys_;
 };
 

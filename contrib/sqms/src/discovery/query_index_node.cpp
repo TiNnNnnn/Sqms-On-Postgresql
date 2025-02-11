@@ -926,7 +926,7 @@ bool LevelRangeStrategy::Search(NodeCollector* node_collector){
     auto top_eqs = node_collector->node_equivlences_;
     size_t top_idx = 0;
     for(const auto& lpes : *top_eqs){
-        SET pe_vecs;
+        SET pe_vecs; 
         for(const auto& pe : *lpes){
             if(pe->GetPredSet().size() == 1){
                 pe_vecs.push_back(*pe->GetPredSet().begin());
@@ -966,9 +966,11 @@ bool LevelRangeStrategy::Search(NodeCollector* node_collector){
 bool LevelResidualStrategy::Insert(LevelManager* level_mgr){
     return true;
 }
+
 bool LevelResidualStrategy::Serach(LevelManager* level_mgr,int id){
     return true;
 }
+
 bool LevelResidualStrategy::Remove(LevelManager* level_mgr){
     return true;
 }
@@ -1030,13 +1032,26 @@ bool LeafStrategy::Serach(LevelManager* level_mgr,int id){
 bool LeafStrategy::Remove(LevelManager* level_mgr){
     return true;
 }
+
 bool LeafStrategy::Insert(NodeCollector* node_collector){
+    assert(node_collector);
+    for(const auto& in : node_collector->inputs){
+        inputs_.push_back(in);
+    }
+    output_ = node_collector->output;
     return true;
 }
+
 bool LeafStrategy::Remove(NodeCollector* node_collector){
     return true;
 }
+
 bool LeafStrategy::Search(NodeCollector* node_collector){
+    assert(node_collector);
+    for(const auto& in : inputs_){
+        node_collector->inputs.push_back(in);
+    }
+    node_collector->output = output_;
     return true;
 }
 
