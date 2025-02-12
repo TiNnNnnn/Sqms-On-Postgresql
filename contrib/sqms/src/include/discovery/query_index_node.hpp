@@ -183,6 +183,10 @@ public:
             inverted_idx_ = (InvertedIndex<PostingList>*) ShmemAlloc(sizeof(InvertedIndex<PostingList>));
             assert(inverted_idx_);
             new (inverted_idx_) InvertedIndex<PostingList>();
+
+            range_inverted_idx_ = (RangeInvertedIndex*) ShmemAlloc(sizeof(RangeInvertedIndex));
+            assert(range_inverted_idx_);
+            new (range_inverted_idx_) RangeInvertedIndex();
         }
     SMString Name(){return "PlanRangePredsStrategy";}
     bool Insert(LevelManager* level_mgr);
@@ -195,7 +199,10 @@ public:
 
 private:
     InvertedIndex<PostingList>* inverted_idx_;
-    SMUnorderedMap<SET,SMUnorderedMap<LevelPredEquivlences*,HistoryQueryIndexNode*>,SetHasher> child_map_;
+    RangeInvertedIndex* range_inverted_idx_;
+    SMConcurrentHashMap<SET,HistoryQueryIndexNode*,SetHasher> child_map_;
+    //SMUnorderedMap<SET,HistoryQueryIndexNode*,SetHasher> child_map_;
+    //SMUnorderedMap<SET,SMUnorderedMap<LevelPredEquivlences*,HistoryQueryIndexNode*>,SetHasher> child_map_;
     std::shared_mutex rw_mutex_;
     size_t s_level_;
 };

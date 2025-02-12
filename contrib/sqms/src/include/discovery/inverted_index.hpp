@@ -11,12 +11,12 @@
 #include <boost/bimap.hpp>
 #include <mutex>
 #include <iostream>
-
+#include "sm_level_mgr.hpp"
 
 /**
  * TODO: a temp implemetaion of postingList,it will be replaced by another one 
  */
-typedef SMVector<std::string> SET;
+typedef SMVector<SMString> SET;
 static std::string EncodingSets(const SET&sets){
     std::string encoding;
     for(size_t i=0;i<sets.size();i++){
@@ -42,13 +42,6 @@ struct SetHasher {
         return lhs == rhs;
     }
 };
-
-struct SMStringHash {
-    std::size_t operator()(const SMString &s) const {
-        return std::hash<std::string_view>{}(std::string_view(s.data(), s.size()));
-    }
-};
-
 
 class PostingList{
 public:
@@ -89,7 +82,6 @@ private:
 
 private:
     SMUnorderedSet<SET,SetHasher>list_;
-    //std::unordered_set<SET,SetHasher,std::equal_to<SET>,SharedMemoryAllocator<SET>> list_;
     std::bitset<bit_map_size> bit_set_;
 };
 
@@ -165,11 +157,61 @@ public:
     }
 
 private:
-    SMUnorderedMap<std::string,PostingList>inverted_map_;
+    SMUnorderedMap<SMString,PostingList,SMStringHash>inverted_map_;
     /* item in set,such as A,B,C,D....*/
     /* set such as {A,B},{A,B,C},{B,C,D,E} to their id*/
     SMUnorderedMap<SET,int,SetHasher>sets2id_; 
     SMUnorderedMap<int,SET> id2sets_; 
+    /*id generate for the set id*/
+    std::atomic<long long> set_cnt_{-1}; 
+    std::atomic<int>items_cnt_{0};
+    std::shared_mutex rw_mutex_;
+};
+
+class RangePostingList{
+    struct PredCompare {
+        bool operator()(const PredEquivlenceRange* per1, const PredEquivlenceRange* per2) const {
+            return true;
+        }
+    };
+public:
+    void Insert(SMPredEquivlence* range,int id);
+    void Erase(SMPredEquivlence* range,int id);
+    /*get all ranges which is superset of range,used in query index*/
+    SMVector<int> SuperSet(SMPredEquivlence* pe);
+    /**
+     * TODO: not implement yet
+     */
+    SMVector<int> SubSet(PredEquivlence* range);
+private:
+    /*check if the pe is the dst_pe's superset*/
+    bool SuperSetInternal(SMPredEquivlence* dst_pe, SMPredEquivlence* pe);
+private:
+    SMSet<SMPredEquivlence*,PredCompare>sets_;
+    SMUnorderedMap<SMPredEquivlence*,int> set2id_;
+};
+
+class RangeInvertedIndex{
+public:
+    /*insert a set into inverted index*/
+    void Insert(LevelPredEquivlences* lpes);
+    /*erase a set from inverted index*/
+    void Erase(LevelPredEquivlences* lpes);
+    /**serach a set whether in inverted index or not */
+    bool Serach(LevelPredEquivlences* lpes);
+    /*find superset of <set>*/
+    SMSet<int> SuperSets(LevelPredEquivlences* lpes);
+    /*find subsets of <set>*/
+    SMSet<int> SubSets(LevelPredEquivlences* lpes);
+    /*get lpes's all pe id in invertedindex*/
+    SMSet<int> GetLpesIds(LevelPredEquivlences* lpes);
+
+private:
+    SMUnorderedMap<SMString,RangePostingList,SMStringHash>inverted_map_;
+    /* item in set,such as A,B,C,D....*/
+    /* set such as {A,B},{A,B,C},{B,C,D,E} to their id*/
+    SMUnorderedMap<SMString,int,SMStringHash>set2id_; 
+    SMUnorderedMap<int,SMString> id2set_; 
     /*id generate for the set id*/
     std::atomic<long long> set_cnt_{-1}; 
     std::atomic<int>items_cnt_{0};

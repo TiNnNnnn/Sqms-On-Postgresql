@@ -147,3 +147,10 @@ void generateCombinations(const SMVector<SMVector<T>>& arrays,
 
 uint32_t hash_array(const std::vector<int>& array);
 uint32_t hash_array(const SMVector<int>& array);
+
+
+struct SMStringHash {
+    std::size_t operator()(const SMString &s) const {
+        return std::hash<std::string_view>{}(std::string_view(s.data(), s.size()));
+    }
+};

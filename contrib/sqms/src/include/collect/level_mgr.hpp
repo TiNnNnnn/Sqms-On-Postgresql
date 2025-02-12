@@ -43,6 +43,7 @@ enum class PType{
     /**/
     SUBLINK,
     SUBQUERY,
+    UNKNOWN,
 };
 
 /*operator type set*/
@@ -110,7 +111,14 @@ public:
 
     void PrintPredEquivlenceRange(int depth = 0);
     std::string PrintPredEquivlenceRange(int depth,std::string tag,SqmsLogger* logger);
-
+    
+    SMString Serialization(){
+        SMString str;
+        str += SMString(std::to_string(int(type_)));    
+        str += subquery_name_ + lower_limit_ + upper_limit_;
+        str += boundary_constraint_.first ? "1":"0" + boundary_constraint_.second ? "1":"0";
+        return str;
+    }
 private:
     PType type_;
     /*type == SUBQRUEY or SUBLINK*/
@@ -183,6 +191,25 @@ public:
 
     void SetChild(std::shared_ptr<PredEquivlence> child){child_ = child;}
     std::shared_ptr<PredEquivlence> Child(){return child_;}
+
+    std::string GetPredSetStr(){
+        std::string str;
+        for(const auto& name : set_){
+            str += name;
+        }
+        return str;
+    }
+
+    SMString Serialization(){
+        SMString str;
+        for(const auto& name : set_){
+            str += name;
+        }
+        for(const auto& range : ranges_){
+            str += range->Serialization();
+        }
+        return str;
+    }
 
 private:
     std::string extract_field(const std::string& expression) {
@@ -261,8 +288,7 @@ private:
      * a fast map from attr to its pe  
      */
     std::unordered_map<std::string,PredEquivlence*> key2pe_;
-    /*mark pe that can't early stop,from current level's pe to p4re level's pe*/
-    std::unordered_map<PredEquivlence*,PredEquivlence*>pe2pe_map_;
+
     bool early_stop_ = true;
     int  lpe_id_;
 };

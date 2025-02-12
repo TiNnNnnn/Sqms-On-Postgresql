@@ -2689,66 +2689,25 @@ show_hashagg_info(AggState *aggstate, ExplainState *es)
 		agg->aggstrategy != AGG_MIXED)
 		return;
 
-	if (es->format != EXPLAIN_FORMAT_TEXT)
-	{
 
-		if (es->costs)
-			FormatPropertyInteger("Planned Partitions", NULL,
+
+	if (es->costs)
+		FormatPropertyInteger("Planned Partitions", NULL,
 								   aggstate->hash_planned_partitions, es);
 
-		/*
-		 * During parallel query the leader may have not helped out.  We
-		 * detect this by checking how much memory it used.  If we find it
-		 * didn't do any work then we don't show its properties.
-		 */
-		if (es->analyze && aggstate->hash_mem_peak > 0)
-		{
-			FormatPropertyInteger("HashAgg Batches", NULL,
-								   aggstate->hash_batches_used, es);
-			FormatPropertyInteger("Peak Memory Usage", "kB", memPeakKb, es);
-			FormatPropertyInteger("Disk Usage", "kB",
-								   aggstate->hash_disk_used, es);
-		}
-	}
-	else
+	/*
+	* During parallel query the leader may have not helped out.  We
+	* detect this by checking how much memory it used.  If we find it
+	* didn't do any work then we don't show its properties.
+	*/
+	if (es->analyze && aggstate->hash_mem_peak > 0)
 	{
-		bool		gotone = false;
-
-		if (es->costs && aggstate->hash_planned_partitions > 0)
-		{
-			appendStringInfo(es->str, "Planned Partitions: %d",
-							 aggstate->hash_planned_partitions);
-			gotone = true;
-		}
-
-		/*
-		 * During parallel query the leader may have not helped out.  We
-		 * detect this by checking how much memory it used.  If we find it
-		 * didn't do any work then we don't show its properties.
-		 */
-		if (es->analyze && aggstate->hash_mem_peak > 0)
-		{
-			if (!gotone){
-
-			}
-			else
-				appendStringInfoString(es->str, "  ");
-
-			appendStringInfo(es->str, "Batches: %d  Memory Usage: " INT64_FORMAT "kB",
-							 aggstate->hash_batches_used, memPeakKb);
-			gotone = true;
-
-			/* Only display disk usage if we spilled to disk */
-			if (aggstate->hash_batches_used > 1)
-			{
-				appendStringInfo(es->str, "  Disk Usage: " UINT64_FORMAT "kB",
-					aggstate->hash_disk_used);
-			}
-		}
-
-		if (gotone)
-			appendStringInfoChar(es->str, '\n');
+		FormatPropertyInteger("HashAgg Batches", NULL,
+								   aggstate->hash_batches_used, es);
+		FormatPropertyInteger("Peak Memory Usage", "kB", memPeakKb, es);
+		FormatPropertyInteger("Disk Usage", "kB",aggstate->hash_disk_used, es);
 	}
+	
 
 	/* Display stats for each parallel worker */
 	if (es->analyze && aggstate->shared_info != NULL)

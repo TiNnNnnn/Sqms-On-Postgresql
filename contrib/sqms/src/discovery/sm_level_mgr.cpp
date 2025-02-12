@@ -30,4 +30,6 @@ void SMPredEquivlence::Copy(PredEquivlence* pe){
         sm_child_pe->Copy(pe->Child().get());
     }
     child_ = sm_child_pe;
+
+    serialization_ = Serialization();
 }

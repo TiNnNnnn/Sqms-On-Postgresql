@@ -1348,16 +1348,22 @@ PType PredEquivlence::QualType(Quals* qual){
 					return PType::JOIN_EQUAL;
 				}else if(!strcmp(op,">")){
 					/*not support*/
+					return PType::UNKNOWN;
 				}else if(!strcmp(op,">=")){
 					/*not support*/
+					return PType::UNKNOWN;
 				}else if(!strcmp(op,"<")){
 					/*not support*/
+					return PType::UNKNOWN;
 				}else if(!strcmp(op,"<=")){
 					/*not support*/
+					return PType::UNKNOWN;
 				}else if(!strcmp(op,"!=") or !strcmp(op,"<>")){
 					/*not support*/
+					return PType::UNKNOWN;
 				}else if(!strcmp(op,"!~")){
 					/*not support*/
+					return PType::UNKNOWN;
 				}
 			}else if(PredVariable(left_type) && !PredVariable(right_type)){
 				switch(right_type){
@@ -1386,6 +1392,7 @@ PType PredEquivlence::QualType(Quals* qual){
 					}break;
 					default:{
 						std::cerr<<"unsupport right value type :"<<right_type<<" of quals"<<std::endl;
+						return PType::UNKNOWN;
 					}
 				}
 			}else if(!PredVariable(left_type) && PredVariable(right_type)){
@@ -1452,15 +1459,18 @@ PType PredEquivlence::QualType(Quals* qual){
 					}break;
 					default:{
 						std::cerr<<"unsupport right value type :"<<right_type<<" of quals"<<std::endl;
+						return PType::UNKNOWN;
 					}
 				}
 			}else{
 				std::cerr<<"not support currnt type of quals: left: "<<left_type<<",right: "<<right_type<<std::endl;
-				exit(-1);
+				return PType::UNKNOWN;
 			}
 		}
 	}else if(qual->hash_sub_plan){
 		return PType::SUBQUERY;
+	}else{
+		return PType::UNKNOWN;
 	}
 }
 
@@ -1688,7 +1698,7 @@ bool PredEquivlence::SuperSet(PredEquivlence* pe){
 		}
 	}
 
-	/*check subquery names in pe*/
+	/*externel check: subquery names in pe*/
 	size_t sub_src_idx = 0;
 	for(const auto& r : ranges){
 		if(r->PredType() == PType::SUBQUERY || r->PredType() == PType::SUBLINK){
@@ -1698,6 +1708,9 @@ bool PredEquivlence::SuperSet(PredEquivlence* pe){
 			if(r->GetSubqueryName() != subquery_names[sub_src_idx]){
 				return false;
 			}
+			/**
+			 * TODO: here we check the true subquery
+			 */
 			++sub_src_idx;
 		}
 	}

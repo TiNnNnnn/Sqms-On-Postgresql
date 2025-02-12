@@ -90,10 +90,12 @@ bool NodeManager::Search(){
                     return false;
                 }
             }
+            return true;
         });
         ++part_idx;
         return true;
     }
+    return false;
 }
     
 void NodeManager::ComputeTotalNodes(HistorySlowPlanStat* hsps,std::unordered_map<HistorySlowPlanStat*, NodeCollector*> nodes_collector_map){
