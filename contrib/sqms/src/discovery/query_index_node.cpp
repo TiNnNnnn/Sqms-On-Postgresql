@@ -96,6 +96,7 @@ bool LevelHashStrategy::Search(NodeCollector* node_collector){
     }else{
         return false;
     }
+    
     return false;
 }
 
