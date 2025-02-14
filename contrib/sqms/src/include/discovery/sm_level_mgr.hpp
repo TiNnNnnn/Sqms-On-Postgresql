@@ -40,14 +40,14 @@ private:
 
 class SMLevelManager;
 class SMPredEquivlence {
-    struct SMRangesCompare {
-        bool operator()(const SMPredEquivlenceRange* per1, const SMPredEquivlenceRange* per2) const {
-            return true;
-        }
-    };
+    // struct SMRangesCompare {
+    //     bool operator()(const SMPredEquivlenceRange* per1, const SMPredEquivlenceRange* per2) const {
+    //         return true;
+    //     }
+    // };
 public:
     SMSet<SMString>& GetPredSet(){return set_;}
-    SMSet<SMPredEquivlenceRange*,SMRangesCompare>& GetRanges(){return ranges_;}
+    SMSet<SMPredEquivlenceRange*>& GetRanges(){return ranges_;}
     SMUnorderedMap<SMString, SMLevelManager*,SMStringHash>& GetSubLinkLevelPeLists(){return sublink_level_pe_lists_;}
     bool EarlyStop(){return early_stop_;}
     SMPredEquivlence* Child(){return child_;}
@@ -72,7 +72,7 @@ public:
 private:
     SMSet<SMString> set_;
     /* common attr ranges */
-    SMSet<SMPredEquivlenceRange*,SMRangesCompare>ranges_;
+    SMSet<SMPredEquivlenceRange*>ranges_;
     /* sublink attr ranges */
     SMUnorderedMap<SMString, SMLevelManager*,SMStringHash> sublink_level_pe_lists_;
     

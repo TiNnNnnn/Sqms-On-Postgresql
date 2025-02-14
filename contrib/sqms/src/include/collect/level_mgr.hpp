@@ -137,15 +137,14 @@ private:
  */
 class LevelManager;
 class PredEquivlence {
-    struct RangesCompare {
-        bool operator()(const PredEquivlenceRange* per1, const PredEquivlenceRange* per2) const {
-            
-            return true;
-            // if (per1->LowerLimit() != per2->LowerLimit())
-            //     return per1->LowerLimit() < per2->LowerLimit();
-            // return per1->UpperLimit() < per2->UpperLimit();
-        }
-    };
+    // struct RangesCompare {
+    //     bool operator()(const PredEquivlenceRange* per1, const PredEquivlenceRange* per2) const {
+    //         //return true;
+    //         if (per1->LowerLimit() != per2->LowerLimit())
+    //             return per1->LowerLimit() < per2->LowerLimit();
+    //         return per1->UpperLimit() < per2->UpperLimit();
+    //     }
+    // };
 public:
     PredEquivlence(){}
     PredEquivlence(Quals* qual);
@@ -179,8 +178,8 @@ public:
     std::set<std::string>& GetPredSet(){return set_;}
     void SetPredSet(std::set<std::string> set){set_ = set;}
 
-    std::set<PredEquivlenceRange*,RangesCompare>& GetRanges(){return ranges_;}
-    void SetRanges(std::set<PredEquivlenceRange*,RangesCompare> ranges){ranges_ = ranges;}
+    std::set<PredEquivlenceRange*>& GetRanges(){return ranges_;}
+    void SetRanges(std::set<PredEquivlenceRange*> ranges){ranges_ = ranges;}
 
     bool MergePredEquivlenceRanges(const std::vector<PredEquivlenceRange*>& merge_pe_list);
 
@@ -259,7 +258,7 @@ private:
 private:
     std::set<std::string> set_;
     /* common attr ranges,here is no need to sort*/
-    std::set<PredEquivlenceRange*,RangesCompare>ranges_;
+    std::set<PredEquivlenceRange*>ranges_;
     /* sublink attr ranges */
     /**
      * TODO: we should let level_mgr can more easily visit sublink_level_pe_strings_

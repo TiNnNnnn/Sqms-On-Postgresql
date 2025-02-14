@@ -1063,19 +1063,31 @@ bool PredEquivlenceRange::Serach(PredEquivlenceRange* range){
 			}
 		}break;
 		case PType::RANGE:{
-			if(range->PredType() == PType::RANGE){
-				bool intersected = 
-					(range->UpperLimit() < LowerLimit())||
-					(range->LowerLimit() > UpperLimit())||
-					(range->UpperLimit() == LowerLimit() && (!GetLowerBoundaryConstraint()||!range->GetUpperBoundaryConstraint()))||
-					(range->LowerLimit() == UpperLimit() && (!GetUpperBoundaryConstraint()||!range->GetLowerBoundaryConstraint()));
-				return !intersected;
-			}else if (range->PredType() == PType::EQUAL){
-				/*if this qual num is in the range of this->ranges,then we just convert ptype into PType::EQUAL*/
-				bool intersected = 
-					((range->UpperLimit() < LowerLimit())) ||
-					(range->UpperLimit() == LowerLimit() && (!GetLowerBoundaryConstraint()||!range->GetUpperBoundaryConstraint()));
-				return !intersected;
+			if(range->PredType() == PType::RANGE || range->PredType() == PType::EQUAL){
+				bool left_intersected = false;
+				if(range->LowerLimit() != LOWER_LIMIT){
+					if(lower_limit_ != LOWER_LIMIT){
+						left_intersected = (range->LowerLimit() > lower_limit_) 
+									|| (range->LowerLimit() == lower_limit_ && range->GetLowerBoundaryConstraint() && !GetLowerBoundaryConstraint());
+					}else{
+						left_intersected = true;
+					}
+				}else{
+					left_intersected = false;
+				}
+				
+				bool right_intersected = false;
+				if(range->UpperLimit() !=  UPPER_LIMIT){
+					if(upper_limit_ != UPPER_LIMIT){
+						right_intersected = (range->UpperLimit() < upper_limit_)
+										|| (range->UpperLimit() == upper_limit_ && !range->GetUpperBoundaryConstraint() && GetUpperBoundaryConstraint());
+					}else{
+						right_intersected = true;
+					}
+				}else{
+					right_intersected = false;
+				}
+				return right_intersected || left_intersected;
 			}else{
 				return false;
 			}
@@ -1568,10 +1580,10 @@ bool PredEquivlence::MergePredEquivlenceRanges(const std::vector<PredEquivlenceR
 		}
 
 		if(idx == 0){
-			upper_bound = merge_range_list[0]->UpperLimit();
-			lower_bound = merge_range_list[0]->LowerLimit();
-			left = merge_range_list[0]->GetLowerBoundaryConstraint();
-			right = merge_range_list[0]->GetUpperBoundaryConstraint();
+			upper_bound = r->UpperLimit();
+			lower_bound = r->LowerLimit();
+			left = r->GetLowerBoundaryConstraint();
+			right = r->GetUpperBoundaryConstraint();
 		}else{
 
 			if((r->UpperLimit() < upper_bound && r->UpperLimit() != UPPER_LIMIT && upper_bound != UPPER_LIMIT)||
@@ -1906,16 +1918,16 @@ bool LevelPredEquivlences::Insert(LevelPredEquivlences* lpes,bool pre_merged){
  */
 bool LevelPredEquivlences::MergePredEquivlences(const std::vector<PredEquivlence*>& merge_pe_list,bool pre_merged){
 	PredEquivlence* new_pe = new PredEquivlence();
-	std::set<std::string>pred_name_set;
 	int idx = 0;
+	assert(merge_pe_list.size() >=2);
 	for(const auto& mpe : merge_pe_list){
 		if(idx == 0){
-			mpe[idx].Copy(new_pe);
+			mpe->Copy(new_pe);
 		}else{
 			new_pe->Insert(mpe,true,pre_merged);
 		}
 		/*remove the pe has been merged*/
-		level_pe_sets_.erase(mpe);
+		int ret = level_pe_sets_.erase(mpe);
 		++idx;
 	}
 	/*insert the new pe*/
@@ -2075,9 +2087,9 @@ bool LevelPredEquivlencesList::Insert(LevelPredEquivlencesList* lpes_list,bool i
 	if(is_or){ /*or_model*/
 		size_t src_idx = 0;
 		for(const auto& lpes: *lpes_list){
-			Insert(lpes,true);
 			if(pre_merge)
 				child_lpes_map_[lpes_list_.size()].push_back(src_idx++);
+			Insert(lpes,true);
 		}
 	}else{ /*and_model*/
 		if(lpes_list_.empty()){
@@ -2100,11 +2112,13 @@ bool LevelPredEquivlencesList::Insert(LevelPredEquivlencesList* lpes_list,bool i
 					LevelPredEquivlences* new_lpes = new LevelPredEquivlences();
 					lpes_list_[i]->Copy(new_lpes);
 					
-					auto iter = child_lpes_map_.find(i);
-					assert(iter != lpes_list->GetChildLpesMap().end());
-
 					lpes_list_.push_back(new_lpes);
-					child_lpes_map_[lpes_list_.size()-1] = iter->second;
+					new_lpes->SetLpeId(lpes_list_.size()-1);
+					
+					// auto iter = child_lpes_map_.find(i);
+					// if(iter != child_lpes_map_.end()){
+					// 	child_lpes_map_[lpes_list_.size()-1] = iter->second;
+					// }
 				}
 				--sz;
 			}

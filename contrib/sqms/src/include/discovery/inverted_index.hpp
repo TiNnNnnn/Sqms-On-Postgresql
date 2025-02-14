@@ -167,7 +167,9 @@ private:
     std::atomic<int>items_cnt_{0};
     std::shared_mutex rw_mutex_;
 };
-
+/**
+ * pe in posting list should be order by ranges, then we can use lower_bound to acc sarech
+ */
 struct PredRangeCompare {
     bool operator()(const SMPredEquivlence* lhs, const SMPredEquivlence* rhs) const{
         if(lhs->HasRange()){

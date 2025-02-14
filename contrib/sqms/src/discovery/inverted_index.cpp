@@ -201,6 +201,7 @@ SMSet<int> RangeInvertedIndex::SubSets(LevelPredEquivlences* lpes){
 SMSet<int> RangeInvertedIndex::GetLpesIds(LevelPredEquivlences* lpes){
     assert(lpes);
     SMSet<int>ids;
+    std::shared_lock<std::shared_mutex> lock(rw_mutex_);
     for(const auto& pe : *lpes){
         auto pe_serialization = pe->Serialization();
         assert(set2id_.find(pe_serialization) == set2id_.end());
