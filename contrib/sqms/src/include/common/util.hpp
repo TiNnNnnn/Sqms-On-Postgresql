@@ -33,6 +33,11 @@ template <typename T>
 struct SharedMemoryAllocator {
     using value_type = T;
 
+    template <typename U>
+    struct rebind {
+        using other = SharedMemoryAllocator<U>;
+    };
+
     SharedMemoryAllocator() {}
     template <typename U>
     SharedMemoryAllocator(const SharedMemoryAllocator<U>&) {}

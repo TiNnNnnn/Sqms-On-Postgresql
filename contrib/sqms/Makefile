@@ -20,6 +20,7 @@ OBJS = \
     src/discovery/query_index_node.o \
     src/discovery/query_index.o \
     src/discovery/sm_level_mgr.o \
+    src/discovery/inverted_index.o \
 
 #src/discovery/levels.o\ 
 

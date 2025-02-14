@@ -132,7 +132,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, bool slow){
                     // if(!p){
                     //     std::cerr<<"history_slow_plan_stat__unpack failed in thered: "<<ThreadPool::GetTid()<<std::endl;
                     // }
-                    logger_->Logger("comming",("\n-----------sub_query ["+std::to_string(sub_idx)+"]-------------").c_str());
+                    logger_->Logger("comming",("**********sub_query ["+std::to_string(sub_idx)+"]***************").c_str());
                     SlowPlanStat *sps= new SlowPlanStat();
                     PlanFormatContext* pf_context_1 = new PlanFormatContext();
                     auto level_mgr = std::make_shared<LevelManager>(p,sps,logger_,"comming");
@@ -153,7 +153,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, bool slow){
                     if(shared_index->Search(level_mgr.get(),1)){
                         CancelQuery();
                     }
-                    logger_->Logger("comming","\n---------------------------------------------------------------");
+                    logger_->Logger("comming","****************************");
                     //return true;
                 //});
                 ++sub_idx;

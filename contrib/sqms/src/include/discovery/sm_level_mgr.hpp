@@ -42,9 +42,7 @@ class SMLevelManager;
 class SMPredEquivlence {
     struct SMRangesCompare {
         bool operator()(const SMPredEquivlenceRange* per1, const SMPredEquivlenceRange* per2) const {
-            if (per1->LowerLimit() != per2->LowerLimit())
-                return per1->LowerLimit() < per2->LowerLimit();
-            return per1->UpperLimit() < per2->UpperLimit();
+            return true;
         }
     };
 public:
@@ -65,6 +63,12 @@ public:
         }
         return str;
     }
+
+    const bool HasSubquery() const {return has_subquery_;}
+    const bool HasRange() const {return has_range_;}
+    const SMSet<SMString> SubqueryNames() const {return subquery_names_;}
+    const SMString LowerLimit() const {return lower_limit_;}
+    const SMString UpperLimit() const {return upper_limit_;}
 private:
     SMSet<SMString> set_;
     /* common attr ranges */
@@ -75,6 +79,13 @@ private:
     bool early_stop_ = true;
     SMPredEquivlence* child_ = nullptr;
     SMString serialization_;
+
+    /*for pe sort*/
+    bool has_subquery_ = false;
+    bool has_range_ = false;
+    SMSet<SMString> subquery_names_;
+    SMString lower_limit_;
+    SMString upper_limit_;
 };
 
 class SMLevelPredEquivlences{

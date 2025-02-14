@@ -2,7 +2,7 @@
 
 void RangePostingList::Insert(SMPredEquivlence* range,int id){
     sets_.insert(range);
-    set2id_.insert({range,id});
+    set2id_[range] = id;
 }
 
 void RangePostingList::Erase(SMPredEquivlence* range,int id){

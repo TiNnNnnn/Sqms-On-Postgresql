@@ -168,12 +168,31 @@ private:
     std::shared_mutex rw_mutex_;
 };
 
-class RangePostingList{
-    struct PredCompare {
-        bool operator()(const PredEquivlenceRange* per1, const PredEquivlenceRange* per2) const {
-            return true;
+struct PredRangeCompare {
+    bool operator()(const SMPredEquivlence* lhs, const SMPredEquivlence* rhs) const{
+        if(lhs->HasRange()){
+            if(rhs->HasRange()){
+                if(lhs->LowerLimit() == LOWER_LIMIT || (lhs->LowerLimit() != LOWER_LIMIT && rhs->LowerLimit() != LOWER_LIMIT && lhs->LowerLimit() < rhs->LowerLimit())){
+                    return true;
+                }else if(lhs->LowerLimit() == rhs->LowerLimit()){
+                    if(lhs->LowerLimit() == UPPER_LIMIT || (lhs->UpperLimit() != UPPER_LIMIT && rhs->UpperLimit() != UPPER_LIMIT && lhs->UpperLimit() < rhs->UpperLimit())){
+                        return true;
+                    }
+                }
+                return false;
+            }else{
+                return false;
+            }
+        }else{
+            if(rhs->HasRange()){
+                return true;
+            }else{
+                return lhs->SubqueryNames().size() <= rhs->SubqueryNames().size();
+            }
         }
-    };
+    }
+};
+class RangePostingList{
 public:
     void Insert(SMPredEquivlence* range,int id);
     void Erase(SMPredEquivlence* range,int id);
@@ -187,7 +206,7 @@ private:
     /*check if the pe is the dst_pe's superset*/
     bool SuperSetInternal(SMPredEquivlence* dst_pe, SMPredEquivlence* pe);
 private:
-    SMSet<SMPredEquivlence*,PredCompare>sets_;
+    SMSet<SMPredEquivlence*,PredRangeCompare>sets_;
     SMUnorderedMap<SMPredEquivlence*,int> set2id_;
 };
 

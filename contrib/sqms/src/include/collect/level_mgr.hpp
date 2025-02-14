@@ -139,6 +139,7 @@ class LevelManager;
 class PredEquivlence {
     struct RangesCompare {
         bool operator()(const PredEquivlenceRange* per1, const PredEquivlenceRange* per2) const {
+            
             return true;
             // if (per1->LowerLimit() != per2->LowerLimit())
             //     return per1->LowerLimit() < per2->LowerLimit();
@@ -211,6 +212,37 @@ public:
         return str;
     }
 
+    void CalSortInfo(){
+        assert(ranges_.size());
+        std::string lower_limit = UPPER_LIMIT;
+        std::string upper_limit = LOWER_LIMIT;
+        for(const auto& range: ranges_){
+            if(range->PredType() == PType::SUBQUERY){
+                has_subquery_ = true;
+                subquery_names_.insert(range->GetSubqueryName());
+                continue;
+            }
+            has_range_ = true;
+            if((lower_limit != UPPER_LIMIT && range->LowerLimit() < lower_limit)
+                || lower_limit == UPPER_LIMIT || lower_limit == LOWER_LIMIT){
+                lower_limit = range->LowerLimit();
+            }
+
+            if((upper_limit != LOWER_LIMIT && range->UpperLimit() > upper_limit)
+                || upper_limit == LOWER_LIMIT || upper_limit == UPPER_LIMIT){
+                upper_limit = range->UpperLimit();
+            }
+        }
+        lower_limit_ = lower_limit;
+        upper_limit_ = upper_limit;
+    }
+
+    std::string LowerLimit(){return lower_limit_;}
+    std::string UpperLimit(){return upper_limit_;}
+    bool HasSubquery(){return has_subquery_;}
+    bool HasRange(){return has_range_;}
+    std::set<std::string>& SubqueryNames(){return subquery_names_;}
+
 private:
     std::string extract_field(const std::string& expression) {
         size_t start_pos = expression.find('(');  
@@ -226,7 +258,7 @@ private:
     }
 private:
     std::set<std::string> set_;
-    /* common attr ranges */
+    /* common attr ranges,here is no need to sort*/
     std::set<PredEquivlenceRange*,RangesCompare>ranges_;
     /* sublink attr ranges */
     /**
@@ -237,11 +269,18 @@ private:
     
     bool early_stop_ = true;
     std::shared_ptr<PredEquivlence> child_ = nullptr;
+
+    /*for pe sort*/
+    bool has_subquery_ = false;
+    bool has_range_ = false;
+    std::set<std::string> subquery_names_;
+    std::string lower_limit_;
+    std::string upper_limit_;
 };
 
 class LevelPredEquivlences{
 public:
-  
+
     bool Insert(Quals* quals,bool is_or = false);
     bool Insert(PredEquivlence* pe);
     bool Insert(LevelPredEquivlences* pe,bool pre_merged = false);

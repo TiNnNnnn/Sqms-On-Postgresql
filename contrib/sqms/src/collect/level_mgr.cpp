@@ -82,6 +82,10 @@ void LevelManager::ComputeLevelClass(const std::vector<HistorySlowPlanStat*>& li
 			/*collect all subqueries in predicates,we only need collecet on one of 
 			the level_pe_list in one level*/
 		}
+
+		for(const auto& pe : *e){
+			pe->CalSortInfo();
+		}
 	}
 
 	/*calulate other attrs based on equivlences*/
@@ -125,9 +129,6 @@ void LevelManager::HandleNode(HistorySlowPlanStat* hsps){
 		case T_NestLoop:
 		case T_MergeJoin:
 		case T_HashJoin:{
-			if(hsps->join_type == ""){
-
-			}
 		}break;
 		case T_SeqScan:
 			break;
