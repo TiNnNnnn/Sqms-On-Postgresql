@@ -104,7 +104,7 @@ public:
             SMPredEquivlence* sm_pe = (SMPredEquivlence*)ShmemAlloc(sizeof(SMPredEquivlence));
             assert(sm_pe);
             new (sm_pe) SMPredEquivlence();
-            sm_pe->Copy(pe);
+            //sm_pe->Copy(pe);
             level_pe_sets_.insert(sm_pe);
         }
         for(const auto& item : lpes->GetKey2Pe()){

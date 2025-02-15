@@ -4,7 +4,7 @@ void SMPredEquivlence::Copy(PredEquivlence* pe){
     assert(pe);
     for(const auto& attr : pe->GetPredSet()){
         set_.insert(SMString(attr));
-    }
+    } 
     for(const auto& range: pe->GetRanges()){
         SMPredEquivlenceRange* sm_range =  (SMPredEquivlenceRange*)ShmemAlloc(sizeof(SMPredEquivlenceRange));
         assert(sm_range);

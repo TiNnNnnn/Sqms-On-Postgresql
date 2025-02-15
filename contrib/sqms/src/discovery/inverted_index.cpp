@@ -112,6 +112,7 @@ bool RangePostingList::SuperSetInternal(SMPredEquivlence* dst_pe, SMPredEquivlen
 
 void RangeInvertedIndex::Insert(LevelPredEquivlences* lpes){
     SMLevelPredEquivlences* sm_lpes = (SMLevelPredEquivlences*)ShmemAlloc(sizeof(SMLevelPredEquivlences));
+    new (sm_lpes) SMLevelPredEquivlences();
     sm_lpes->Copy(lpes);
     assert(sm_lpes);
 
@@ -134,6 +135,7 @@ void RangeInvertedIndex::Insert(LevelPredEquivlences* lpes){
 
 void RangeInvertedIndex::Erase(LevelPredEquivlences* lpes){
     SMLevelPredEquivlences* sm_lpes = (SMLevelPredEquivlences*)ShmemAlloc(sizeof(SMLevelPredEquivlences));
+    new (sm_lpes) SMLevelPredEquivlences();
     sm_lpes->Copy(lpes);
     assert(sm_lpes);
 

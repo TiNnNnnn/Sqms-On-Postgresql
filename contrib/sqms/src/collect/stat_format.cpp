@@ -83,7 +83,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, bool slow){
                     logger_->Logger("slow",ShowAllNodeCollect(hsps,node_collect_map,"slow").c_str());
                 }
 
-                /*format strategt 2*/
+                // /*format strategt 2*/
                 PlanFormatContext* pf_context_2 = new PlanFormatContext();
                 auto node_manager = std::make_shared<NodeManager>(p,level_mgr);
                 pf_context_2->SetStrategy(node_manager);

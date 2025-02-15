@@ -279,7 +279,6 @@ private:
 
 class LevelPredEquivlences{
 public:
-
     bool Insert(Quals* quals,bool is_or = false);
     bool Insert(PredEquivlence* pe);
     bool Insert(LevelPredEquivlences* pe,bool pre_merged = false);

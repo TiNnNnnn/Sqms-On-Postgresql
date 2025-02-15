@@ -6,7 +6,7 @@
 #include <algorithm>
 
 NodeManager::NodeManager(HistorySlowPlanStat* hsps,std::shared_ptr<LevelManager> level_mgr)
-: hsps_(hsps),level_mgr_(level_mgr),pool_(std::make_shared<ThreadPool>(pool_size_,true)){
+: hsps_(hsps),level_mgr_(level_mgr),pool_(std::make_shared<ThreadPool>(10,true)){
     bool found = false;
     logger_ = (SqmsLogger*)ShmemInitStruct("SqmsLogger", sizeof(SqmsLogger), &found);
     assert(logger_ && found);
@@ -116,7 +116,7 @@ void NodeManager::ComputeTotalNodes(HistorySlowPlanStat* hsps,std::unordered_map
     for(size_t i = 0; i< hsps->n_childs; ++i){
         auto child_node_collector = nodes_collector_map[hsps->childs[i]];
         child_node_collector->parent_ = node_collector;
-        child_node_collector->inputs.push_back(hsps->childs[i]->actual_rows);
+        node_collector->inputs.push_back(hsps->childs[i]->actual_rows);
         node_collector->childs_.push_back(child_node_collector);
         ComputeTotalNodes(hsps->childs[i],nodes_collector_map);
     }
