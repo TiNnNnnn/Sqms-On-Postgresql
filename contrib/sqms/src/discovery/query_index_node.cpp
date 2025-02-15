@@ -719,13 +719,18 @@ bool LevelRangeStrategy::Insert(LevelManager* level_mgr){
              * if id_vecs exists in inverted_idx, id_vecs must in
              * child_map
              */
-            assert(child_exist && child_node);
-            SMConcurrentHashMap<SET,HistoryQueryIndexNode*,SetHasher>::const_accessor acc;
-            bool found = child_map_.find(acc,id_vecs);
-            assert(found);
-            auto child = acc->second;
-            if(!child->Insert(level_mgr)){
-                return false;
+            if(child_exist){
+                if(!child_node->Insert(level_mgr)){
+                    return false;
+                }
+            }else{
+                SMConcurrentHashMap<SET,HistoryQueryIndexNode*,SetHasher>::const_accessor acc;
+                bool found = child_map_.find(acc,id_vecs);
+                assert(found);
+                auto child = acc->second;
+                if(!child->Insert(level_mgr)){
+                    return false;
+                }
             }
         }else{
             inverted_idx_->Insert(id_vecs);
@@ -812,13 +817,18 @@ bool LevelRangeStrategy::Insert(NodeCollector* node_collector){
              * if id_vecs exists in inverted_idx, id_vecs must in
              * child_map
              */
-            assert(child_exist && child_node);
-            SMConcurrentHashMap<SET,HistoryQueryIndexNode*,SetHasher>::const_accessor acc;
-            bool found = child_map_.find(acc,id_vecs);
-            assert(found);
-            auto child = acc->second;
-            if(!child->Insert(node_collector)){
-                return false;
+            if(child_exist){
+                if(!child_node->Insert(node_collector)){
+                    return false;
+                }
+            }else{
+                SMConcurrentHashMap<SET,HistoryQueryIndexNode*,SetHasher>::const_accessor acc;
+                bool found = child_map_.find(acc,id_vecs);
+                assert(found);
+                auto child = acc->second;
+                if(!child->Insert(node_collector)){
+                    return false;
+                }
             }
         }else{
             inverted_idx_->Insert(id_vecs);
