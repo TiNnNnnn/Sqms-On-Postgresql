@@ -176,10 +176,10 @@ public:
     std::string ShowPredEquivlenceSets(int depth,std::string tag,SqmsLogger* logger);
 
     std::set<std::string>& GetPredSet(){return set_;}
-    void SetPredSet(std::set<std::string> set){set_ = set;}
+    void SetPredSet(const std::set<std::string>& set){set_ = set;}
 
     std::set<PredEquivlenceRange*>& GetRanges(){return ranges_;}
-    void SetRanges(std::set<PredEquivlenceRange*> ranges){ranges_ = ranges;}
+    void SetRanges(const std::set<PredEquivlenceRange*>& ranges){ranges_ = ranges;}
 
     bool MergePredEquivlenceRanges(const std::vector<PredEquivlenceRange*>& merge_pe_list);
 
@@ -221,7 +221,9 @@ public:
                 subquery_names_.insert(range->GetSubqueryName());
                 continue;
             }
+            range_cnt_ ++;
             has_range_ = true;
+
             if((lower_limit != UPPER_LIMIT && range->LowerLimit() < lower_limit)
                 || lower_limit == UPPER_LIMIT || lower_limit == LOWER_LIMIT){
                 lower_limit = range->LowerLimit();
@@ -241,6 +243,7 @@ public:
     bool HasSubquery(){return has_subquery_;}
     bool HasRange(){return has_range_;}
     std::set<std::string>& SubqueryNames(){return subquery_names_;}
+    int RangeCnt(){return range_cnt_;}
 
 private:
     std::string extract_field(const std::string& expression) {
@@ -273,6 +276,7 @@ private:
     bool has_subquery_ = false;
     bool has_range_ = false;
     std::set<std::string> subquery_names_;
+    int range_cnt_ = 0;
     std::string lower_limit_;
     std::string upper_limit_;
 };

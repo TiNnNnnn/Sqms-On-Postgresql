@@ -34,4 +34,5 @@ void SMPredEquivlence::Copy(PredEquivlence* pe){
     serialization_ = Serialization();
     has_subquery_ = pe->HasSubquery();
     has_range_ =pe->HasRange();
+    range_cnt_ = pe->RangeCnt();
 }

@@ -92,7 +92,10 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, bool slow){
                 if(!shared_index->Insert(level_mgr.get(),1)){
                     logger_->Logger("slow","shared_index insert error in strategy 1");
                     exit(-1);
+                }else{
+                    logger_->Logger("slow","shared_index insert level_mgr success");
                 }
+                
                 // for(const auto& node_collector : node_manager->GetNodeCollectorList()){
                 //     if(!shared_index->Insert(node_collector)){
                 //         logger_->Logger("slow","shared_index insert error in strategy 2");

@@ -35,16 +35,31 @@ SMVector<int> RangePostingList::SubSet(PredEquivlence* range){
 /*check if the pe is the dst_pe's superset*/
 bool RangePostingList::SuperSetInternal(SMPredEquivlence* dst_pe, SMPredEquivlence* pe){
     assert(pe);
+
+    /*externel check: subquery names in pe*/
+    if(dst_pe->SubqueryNames().size() != pe->SubqueryNames().size()){
+        return false;
+    }
+    auto dst_iter = dst_pe->SubqueryNames().begin();
+    for(const auto& subquery_name : pe->SubqueryNames()){
+        if(subquery_name != *dst_iter){
+            return false;
+        }
+        dst_iter++;
+    }
+
+    if(dst_pe->RangeCnt() > 1){
+        return true;
+    }
+    if(pe->RangeCnt() > 1){
+        return false;
+    }
+
     /*here we just compare subquery name,such as SUBQUERY1, SUBQUERY2, we will compare */
     auto ranges = pe->GetRanges();
-    SMVector<SMString> subquery_names;
     for(const auto r :dst_pe->GetRanges()){
         bool match = false;
-        if(r->PredType() == PType::SUBQUERY || r->PredType() == PType::SUBLINK){
-                assert(!r->GetSubqueryName().empty());
-                subquery_names.push_back(r->GetSubqueryName());
-                match = true;
-        }else if(r->PredType() == PType::EQUAL || r->PredType() == PType::NOT_EQUAL || r->PredType() == PType::RANGE){
+        if(r->PredType() == PType::EQUAL || r->PredType() == PType::NOT_EQUAL || r->PredType() == PType::RANGE){
             for(const auto& src_r : ranges){
                 bool super = true;
                 /* check lowlimit */
@@ -88,23 +103,6 @@ bool RangePostingList::SuperSetInternal(SMPredEquivlence* dst_pe, SMPredEquivlen
 
         if(!match){
             return false;
-        }
-    }
-
-    /*externel check: subquery names in pe*/
-    size_t sub_src_idx = 0;
-    for(const auto& r : ranges){
-        if(r->PredType() == PType::SUBQUERY || r->PredType() == PType::SUBLINK){
-            if(sub_src_idx >= subquery_names.size()){
-                return false;
-            }
-            if(r->GetSubqueryName() != subquery_names[sub_src_idx]){
-                return false;
-            }
-            /**
-            * TODO: here we check the true subquery
-            */
-            ++sub_src_idx;
         }
     }
     return true;
@@ -206,7 +204,7 @@ SMSet<int> RangeInvertedIndex::GetLpesIds(LevelPredEquivlences* lpes){
     std::shared_lock<std::shared_mutex> lock(rw_mutex_);
     for(const auto& pe : *lpes){
         auto pe_serialization = pe->Serialization();
-        assert(set2id_.find(pe_serialization) == set2id_.end());
+        assert(set2id_.find(pe_serialization) != set2id_.end());
         ids.insert(set2id_[pe_serialization]);
     }
     return ids;

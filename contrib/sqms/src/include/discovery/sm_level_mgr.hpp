@@ -67,6 +67,7 @@ public:
     const bool HasSubquery() const {return has_subquery_;}
     const bool HasRange() const {return has_range_;}
     const SMSet<SMString> SubqueryNames() const {return subquery_names_;}
+    const int RangeCnt() const {return range_cnt_;}
     const SMString LowerLimit() const {return lower_limit_;}
     const SMString UpperLimit() const {return upper_limit_;}
 private:
@@ -84,6 +85,7 @@ private:
     bool has_subquery_ = false;
     bool has_range_ = false;
     SMSet<SMString> subquery_names_;
+    int range_cnt_;
     SMString lower_limit_;
     SMString upper_limit_;
 };
@@ -104,7 +106,7 @@ public:
             SMPredEquivlence* sm_pe = (SMPredEquivlence*)ShmemAlloc(sizeof(SMPredEquivlence));
             assert(sm_pe);
             new (sm_pe) SMPredEquivlence();
-            //sm_pe->Copy(pe);
+            sm_pe->Copy(pe);
             level_pe_sets_.insert(sm_pe);
         }
         for(const auto& item : lpes->GetKey2Pe()){

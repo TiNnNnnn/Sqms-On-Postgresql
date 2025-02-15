@@ -79,8 +79,10 @@ void LevelManager::ComputeLevelClass(const std::vector<HistorySlowPlanStat*>& li
 		e->SetLpeId(idx++);
 		e->BuildKey2PeMap();
 		if(idx == 0){
-			/*collect all subqueries in predicates,we only need collecet on one of 
-			the level_pe_list in one level*/
+			/**
+			 * TODO:collect all subqueries in predicates,we only need collecet on one of 
+			 * the level_pe_list in one level
+			**/
 		}
 
 		for(const auto& pe : *e){
@@ -1064,30 +1066,30 @@ bool PredEquivlenceRange::Serach(PredEquivlenceRange* range){
 		}break;
 		case PType::RANGE:{
 			if(range->PredType() == PType::RANGE || range->PredType() == PType::EQUAL){
-				bool left_intersected = false;
+				bool left_no_intersected = false;
 				if(range->LowerLimit() != LOWER_LIMIT){
-					if(lower_limit_ != LOWER_LIMIT){
-						left_intersected = (range->LowerLimit() > lower_limit_) 
-									|| (range->LowerLimit() == lower_limit_ && range->GetLowerBoundaryConstraint() && !GetLowerBoundaryConstraint());
+					if(upper_limit_ != UPPER_LIMIT){
+						left_no_intersected = (range->LowerLimit() > upper_limit_) 
+							|| (range->LowerLimit() == upper_limit_ && (!range->GetLowerBoundaryConstraint()&GetUpperBoundaryConstraint()));
 					}else{
-						left_intersected = true;
+						left_no_intersected = false;
 					}
 				}else{
-					left_intersected = false;
+					left_no_intersected = false;
 				}
 				
-				bool right_intersected = false;
+				bool right_no_intersected = false;
 				if(range->UpperLimit() !=  UPPER_LIMIT){
-					if(upper_limit_ != UPPER_LIMIT){
-						right_intersected = (range->UpperLimit() < upper_limit_)
-										|| (range->UpperLimit() == upper_limit_ && !range->GetUpperBoundaryConstraint() && GetUpperBoundaryConstraint());
+					if(lower_limit_ != LOWER_LIMIT){
+						right_no_intersected = (range->UpperLimit() < lower_limit_)
+							|| (range->UpperLimit() == lower_limit_ && (!range->GetUpperBoundaryConstraint()&GetLowerBoundaryConstraint()));
 					}else{
-						right_intersected = true;
+						right_no_intersected = false;
 					}
 				}else{
-					right_intersected = false;
+					right_no_intersected = false;
 				}
-				return right_intersected || left_intersected;
+				return !(right_no_intersected || left_no_intersected);
 			}else{
 				return false;
 			}
@@ -1527,7 +1529,7 @@ bool PredEquivlence::Insert(PredEquivlence* pe, bool check_can_merged, bool pre_
 		if(RangesSerach(r,merge_range_list)){
 			/*merge ranges */
 			merge_range_list.push_back(r);
-			bool early_stop =  MergePredEquivlenceRanges(merge_range_list);
+			bool early_stop = MergePredEquivlenceRanges(merge_range_list);
 			if(!early_stop){
 				child_ = std::shared_ptr<PredEquivlence>(pe);
 			}
@@ -1573,6 +1575,7 @@ bool PredEquivlence::MergePredEquivlenceRanges(const std::vector<PredEquivlenceR
 	bool left = false;
 	bool right = false;
 
+
 	for(const auto& r : merge_range_list){
 		if(r->PredType() != PType::RANGE){
 			std::cerr<<"only support range type merge currently"<<std::endl;
@@ -1608,7 +1611,10 @@ bool PredEquivlence::MergePredEquivlenceRanges(const std::vector<PredEquivlenceR
 	new_range->SetPredType(PType::RANGE);
 	new_range->SetLowerLimit(lower_bound);
 	new_range->SetUpperLimit(upper_bound);
-
+	new_range->SetLowerBoundaryConstraint(left);
+	new_range->SetUpperBoundaryConstraint(right);
+	ranges_.insert(new_range);
+	
 	auto old_range = merge_range_list.back();
 	if(old_range->LowerLimit() < new_range->LowerLimit() 
 		|| (old_range->GetBoundaryConstraint().first && !new_range->GetBoundaryConstraint().first&&old_range->LowerLimit() == new_range->LowerLimit())
@@ -1617,7 +1623,7 @@ bool PredEquivlence::MergePredEquivlenceRanges(const std::vector<PredEquivlenceR
 			early_stop_ = false;
 			return false;
 	}
-	ranges_.insert(new_range);
+	
 	return true;
 }
 
@@ -1655,6 +1661,12 @@ bool PredEquivlence::Serach(const std::string& attr){
  */
 bool PredEquivlence::SuperSet(PredEquivlence* pe){
 	assert(pe);
+	
+	/*if one pe has more then one range,it must be return 0 tuple*/
+	if(RangeCnt() >= 2 && !has_subquery_){
+		return true;
+	}
+
 	/*here we just compare subquery name,such as SUBQUERY1, SUBQUERY2, we will compare */
 	auto ranges = pe->GetRanges();
 	std::vector<std::string> subquery_names;
@@ -1705,7 +1717,6 @@ bool PredEquivlence::SuperSet(PredEquivlence* pe){
 			/*not support yet*/
 			match = true;
 		}
-
 		if(!match){
 			return false;
 		}
@@ -1927,7 +1938,7 @@ bool LevelPredEquivlences::MergePredEquivlences(const std::vector<PredEquivlence
 			new_pe->Insert(mpe,true,pre_merged);
 		}
 		/*remove the pe has been merged*/
-		int ret = level_pe_sets_.erase(mpe);
+		level_pe_sets_.erase(mpe);
 		++idx;
 	}
 	/*insert the new pe*/
