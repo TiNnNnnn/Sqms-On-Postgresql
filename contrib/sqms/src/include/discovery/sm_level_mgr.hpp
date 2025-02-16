@@ -50,7 +50,7 @@ public:
     SMSet<SMPredEquivlenceRange*>& GetRanges(){return ranges_;}
     SMUnorderedMap<SMString, SMLevelManager*,SMStringHash>& GetSubLinkLevelPeLists(){return sublink_level_pe_lists_;}
     bool EarlyStop(){return early_stop_;}
-    SMPredEquivlence* Child(){return child_;}
+    //SMPredEquivlence* Child(){return child_;}
     void Copy(PredEquivlence* pe);
     SMString GetSerialization(){return serialization_; }
     SMString Serialization(){
@@ -78,7 +78,7 @@ private:
     SMUnorderedMap<SMString, SMLevelManager*,SMStringHash> sublink_level_pe_lists_;
     
     bool early_stop_ = true;
-    SMPredEquivlence* child_ = nullptr;
+    //SMPredEquivlence* child_ = nullptr;
     SMString serialization_;
 
     /*for pe sort*/

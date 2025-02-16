@@ -23,13 +23,13 @@ void SMPredEquivlence::Copy(PredEquivlence* pe){
     early_stop_ = pe->EarlyStop();
 
     SMPredEquivlence* sm_child_pe = nullptr;
-    if(pe->Child().get()){
-        sm_child_pe = (SMPredEquivlence*)ShmemAlloc(sizeof(SMPredEquivlence));
-        assert(sm_child_pe);
-        new (sm_child_pe) SMPredEquivlence();
-        sm_child_pe->Copy(pe->Child().get());
-    }
-    child_ = sm_child_pe;
+    // if(pe->Child().get()){
+    //     sm_child_pe = (SMPredEquivlence*)ShmemAlloc(sizeof(SMPredEquivlence));
+    //     assert(sm_child_pe);
+    //     new (sm_child_pe) SMPredEquivlence();
+    //     sm_child_pe->Copy(pe->Child().get());
+    // }
+    //child_ = sm_child_pe;
 
     serialization_ = Serialization();
     has_subquery_ = pe->HasSubquery();

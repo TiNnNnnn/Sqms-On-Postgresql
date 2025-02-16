@@ -155,7 +155,7 @@ public:
     static bool PredVariable(NodeTag node_tag);
     static bool PredSubquery(NodeTag node_tag);
 
-    bool Insert(PredEquivlence* pe, bool check_can_merged,bool pre_merged);
+    bool Insert(PredEquivlence* pe, bool check_can_merged,bool pre_merged,bool early_check);
 
     bool Delete(Quals* quals);
     
@@ -182,7 +182,7 @@ public:
     void UpdateRanges(PredEquivlenceRange* range) {ranges_.insert(range);}
     void SetRanges(const std::set<PredEquivlenceRange*>& ranges){ranges_ = ranges;}
 
-    bool MergePredEquivlenceRanges(const std::vector<PredEquivlenceRange*>& merge_pe_list);
+    bool MergePredEquivlenceRanges(const std::vector<PredEquivlenceRange*>& merge_pe_list,bool pre_merge = false,bool ealy_check = false);
 
     std::unordered_map<std::string, std::shared_ptr<LevelManager>>& GetSubLinkLevelPeLists(){return sublink_level_pe_lists_;}
     void SetSubLinkLevelPeLists(const std::unordered_map<std::string, std::shared_ptr<LevelManager>>& lists){sublink_level_pe_lists_ = lists;}
@@ -190,8 +190,8 @@ public:
     bool EarlyStop(){return early_stop_;}
     void SetEarlyStop(bool early_stop){early_stop_ = early_stop;}
 
-    void SetChild(std::shared_ptr<PredEquivlence> child){child_ = child;}
-    std::shared_ptr<PredEquivlence> Child(){return child_;}
+    //void SetChild(std::shared_ptr<PredEquivlence> child){child_ = child;}
+    //std::shared_ptr<PredEquivlence> Child(){return child_;}
 
     std::string GetPredSetStr(){
         std::string str;
@@ -213,7 +213,7 @@ public:
     }
 
     void CalSortInfo(){
-        assert(ranges_.size());
+        //assert(ranges_.size());
         std::string lower_limit = UPPER_LIMIT;
         std::string upper_limit = LOWER_LIMIT;
         for(const auto& range: ranges_){
@@ -271,7 +271,7 @@ private:
     std::unordered_map<std::string, std::shared_ptr<LevelManager>> sublink_level_pe_lists_;
     
     bool early_stop_ = true;
-    std::shared_ptr<PredEquivlence> child_ = nullptr;
+    //std::shared_ptr<PredEquivlence> child_ = nullptr;
 
     /*for pe sort*/
     bool has_subquery_ = false;
@@ -286,7 +286,7 @@ class LevelPredEquivlences{
 public:
     bool Insert(Quals* quals,bool is_or = false);
     bool Insert(PredEquivlence* pe);
-    bool Insert(LevelPredEquivlences* pe,bool pre_merged = false);
+    bool Insert(LevelPredEquivlences* pe,bool pre_merged = false,bool early_check = false);
 
     bool Delete(PredEquivlence* quals);
     bool UpdateRanges(Quals* quals);
@@ -302,7 +302,7 @@ public:
 
     bool Match(LevelPredEquivlences* lpes);
 
-    bool MergePredEquivlences(const std::vector<PredEquivlence*>& merge_pe_list,bool pre_merged = false);
+    bool MergePredEquivlences(const std::vector<PredEquivlence*>& merge_pe_list,bool pre_merged = false,bool early_check = false);
 
     void ShowLevelPredEquivlences(int depth = 0);
     std::string ShowLevelPredEquivlences(int depth,std::string tag, SqmsLogger* logger);
@@ -341,7 +341,7 @@ private:
 class LevelPredEquivlencesList{
 public:
     bool Insert(LevelPredEquivlences* lpes,bool is_or);
-    bool Insert(LevelPredEquivlencesList* lpes_list,bool is_or,bool pre_merge = false);
+    bool Insert(LevelPredEquivlencesList* lpes_list,bool is_or,bool pre_merge = false,bool early_check = false);
 
     void Copy(LevelPredEquivlencesList* new_lpes_list);
     size_t Size(){return lpes_list_.size();}
