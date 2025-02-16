@@ -2124,7 +2124,12 @@ bool LevelPredEquivlencesList::Insert(LevelPredEquivlencesList* lpes_list,bool i
 					lpes_list_[i]->Copy(new_lpes);
 					
 					lpes_list_.push_back(new_lpes);
-					new_lpes->SetLpeId(lpes_list_.size()-1);
+
+					auto child_pos = child_lpes_map_.find(i);
+					if(child_pos != child_lpes_map_.end()){
+						child_lpes_map_[lpes_list_.size()-1] = child_pos->second;
+					}
+					//new_lpes->SetLpeId(lpes_list_.size()-1);
 				}
 				--sz;
 			}
@@ -2180,8 +2185,8 @@ std::string LevelPredEquivlencesList::ShowLevelPredEquivlencesList(int depth, st
 	for(size_t i = 0; i < lpes_list_.size();++i){
 		str += PrintIndent(depth+1,tag);
 		str += "[id:"+ std::to_string(i) + ", childs:";
-		for(const auto& child : child_lpes_map_[i]){
-			str += child + ",";
+		for(const auto& child : child_lpes_map_[lpes_list_[i]->LpeId()]){
+			str += std::to_string(child) + ",";
 		}
 		str += "early_stop:" + std::string(lpes_list_[i]->EarlyStop() == true? "ture":"false");
 		str += "]->";
@@ -2319,7 +2324,7 @@ std::string LevelManager::GetPredClassStr(int height,std::string tag,int depth){
 
 	str += PrintIndent(depth,log_tag_);
 	str += PrintLine(50-depth,log_tag_);
-
+	str += "\n";
 	return str;
 }
 
