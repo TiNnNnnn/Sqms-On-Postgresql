@@ -179,6 +179,7 @@ public:
     void SetPredSet(const std::set<std::string>& set){set_ = set;}
 
     std::set<PredEquivlenceRange*>& GetRanges(){return ranges_;}
+    void UpdateRanges(PredEquivlenceRange* range) {ranges_.insert(range);}
     void SetRanges(const std::set<PredEquivlenceRange*>& ranges){ranges_ = ranges;}
 
     bool MergePredEquivlenceRanges(const std::vector<PredEquivlenceRange*>& merge_pe_list);
@@ -360,7 +361,7 @@ public:
         return ret;
     }
 
-    void SetChildLpesMap(std::unordered_map<size_t,std::vector<size_t>> map){child_lpes_map_ = map;}
+    void SetChildLpesMap(const std::unordered_map<size_t,std::vector<size_t>>& map){child_lpes_map_ = map;}
     std::unordered_map<size_t,std::vector<size_t>>& GetChildLpesMap(){return child_lpes_map_;}
 private:
     std::vector<LevelPredEquivlences*> lpes_list_;

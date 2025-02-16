@@ -971,24 +971,21 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
 	node_final_lpes_list = new LevelPredEquivlencesList();
 	final_lpes_list->Copy(node_final_lpes_list);
 
-	/*we should merge current level's pre lpes with this level*/
-	// if(same_level_need_merged){
-	// 	final_lpes_list->Insert(total_equivlences_[cur_height_],false);
-	// }
-
 	if(!total_equivlences_[cur_height_])
 		total_equivlences_[cur_height_] = new LevelPredEquivlencesList();
-
-	if(nodes_collector_map_[cur_hsps_]->node_equivlences_ && nodes_collector_map_[cur_hsps_]->node_equivlences_->Size())
-		node_final_lpes_list->Insert(nodes_collector_map_[cur_hsps_]->node_equivlences_,false);
 	
 	/*we should merge pre level's lpes with this level*/
 	if(cur_height_ >= 1){	
 		if(!GetPreProcessed(PreProcessLabel::PREDICATE)){
-			//final_lpes_list->Insert(total_equivlences_[cur_height_-1],false,true);
 			total_equivlences_[cur_height_]->Insert(total_equivlences_[cur_height_-1],false,true);
 			SetPreProcessed(PreProcessLabel::PREDICATE,true);
 		}
+	}
+	total_equivlences_[cur_height_]->Insert(final_lpes_list,false);
+
+	if(nodes_collector_map_[cur_hsps_]->node_equivlences_ && nodes_collector_map_[cur_hsps_]->node_equivlences_->Size())
+		node_final_lpes_list->Insert(nodes_collector_map_[cur_hsps_]->node_equivlences_,false);
+	if(cur_height_ >= 1){
 		if(first_pred_check_){
 			for(size_t i = 0;i<cur_hsps_->n_childs; ++i){
 				auto child_eq = nodes_collector_map_[cur_hsps_->childs[i]]->node_equivlences_;
@@ -997,9 +994,6 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
 			first_pred_check_ = false;
 		}
 	}
-
-	total_equivlences_[cur_height_]->Insert(final_lpes_list,false);
-
 	/**
 	 * here we try to extract the equivalence class from subquery 
 	*/
@@ -1589,17 +1583,17 @@ bool PredEquivlence::MergePredEquivlenceRanges(const std::vector<PredEquivlenceR
 			right = r->GetUpperBoundaryConstraint();
 		}else{
 
-			if((r->UpperLimit() < upper_bound && r->UpperLimit() != UPPER_LIMIT && upper_bound != UPPER_LIMIT)||
-			   (upper_bound == UPPER_LIMIT)||
-			   (r->UpperLimit() == upper_bound && r->GetUpperBoundaryConstraint() && !right)
+			if((r->UpperLimit() < upper_bound && r->UpperLimit() != UPPER_LIMIT && upper_bound != UPPER_LIMIT)
+				||(upper_bound == UPPER_LIMIT)
+				||(r->UpperLimit() == upper_bound && r->GetUpperBoundaryConstraint() && !right)
 			){
 				upper_bound = r->UpperLimit();
 				right = r->GetUpperBoundaryConstraint();
 			}
 			
-			if((r->LowerLimit() > lower_bound && r->LowerLimit() != LOWER_LIMIT &&  lower_bound != LOWER_LIMIT)||
-			   (lower_bound  == LOWER_LIMIT)||
-			   (r->LowerLimit() == lower_bound && r->GetLowerBoundaryConstraint() && !left)
+			if((r->LowerLimit() > lower_bound && r->LowerLimit() != LOWER_LIMIT &&  lower_bound != LOWER_LIMIT)
+				||(lower_bound  == LOWER_LIMIT)
+				||(r->LowerLimit() == lower_bound && r->GetLowerBoundaryConstraint() && !left)
 			){
 				lower_bound = r->LowerLimit();
 				left = r->GetLowerBoundaryConstraint();
@@ -1742,8 +1736,14 @@ bool PredEquivlence::SuperSet(PredEquivlence* pe){
 }
 
 bool PredEquivlence::Copy(PredEquivlence* pe){
-	pe->SetPredSet(set_);
-	pe->SetRanges(ranges_);
+	for(const auto& set : set_){
+		pe->GetPredSet().insert(set);
+	}
+	for(const auto& range : ranges_){
+		auto new_range = new PredEquivlenceRange();
+		range->Copy(new_range);
+		pe->UpdateRanges(new_range);
+	}
 	pe->SetSubLinkLevelPeLists(sublink_level_pe_lists_);
 	pe->SetEarlyStop(early_stop_);
 	pe->SetChild(std::shared_ptr<PredEquivlence>(this));
@@ -2125,11 +2125,6 @@ bool LevelPredEquivlencesList::Insert(LevelPredEquivlencesList* lpes_list,bool i
 					
 					lpes_list_.push_back(new_lpes);
 					new_lpes->SetLpeId(lpes_list_.size()-1);
-					
-					// auto iter = child_lpes_map_.find(i);
-					// if(iter != child_lpes_map_.end()){
-					// 	child_lpes_map_[lpes_list_.size()-1] = iter->second;
-					// }
 				}
 				--sz;
 			}
@@ -2140,7 +2135,8 @@ bool LevelPredEquivlencesList::Insert(LevelPredEquivlencesList* lpes_list,bool i
 					if(pre_merge){
 						child_lpes_map_[i].push_back(src_idx++);
 					}
-					lpes_list_[i++]->Insert(src);
+					lpes_list_[i]->Insert(src);
+					++i;
 				}
 			}
 
