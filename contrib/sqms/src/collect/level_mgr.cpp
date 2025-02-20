@@ -1956,7 +1956,7 @@ std::string PredEquivlence::ShowPredEquivlence(int depth,std::string tag,SqmsLog
 		str += "] , sublinks: [\n";
 		str += PrintIndent(depth+1,tag);
 		for(const auto& subklink : sublink_level_pe_lists_){
-			str += subklink.first + "\n";
+			str += subklink.first;
 			str += PrintIndent(depth+1,tag);
 			str += subklink.second->GetTotalPredClassStr(depth+3);
 		}
@@ -2476,7 +2476,7 @@ void LevelManager::ShowTotalPredClass(int depth){
 
 std::string LevelManager::GetTotalPredClassStr(int depth){
 	std::string str;
-	str += "\nTotal Pred Class: \n";
+	str += "\n" + PrintIndent(depth,log_tag_) + "Total Pred Class: \n";
 	for(int i = total_equivlences_.size()-1;i>=0;--i){
 		str += GetPredClassStr(i,log_tag_,depth+1);
 	}
