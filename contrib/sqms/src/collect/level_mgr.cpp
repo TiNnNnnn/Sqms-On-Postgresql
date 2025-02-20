@@ -1275,27 +1275,33 @@ PredEquivlence::PredEquivlence(Quals* qual){
 			ranges_.insert(range);
 		}break;
 		case PType::SUBQUERY:{
-			std::string l = extract_field(qual->left);
-			if(l.empty()){
-				set_.insert(qual->left);
-			}else{
-				set_.insert(l);
-			}
 			assert(qual->hsps);
 			PlanFormatContext* pf_context = new PlanFormatContext();
 			
 			bool found = false;
 			auto logger = (SqmsLogger*)ShmemInitStruct("SqmsLogger", sizeof(SqmsLogger), &found);
 			assert(found);
-			
+
+			if(!strlen(qual->left)){
+				/*subquery not must have left val*/
+			}else{
+				std::string l = extract_field(qual->left);
+				if(l.empty()){
+					set_.insert(qual->left);
+				}else{
+					set_.insert(l);
+				}
+			}
+
 			/*calualate pred equivlence here*/
 			for(size_t i = 0; i < qual->hsps->n_subplans; i++){
 				auto sub_plan_hsp = qual->hsps->subplans[i];
-
+	
 				PredEquivlenceRange* new_range = new PredEquivlenceRange(); 
+				new_range->SetPredType(PType::SUBQUERY);
 				new_range->SetSubqueryName(sub_plan_hsp->sub_plan_name);
 				ranges_.insert(new_range);
-				
+					
 				auto sub_level_mgr = std::make_shared<LevelManager>(sub_plan_hsp,nullptr,logger);
 				pf_context->SetStrategy(sub_level_mgr);
 				pf_context->executeStrategy();
@@ -1303,12 +1309,6 @@ PredEquivlence::PredEquivlence(Quals* qual){
 			}
 		}break;
 		case PType::SUBLINK:{
-			std::string l = extract_field(qual->left);
-			if(l.empty()){
-				set_.insert(qual->left);
-			}else{
-				set_.insert(l);
-			}
 			assert(qual->hsps);
 			PlanFormatContext* pf_context = new PlanFormatContext();
 
@@ -1316,11 +1316,22 @@ PredEquivlence::PredEquivlence(Quals* qual){
 			auto logger = (SqmsLogger*)ShmemInitStruct("SqmsLogger", sizeof(SqmsLogger), &found);
 			assert(found);
 
+			if(!strlen(qual->left)){				
+			}else{
+				std::string l = extract_field(qual->left);
+				if(l.empty()){
+					set_.insert(qual->left);
+				}else{
+					set_.insert(l);
+				}				
+			}
+			
 			/*calualate pred equivlence here*/
 			for(size_t i = 0; i < qual->hsps->n_subplans; i++){
 				auto sub_plan_hsp = qual->hsps->subplans[i];
 				
 				PredEquivlenceRange* new_range = new PredEquivlenceRange(); 
+				new_range->SetPredType(PType::SUBLINK);
 				new_range->SetSubqueryName(sub_plan_hsp->sub_plan_name);
 				ranges_.insert(new_range);
 
@@ -1482,9 +1493,12 @@ PType PredEquivlence::QualType(Quals* qual){
 				return PType::UNKNOWN;
 			}
 		}
-	}else if(qual->hash_sub_plan){
+	}else if(strlen(qual->sub_plan_name)){
 		return PType::SUBQUERY;
 	}else{
+		auto left_type = NodeTag(qual->l_type);
+		auto right_type = NodeTag(qual->r_type);
+		std::cerr<<"not support currnt type of quals: left: "<<left_type<<",right: "<<right_type<<std::endl;
 		return PType::UNKNOWN;
 	}
 }

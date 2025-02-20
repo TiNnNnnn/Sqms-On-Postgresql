@@ -399,7 +399,7 @@ void PlanStatFormat::ShowPredTree(PredExpression* p_expr, int depth) {
             PrintIndent(depth + 1);
             std::cout << "Left: " << p_expr->qual->left << std::endl;
             PrintIndent(depth + 1);
-            if(p_expr->qual->hash_sub_plan){
+            if(strlen(p_expr->qual->sub_plan_name)){
                 std::cout << "Right:" << p_expr->qual->sub_plan_name <<std::endl;
             }else{
                 std::cout << "Right: " << p_expr->qual->right << std::endl;
@@ -414,7 +414,7 @@ void PlanStatFormat::ShowPredTree(PredExpression* p_expr, int depth) {
                 PrintIndent(depth + 1);
                 std::cout << "Format_type: " << p_expr->qual->format_type << std::endl;
             }
-        }else if(p_expr->qual->hash_sub_plan && !strlen(p_expr->qual->op)){
+        }else if(strlen(p_expr->qual->sub_plan_name) && !strlen(p_expr->qual->op)){
             PrintIndent(depth + 1);
             std::cout << "Hashed: " << ((p_expr->qual->hash_sub_plan == 0)?"false":"true")<< std::endl;
             PrintIndent(depth + 1);

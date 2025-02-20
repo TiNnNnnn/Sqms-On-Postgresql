@@ -117,7 +117,7 @@ void RangeInvertedIndex::Insert(LevelPredEquivlences* lpes){
     std::unique_lock<std::shared_mutex> lock(rw_mutex_);
 
     for(const auto & pe : *sm_lpes){
-        auto pe_serialization = pe->GetSerialization();
+        const auto& pe_serialization = pe->GetSerialization();
         if(set2id_.find(pe_serialization) == set2id_.end()){
             set_cnt_++;
             set2id_[pe_serialization] = set_cnt_;
@@ -203,7 +203,7 @@ SMSet<int> RangeInvertedIndex::GetLpesIds(LevelPredEquivlences* lpes){
     SMSet<int>ids;
     std::shared_lock<std::shared_mutex> lock(rw_mutex_);
     for(const auto& pe : *lpes){
-        auto pe_serialization = pe->Serialization();
+        const auto& pe_serialization = SMString(pe->Serialization());
         assert(set2id_.find(pe_serialization) != set2id_.end());
         ids.insert(set2id_[pe_serialization]);
     }

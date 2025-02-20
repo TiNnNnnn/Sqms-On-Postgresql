@@ -112,9 +112,9 @@ public:
     void PrintPredEquivlenceRange(int depth = 0);
     std::string PrintPredEquivlenceRange(int depth,std::string tag,SqmsLogger* logger);
     
-    SMString Serialization(){
-        SMString str;
-        str += SMString(std::to_string(int(type_)));    
+    std::string Serialization(){
+        std::string str;
+        str += std::to_string(int(type_));    
         str += subquery_name_ + lower_limit_ + upper_limit_;
         str += boundary_constraint_.first ? "1":"0" + boundary_constraint_.second ? "1":"0";
         return str;
@@ -201,8 +201,8 @@ public:
         return str;
     }
 
-    SMString Serialization(){
-        SMString str;
+    std::string Serialization(){
+        std::string str;
         for(const auto& name : set_){
             str += name;
         }

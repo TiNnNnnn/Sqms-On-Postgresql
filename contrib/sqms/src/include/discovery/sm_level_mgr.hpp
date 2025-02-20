@@ -13,20 +13,26 @@ public:
     bool GetUpperBoundaryConstraint(){return boundary_constraint_.second;}
     const SMString& GetSubqueryName(){return subquery_name_;}
     PType PredType(){return type_;}
-    SMString GetSerialization(){return serialization_; }
-    void Copy(PredEquivlenceRange* per){
-        type_ = per->PredType();
-        lower_limit_ = SMString(per->LowerLimit());
-        upper_limit_ = SMString(per->UpperLimit());
-        boundary_constraint_ = per->GetBoundaryConstraint();
-        serialization_ = Serialization();
-    }
     SMString Serialization(){
         SMString str;
         str += SMString(std::to_string(int(type_)));    
         str += subquery_name_ + lower_limit_ + upper_limit_;
         str += boundary_constraint_.first ? "1":"0" + boundary_constraint_.second ? "1":"0";
         return str;
+    } 
+    SMString GetSerialization(){
+        if(serialization_.empty()){
+            return Serialization();
+        }
+        return serialization_; 
+    }
+    void Copy(PredEquivlenceRange* per){
+        type_ = per->PredType();
+        subquery_name_ = SMString(per->GetSubqueryName());
+        lower_limit_ = SMString(per->LowerLimit());
+        upper_limit_ = SMString(per->UpperLimit());
+        boundary_constraint_ = per->GetBoundaryConstraint();
+        serialization_ = Serialization();
     }
 private:
     PType type_;
@@ -52,7 +58,6 @@ public:
     bool EarlyStop(){return early_stop_;}
     //SMPredEquivlence* Child(){return child_;}
     void Copy(PredEquivlence* pe);
-    SMString GetSerialization(){return serialization_; }
     SMString Serialization(){
         SMString str;
         for(const auto& name : set_){
@@ -62,6 +67,11 @@ public:
             str += range->GetSerialization();
         }
         return str;
+    }    
+    SMString GetSerialization(){
+        if(serialization_.empty())
+            return Serialization();
+        return serialization_; 
     }
 
     const bool HasSubquery() const {return has_subquery_;}

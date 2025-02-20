@@ -22,7 +22,7 @@ void SMPredEquivlence::Copy(PredEquivlence* pe){
     }
     early_stop_ = pe->EarlyStop();
 
-    SMPredEquivlence* sm_child_pe = nullptr;
+    //SMPredEquivlence* sm_child_pe = nullptr;
     // if(pe->Child().get()){
     //     sm_child_pe = (SMPredEquivlence*)ShmemAlloc(sizeof(SMPredEquivlence));
     //     assert(sm_child_pe);
@@ -35,4 +35,10 @@ void SMPredEquivlence::Copy(PredEquivlence* pe){
     has_subquery_ = pe->HasSubquery();
     has_range_ =pe->HasRange();
     range_cnt_ = pe->RangeCnt();
+    for(const auto& name : pe->SubqueryNames()){
+        subquery_names_.insert(SMString(name));
+    }
+    lower_limit_ = pe->LowerLimit();
+    upper_limit_ = pe->UpperLimit();
+    
 }

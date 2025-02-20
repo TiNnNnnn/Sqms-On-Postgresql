@@ -7146,6 +7146,10 @@ get_sublink_expr(SubLink *sublink, deparse_context *context)
 	 * operators, etc) but there is not a whole lot we can do about it, since
 	 * the syntax allows only one operator to be shown.
 	 */
+	/**
+	 * example: WHERE x IN (SELECT y FROM table)
+	 * 
+	 */
 	if (sublink->testexpr)
 	{
 		if (IsA(sublink->testexpr, OpExpr))
