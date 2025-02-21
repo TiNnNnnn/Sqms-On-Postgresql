@@ -470,7 +470,7 @@ void LevelManager::SortKeyDecompase(HistorySlowPlanStat* hsps){
 			return;
 		}
 		final_ls_list = new LevelAggAndSortList(total_equivlences_[cur_height_]);
-		if(cur_height_ >= 1 && GetPreProcessed(PreProcessLabel::SORT)){
+		if(cur_height_ >= 1 && !GetPreProcessed(PreProcessLabel::SORT)){
 			final_ls_list->Insert(total_sorts_[cur_height_-1]);
 			SetPreProcessed(PreProcessLabel::SORT,true);
 		}
@@ -485,7 +485,7 @@ void LevelManager::SortKeyDecompase(HistorySlowPlanStat* hsps){
 		if(same_level_need_merged){
 			final_ls_list->Insert(total_sorts_.back());
 		}
-		if(cur_height_ >= 1 && GetPreProcessed(PreProcessLabel::SORT)){
+		if(cur_height_ >= 1 && !GetPreProcessed(PreProcessLabel::SORT)){
 			final_ls_list->Insert(total_sorts_[cur_height_-1]);
 			SetPreProcessed(PreProcessLabel::SORT,true);
 
@@ -721,6 +721,7 @@ void LevelAggAndSortList::Insert(LevelAggAndSortList* la_list){
 		LevelAggAndSortEquivlences *new_dst_lae = new LevelAggAndSortEquivlences();
 		for(const auto& src_lae : la_list->GetLevelAggList()){
 			new_dst_lae->Insert(src_lae);
+			level_agg_list_.push_back(new_dst_lae);
 		}
 		return;
 	}
@@ -1195,7 +1196,7 @@ std::string PredEquivlenceRange::PrintPredEquivlenceRange(int depth,std::string 
 			output+="]";
 		}break;
 		case PType::SUBQUERY:{
-			output+="SUBQUERY";
+			output+=subquery_name_;
 		}break;
 		default:{
 			std::cerr<<"unknow type of pe_range: "<<int(type_)<<std::endl;
