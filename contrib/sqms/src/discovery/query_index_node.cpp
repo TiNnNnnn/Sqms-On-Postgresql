@@ -99,45 +99,6 @@ bool LevelHashStrategy::Search(NodeCollector* node_collector){
     return false;
 }
 
-int ScalingInfo::CalJoinTypeScore(const SMVector<SMString>& join_type_list,SMString& unique_id){
-    int score = 0;
-    SMString id;
-    for(const auto& join_type : join_type_list){  
-        if (!std::strcmp(join_type.c_str(),"Semi") || !std::strcmp(join_type.c_str(),"Anti")){
-            score += 1;
-            id += "1";
-        }else if(!std::strcmp(join_type.c_str(),"Inner")){
-            score += 2;
-            id += "2";
-        }else if(!std::strcmp(join_type.c_str(),"Left") || !std::strcmp(join_type.c_str(),"Right")){
-            score += 3;
-            id += "3";
-        }else if(!std::strcmp(join_type.c_str(),"Full")){
-            score += 4;
-            id += "4";
-        }else{
-            std::cerr<<"unkonw join type"<<std::endl;
-            exit(-1);
-        }
-    }
-    unique_id = id;
-    return score;
-}
-
-bool ScalingInfo::Match(ScalingInfo* scale_info){
-    /*check join_type_list */
-    bool matched  = true;
-    auto src_id = scale_info->UniqueId();
-    assert(src_id.size() == unique_id_.size());
-    for(size_t i=0;i<src_id.size();i++){
-        if(src_id[i] < unique_id_[i]){
-            matched = false;
-            break;
-        } 
-    }
-    return matched;
-}
-
 bool LevelScalingStrategy::Insert(LevelManager* level_mgr){
     assert(level_mgr);
     assert(level_mgr->GetJoinTypeList().size());

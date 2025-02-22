@@ -14,6 +14,29 @@
 #include "sm_level_mgr.hpp"
 
 /**
+ * ScalingInfo
+ * - join_type_list
+ * TODO: 01-23 maybe we can put indexname , cols here to scale  
+ */
+class ScalingInfo{
+    public:
+        ScalingInfo(std::vector<std::string> join_type_list){
+            for(const auto& type : join_type_list){
+                join_type_list_.push_back(SMString(type.c_str()));
+            }
+            join_type_score_ = CalJoinTypeScore(join_type_list_,unique_id_);
+        }
+        static int CalJoinTypeScore(const SMVector<SMString>& join_type_list,SMString& unique_id);
+        bool Match(ScalingInfo* scale_info);
+        const SMString& UniqueId(){return unique_id_;}
+        int JoinTypeScore(){return join_type_score_;}
+    private:
+        SMVector<SMString> join_type_list_;
+        int join_type_score_ = -1;
+        SMString unique_id_;
+    };
+
+/**
  * TODO: a temp implemetaion of postingList,it will be replaced by another one 
  */
 typedef SMVector<SMString> SET;
@@ -167,6 +190,8 @@ private:
     std::atomic<int>items_cnt_{0};
     std::shared_mutex rw_mutex_;
 };
+
+
 /**
  * pe in posting list should be order by ranges, then we can use lower_bound to acc sarech
  */
@@ -193,7 +218,7 @@ struct PredRangeCompare {
             }
         }
     }
-};
+}; 
 class RangePostingList{
 public:
     void Insert(SMPredEquivlence* range,int id);
@@ -204,9 +229,11 @@ public:
      * TODO: not implement yet
      */
     SMVector<int> SubSet(PredEquivlence* range);
+    
 private:
     /*check if the pe is the dst_pe's superset*/
     bool SuperSetInternal(SMPredEquivlence* dst_pe, SMPredEquivlence* pe);
+    bool SearchSubquery(LevelManager* src_mgr,LevelManager* dst_mgr);
 private:
     SMSet<SMPredEquivlence*,PredRangeCompare>sets_;
     SMUnorderedMap<SMPredEquivlence*,int> set2id_;

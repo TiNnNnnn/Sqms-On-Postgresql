@@ -1,5 +1,44 @@
 #include "discovery/inverted_index.hpp"
 
+int ScalingInfo::CalJoinTypeScore(const SMVector<SMString>& join_type_list,SMString& unique_id){
+    int score = 0;
+    SMString id;
+    for(const auto& join_type : join_type_list){  
+        if (!std::strcmp(join_type.c_str(),"Semi") || !std::strcmp(join_type.c_str(),"Anti")){
+            score += 1;
+            id += "1";
+        }else if(!std::strcmp(join_type.c_str(),"Inner")){
+            score += 2;
+            id += "2";
+        }else if(!std::strcmp(join_type.c_str(),"Left") || !std::strcmp(join_type.c_str(),"Right")){
+            score += 3;
+            id += "3";
+        }else if(!std::strcmp(join_type.c_str(),"Full")){
+            score += 4;
+            id += "4";
+        }else{
+            std::cerr<<"unkonw join type"<<std::endl;
+            exit(-1);
+        }
+    }
+    unique_id = id;
+    return score;
+}
+
+bool ScalingInfo::Match(ScalingInfo* scale_info){
+    /*check join_type_list */
+    bool matched  = true;
+    auto src_id = scale_info->UniqueId();
+    assert(src_id.size() == unique_id_.size());
+    for(size_t i=0;i<src_id.size();i++){
+        if(src_id[i] < unique_id_[i]){
+            matched = false;
+            break;
+        } 
+    }
+    return matched;
+}
+
 void RangePostingList::Insert(SMPredEquivlence* range,int id){
     sets_.insert(range);
     set2id_[range] = id;
@@ -45,6 +84,10 @@ bool RangePostingList::SuperSetInternal(SMPredEquivlence* dst_pe, SMPredEquivlen
         if(subquery_name != *dst_iter){
             return false;
         }
+        /**
+         * TODO: maybe we should checek subquery contents here
+         */
+
         dst_iter++;
     }
 
@@ -108,6 +151,42 @@ bool RangePostingList::SuperSetInternal(SMPredEquivlence* dst_pe, SMPredEquivlen
     return true;
 }
 
+/**
+ * check if dst_mgr is the subquery of src_mgr
+ */
+bool RangePostingList::SearchSubquery(LevelManager* src_mgr,LevelManager* dst_mgr){
+    assert(src_mgr && dst_mgr);
+    /*check canonical hash code*/
+    if(strcmp(src_mgr->GetHsps()->canonical_json_plan,dst_mgr->GetHsps()->canonical_json_plan)){
+        return false;
+    }
+    /*check join node*/
+    auto src_scaling_info = std::make_shared<ScalingInfo>(src_mgr->GetJoinTypeList());
+    auto dst_scaling_info = std::make_shared<ScalingInfo>(dst_mgr->GetJoinTypeList());
+    if(src_scaling_info->Match(dst_scaling_info.get())){
+        return true;
+    }
+    for(int h = src_mgr->GetTotalEquivlences().size()-1; h>=0;--h){
+        auto src_lpes_list = src_mgr->GetTotalEquivlences()[h]->GetLpesList();
+        auto dst_lpes_list = dst_mgr->GetTotalEquivlences()[h]->GetLpesList();
+        
+        for(size_t src_idx = 0; src_idx < src_lpes_list.size(); ++src_idx){
+            for(const auto& dst_lpes : dst_lpes_list){
+                /*check range*/
+
+                /*check sort*/
+
+                /*check agg*/
+                
+                if(src_lpes_list[src_idx]->EarlyStop()){
+                    return true;
+                }
+            }
+        }
+    }
+    return true;
+}
+
 void RangeInvertedIndex::Insert(LevelPredEquivlences* lpes){
     SMLevelPredEquivlences* sm_lpes = (SMLevelPredEquivlences*)ShmemAlloc(sizeof(SMLevelPredEquivlences));
     new (sm_lpes) SMLevelPredEquivlences();
@@ -151,6 +230,7 @@ void RangeInvertedIndex::Erase(LevelPredEquivlences* lpes){
 
 bool RangeInvertedIndex::Serach(LevelPredEquivlences* lpes){
     SMLevelPredEquivlences* sm_lpes = (SMLevelPredEquivlences*)ShmemAlloc(sizeof(SMLevelPredEquivlences));
+    new (sm_lpes) SMLevelPredEquivlences();
     sm_lpes->Copy(lpes);
     assert(sm_lpes);
 
@@ -170,6 +250,7 @@ SMSet<int> RangeInvertedIndex::SuperSets(LevelPredEquivlences* lpes){
      * MARK: can we escape shmemalloc while just seraching
      */
     SMLevelPredEquivlences* sm_lpes = (SMLevelPredEquivlences*)ShmemAlloc(sizeof(SMLevelPredEquivlences));
+    new (sm_lpes) SMLevelPredEquivlences();
     sm_lpes->Copy(lpes);
     assert(sm_lpes);
     

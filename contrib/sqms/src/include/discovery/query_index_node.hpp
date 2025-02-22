@@ -83,32 +83,6 @@ private:
     SMConcurrentHashMap<SMString,HistoryQueryIndexNode*>set_map_;
 };
 
-/**
- * ScalingInfo
- * - join_type_list
- * TODO: 01-23 maybe we can put indexname , cols here to scale  
- */
-class ScalingInfo{
-public:
-    // ScalingInfo(std::vector<std::string,SharedMemoryAllocator<std::string>> join_type_list)    
-    //     :join_type_list_(join_type_list){
-    //     join_type_score_ = CalJoinTypeScore(join_type_list_,unique_id_);
-    // }
-    ScalingInfo(std::vector<std::string> join_type_list){
-        for(const auto& type : join_type_list){
-            join_type_list_.push_back(SMString(type.c_str()));
-        }
-        join_type_score_ = CalJoinTypeScore(join_type_list_,unique_id_);
-    }
-    static int CalJoinTypeScore(const SMVector<SMString>& join_type_list,SMString& unique_id);
-    bool Match(ScalingInfo* scale_info);
-    const SMString& UniqueId(){return unique_id_;}
-    int JoinTypeScore(){return join_type_score_;}
-private:
-    SMVector<SMString> join_type_list_;
-    int join_type_score_ = -1;
-    SMString unique_id_;
-};
 
 /**
  * LevelScalingStrategy
