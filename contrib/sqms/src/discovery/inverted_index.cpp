@@ -154,10 +154,10 @@ bool RangePostingList::SuperSetInternal(SMPredEquivlence* dst_pe, SMPredEquivlen
 /**
  * check if dst_mgr is the subquery of src_mgr
  */
-bool RangePostingList::SearchSubquery(LevelManager* src_mgr,LevelManager* dst_mgr){
+bool RangePostingList::SearchSubquery(SMLevelManager* src_mgr,SMLevelManager* dst_mgr){
     assert(src_mgr && dst_mgr);
     /*check canonical hash code*/
-    if(strcmp(src_mgr->GetHsps()->canonical_json_plan,dst_mgr->GetHsps()->canonical_json_plan)){
+    if(src_mgr->GetJsonSubPlan() != dst_mgr->GetJsonSubPlan()){
         return false;
     }
     /*check join node*/
@@ -177,7 +177,7 @@ bool RangePostingList::SearchSubquery(LevelManager* src_mgr,LevelManager* dst_mg
                 /*check sort*/
 
                 /*check agg*/
-                
+
                 if(src_lpes_list[src_idx]->EarlyStop()){
                     return true;
                 }
@@ -186,6 +186,7 @@ bool RangePostingList::SearchSubquery(LevelManager* src_mgr,LevelManager* dst_mg
     }
     return true;
 }
+
 
 void RangeInvertedIndex::Insert(LevelPredEquivlences* lpes){
     SMLevelPredEquivlences* sm_lpes = (SMLevelPredEquivlences*)ShmemAlloc(sizeof(SMLevelPredEquivlences));

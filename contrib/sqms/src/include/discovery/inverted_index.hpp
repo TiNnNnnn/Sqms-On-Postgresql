@@ -20,6 +20,10 @@
  */
 class ScalingInfo{
     public:
+        ScalingInfo(SMVector<SMString> join_type_list)
+            :join_type_list_(join_type_list){
+            join_type_score_ = CalJoinTypeScore(join_type_list_,unique_id_);
+        }    
         ScalingInfo(std::vector<std::string> join_type_list){
             for(const auto& type : join_type_list){
                 join_type_list_.push_back(SMString(type.c_str()));
@@ -233,7 +237,10 @@ public:
 private:
     /*check if the pe is the dst_pe's superset*/
     bool SuperSetInternal(SMPredEquivlence* dst_pe, SMPredEquivlence* pe);
-    bool SearchSubquery(LevelManager* src_mgr,LevelManager* dst_mgr);
+    bool SearchSubquery(SMLevelManager* src_mgr,SMLevelManager* dst_mgr);
+    bool SearchRange(LevelManager* src_mgr,LevelManager* dst_mgr);
+    bool SearchSort(LevelManager* src_mgr,LevelManager* dst_mgr);
+    bool SearchAgg(LevelManager* src_mgr,LevelManager* dst_mgr);
 private:
     SMSet<SMPredEquivlence*,PredRangeCompare>sets_;
     SMUnorderedMap<SMPredEquivlence*,int> set2id_;

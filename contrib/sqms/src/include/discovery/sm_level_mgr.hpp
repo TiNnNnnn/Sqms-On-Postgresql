@@ -299,6 +299,8 @@ public:
     const SMVector<SMLevelAggAndSortList*>& GetTotalAggs(){return total_aggs_;}
     const SMVector<SMLevelAggAndSortList*>& GetTotalSorts(){return total_sorts_;}
     const SMVector<SMLevelPredEquivlencesList*>& GetTotalResidualEquivlences(){return total_residual_equivlences_;}
+    const SMVector<SMString>& GetJoinTypeList(){return join_type_list_;}
+    const SMString& GetJsonSubPlan(){return json_sub_plan_;}
     void Copy(LevelManager* level_mgr){
         for(const auto& pe : level_mgr->GetTotalEquivlences()){
             SMLevelPredEquivlencesList* sm_lpes_list = (SMLevelPredEquivlencesList*)ShmemAlloc(sizeof(SMLevelPredEquivlencesList));
@@ -342,10 +344,13 @@ public:
             sm_lpes_list->Copy(pe);
             total_residual_equivlences_.push_back(sm_lpes_list);
         }
+        json_sub_plan_ = SMString(level_mgr->GetHsps()->canonical_json_plan);
+        for(const auto& join_type : level_mgr->GetJoinTypeList()){
+            join_type_list_.push_back(SMString(join_type));
+        }
     }
-
 private:
-       /* total equivlences for predicates */
+    /* total equivlences for predicates */
     SMVector<SMLevelPredEquivlencesList*> total_equivlences_;
     /* total equivlences for outputs */
     SMVector<SMLevelOutputList*> total_outputs_;
@@ -357,4 +362,7 @@ private:
     SMVector<SMLevelTblList*>total_tbls_;
 
     SMVector<SMLevelPredEquivlencesList*> total_residual_equivlences_;
+    /*hsps of sub_plan root*/
+    SMString json_sub_plan_;
+    SMVector<SMString> join_type_list_;
 };
