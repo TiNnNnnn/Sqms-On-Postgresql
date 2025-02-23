@@ -66,9 +66,27 @@ SMVector<int> RangePostingList::SuperSet(SMPredEquivlence* pe){
 /**
 * TODO: not implement yet
 */
-SMVector<int> RangePostingList::SubSet(PredEquivlence* range){
+SMVector<int> RangePostingList::SubSet(SMPredEquivlence* range){
     SMVector<int> rets;
     return rets;
+}
+
+void RangePostingList::Insert(PredEquivlence* pe,int id){
+    assert(pe);
+    /*copy a pe in shared_memory*/
+    SMPredEquivlence* sm_pe = (SMPredEquivlence*)ShmemAlloc(sizeof(SMPredEquivlence));
+    new (sm_pe) SMPredEquivlence();
+    sm_pe->Copy(pe);
+    assert(sm_pe);
+
+    sets_.insert(sm_pe);
+    set2id_[sm_pe] = id;
+}
+
+void RangePostingList::Erase(PredEquivlence* pe,int id){
+}
+
+SMVector<int> RangePostingList::SubSet(PredEquivlence* range){
 }
 
 /*check if the pe is the dst_pe's superset*/
@@ -85,9 +103,9 @@ bool RangePostingList::SuperSetInternal(SMPredEquivlence* dst_pe, SMPredEquivlen
             return false;
         }
         /**
-         * TODO: maybe we should checek subquery contents here
+         * MARK: here we compare subquery contents
          */
-
+        SearchSubquery(dst_pe->GetSubLinkLevelPeLists()[subquery_name],pe->GetSubLinkLevelPeLists()[subquery_name]);
         dst_iter++;
     }
 
@@ -167,17 +185,27 @@ bool RangePostingList::SearchSubquery(SMLevelManager* src_mgr,SMLevelManager* ds
         return true;
     }
     for(int h = src_mgr->GetTotalEquivlences().size()-1; h>=0;--h){
-        auto src_lpes_list = src_mgr->GetTotalEquivlences()[h]->GetLpesList();
-        auto dst_lpes_list = dst_mgr->GetTotalEquivlences()[h]->GetLpesList();
+        auto& src_lpes_list = src_mgr->GetTotalEquivlences()[h]->GetLpesList();
+        auto& dst_lpes_list = dst_mgr->GetTotalEquivlences()[h]->GetLpesList();
+        auto& src_sorts = src_mgr->GetTotalSorts()[h]->GetLevelAggList();
+        auto& dst_sorts = dst_mgr->GetTotalSorts()[h]->GetLevelAggList();
+        auto& src_aggs = src_mgr->GetTotalAggs()[h]->GetLevelAggList();
+        auto& dst_aggs = dst_mgr->GetTotalAggs()[h]->GetLevelAggList();
         
         for(size_t src_idx = 0; src_idx < src_lpes_list.size(); ++src_idx){
-            for(const auto& dst_lpes : dst_lpes_list){
+            for(size_t dst_idx = 0; dst_idx < dst_lpes_list.size(); ++dst_idx){
                 /*check range*/
-
+                if(!SearchRange(src_lpes_list[src_idx],dst_lpes_list[dst_idx])){
+                    return false;
+                }
                 /*check sort*/
-
+                if(!SearchSort(src_sorts[src_idx],dst_sorts[dst_idx])){
+                    return false;
+                }
                 /*check agg*/
-
+                if(!SearchAgg(src_aggs[src_idx],dst_aggs[dst_idx])){
+                    return false;
+                }
                 if(src_lpes_list[src_idx]->EarlyStop()){
                     return true;
                 }
@@ -187,24 +215,98 @@ bool RangePostingList::SearchSubquery(SMLevelManager* src_mgr,SMLevelManager* ds
     return true;
 }
 
+bool RangePostingList::SearchRange(SMLevelPredEquivlences * src_lpes,SMLevelPredEquivlences * dst_lpes){
+    if(Match(src_lpes,dst_lpes)){
+            return true;
+    }
+    return false;
+}
+
+bool RangePostingList::SearchSort(SMLevelAggAndSortEquivlences* src_sorts,SMLevelAggAndSortEquivlences* dst_sorts){
+    SMUnorderedSet<SMAggAndSortEquivlence *>states;
+    for(const auto& pe: dst_sorts->GetLevelAggSets()){
+            auto extends = pe->GetExtends();
+            for(const auto& src_eq: src_sorts->GetLevelAggSets()){
+                if(states.find(src_eq)!= states.end()){
+                    continue;
+                }else{
+                    bool matched = true;
+                    auto src_extends = src_eq->GetExtends();
+                    for(const auto& src_key : src_extends){
+                        if(extends.find(SMString(src_key))== extends.end()){
+                            matched = false;
+                        }
+                    }
+                    if(matched){
+                        states.insert(src_eq);
+                    }
+                }
+            }
+    }
+    if(states.size() == src_sorts->Size()){
+        return true;
+    }
+    return false;
+}
+
+bool RangePostingList::SearchAgg(SMLevelAggAndSortEquivlences* src_agg,SMLevelAggAndSortEquivlences* dst_agg){
+    SMUnorderedSet<SMAggAndSortEquivlence *>states;
+    for(const auto& pe: dst_agg->GetLevelAggSets()){
+            auto extends = pe->GetExtends();
+            for(const auto& src_eq: src_agg->GetLevelAggSets()){
+                if(states.find(src_eq)!= states.end()){
+                    continue;
+                }else{
+                    bool matched = true;
+                    auto src_extends = src_eq->GetExtends();
+                    for(const auto& src_key : src_extends){
+                        if(extends.find(SMString(src_key))== extends.end()){
+                            matched = false;
+                        }
+                    }
+                    if(matched){
+                        states.insert(src_eq);
+                    }
+                }
+            }
+    }
+    if(states.size() == src_agg->Size()){
+        return true;
+    }
+    return false;
+}
+
+bool RangePostingList::Match(SMLevelPredEquivlences* dst_lpes, SMLevelPredEquivlences* lpes){
+    assert(lpes);
+    for(const auto& pe : *lpes){
+        for(const auto& attr : pe->GetPredSet()){
+            auto key2pe = dst_lpes->GetKey2Pe();
+            if(key2pe.find(attr) != key2pe.end()){
+                auto dst_pe = key2pe[attr];
+                if(SuperSetInternal(dst_pe,pe)){
+                    continue;
+                }else{
+                    return false;
+                }
+            }
+        }
+    }
+    return true;
+}
+
 
 void RangeInvertedIndex::Insert(LevelPredEquivlences* lpes){
-    SMLevelPredEquivlences* sm_lpes = (SMLevelPredEquivlences*)ShmemAlloc(sizeof(SMLevelPredEquivlences));
-    new (sm_lpes) SMLevelPredEquivlences();
-    sm_lpes->Copy(lpes);
-    assert(sm_lpes);
-
     std::unique_lock<std::shared_mutex> lock(rw_mutex_);
-
-    for(const auto & pe : *sm_lpes){
-        const auto& pe_serialization = pe->GetSerialization();
+    for(const auto & pe : *lpes){
+        auto pe_serialization = SMString(pe->GetSerialization());
         if(set2id_.find(pe_serialization) == set2id_.end()){
             set_cnt_++;
             set2id_[pe_serialization] = set_cnt_;
             id2set_[set_cnt_] = pe_serialization;
 
             for(auto attr : pe->GetPredSet()){
-                inverted_map_[attr].Insert(pe,set2id_[attr]);
+                auto sm_attr = SMString(attr);
+                inverted_map_[sm_attr].Insert(pe,set2id_[sm_attr]);
                 items_cnt_ = inverted_map_.size();
             }
         }
@@ -212,32 +314,22 @@ void RangeInvertedIndex::Insert(LevelPredEquivlences* lpes){
 }
 
 void RangeInvertedIndex::Erase(LevelPredEquivlences* lpes){
-    SMLevelPredEquivlences* sm_lpes = (SMLevelPredEquivlences*)ShmemAlloc(sizeof(SMLevelPredEquivlences));
-    new (sm_lpes) SMLevelPredEquivlences();
-    sm_lpes->Copy(lpes);
-    assert(sm_lpes);
-
     std::unique_lock<std::shared_mutex> lock(rw_mutex_);
-
-    for(const auto& pe : *sm_lpes){
-        auto pe_serialization = pe->GetSerialization();
+    for(const auto& pe : *lpes){
+        auto pe_serialization = SMString(pe->GetSerialization());
         if(set2id_.find(pe_serialization) == set2id_.end())return;
         for(const auto& attr : pe->GetPredSet()){
-            inverted_map_[attr].Erase(pe,set2id_[attr]);
+            auto sm_attr = SMString(attr);
+            inverted_map_[sm_attr].Erase(pe,set2id_[sm_attr]);
             items_cnt_ = inverted_map_.size();
         }
     }
 }
 
 bool RangeInvertedIndex::Serach(LevelPredEquivlences* lpes){
-    SMLevelPredEquivlences* sm_lpes = (SMLevelPredEquivlences*)ShmemAlloc(sizeof(SMLevelPredEquivlences));
-    new (sm_lpes) SMLevelPredEquivlences();
-    sm_lpes->Copy(lpes);
-    assert(sm_lpes);
-
-    std::unique_lock<std::shared_mutex> lock(rw_mutex_);    
-    for(const auto& pe : *sm_lpes){
-        auto pe_serialization = pe->GetSerialization();
+    std::shared_lock<std::shared_mutex> lock(rw_mutex_);    
+    for(const auto& pe : *lpes){
+        auto pe_serialization = SMString(pe->GetSerialization());
         if(set2id_.find(pe_serialization) == set2id_.end()){
             return false;
         }
@@ -265,6 +357,7 @@ SMSet<int> RangeInvertedIndex::SuperSets(LevelPredEquivlences* lpes){
             }
         }
     }
+
     return pe_id_set;
 }
 

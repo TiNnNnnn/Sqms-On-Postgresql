@@ -237,6 +237,7 @@ public:
         }
         lower_limit_ = lower_limit;
         upper_limit_ = upper_limit;
+        serialization_ = Serialization();
     }
 
     std::string LowerLimit(){return lower_limit_;}
@@ -245,7 +246,11 @@ public:
     bool HasRange(){return has_range_;}
     std::set<std::string>& SubqueryNames(){return subquery_names_;}
     int RangeCnt(){return range_cnt_;}
-
+    std::string GetSerialization(){
+        if(serialization_.empty())
+            return Serialization();
+        return serialization_;
+    }
 private:
     std::string extract_field(const std::string& expression) {
         size_t start_pos = expression.find('(');  
@@ -280,6 +285,8 @@ private:
     int range_cnt_ = 0;
     std::string lower_limit_;
     std::string upper_limit_;
+
+    std::string serialization_;
 };
 
 class LevelPredEquivlences{

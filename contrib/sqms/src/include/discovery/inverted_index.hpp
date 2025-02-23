@@ -232,15 +232,21 @@ public:
     /**
      * TODO: not implement yet
      */
+    SMVector<int> SubSet(SMPredEquivlence* range);
+
+    /*a group of more light interfaces*/
+    void Insert(PredEquivlence* range,int id);
+    void Erase(PredEquivlence* range,int id);
+    SMVector<int> SuperSet(PredEquivlence* pe);
     SMVector<int> SubSet(PredEquivlence* range);
-    
 private:
     /*check if the pe is the dst_pe's superset*/
     bool SuperSetInternal(SMPredEquivlence* dst_pe, SMPredEquivlence* pe);
     bool SearchSubquery(SMLevelManager* src_mgr,SMLevelManager* dst_mgr);
-    bool SearchRange(LevelManager* src_mgr,LevelManager* dst_mgr);
-    bool SearchSort(LevelManager* src_mgr,LevelManager* dst_mgr);
-    bool SearchAgg(LevelManager* src_mgr,LevelManager* dst_mgr);
+    bool SearchRange(SMLevelPredEquivlences * src_mgr,SMLevelPredEquivlences * dst_mgr);
+    bool SearchSort(SMLevelAggAndSortEquivlences* src_mgr,SMLevelAggAndSortEquivlences* dst_mgr);
+    bool SearchAgg(SMLevelAggAndSortEquivlences* src_mgr,SMLevelAggAndSortEquivlences* dst_mgr);
+    bool Match(SMLevelPredEquivlences* dst_lpes, SMLevelPredEquivlences* lpes);
 private:
     SMSet<SMPredEquivlence*,PredRangeCompare>sets_;
     SMUnorderedMap<SMPredEquivlence*,int> set2id_;

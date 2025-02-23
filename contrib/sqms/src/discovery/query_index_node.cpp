@@ -948,36 +948,73 @@ bool LeafStrategy::Search(NodeCollector* node_collector){
  */
 bool LeafStrategy::SerachAgg(LevelManager* level_mgr,int h,int id){
     auto src_aggs = level_mgr->GetTotalAggs()[h];
-    int agg_idx = -1;
+    int sort_idx = -1;
     for(size_t i = 0;i< src_aggs->Size();++i){
         if(src_aggs->GetLevelAggList()[i]->GetLpeId() == id){
-            agg_idx = i;
+            sort_idx = i;
             break;
         }
     }
-    assert(agg_idx != -1);
-    auto src_la_eqs = src_aggs->GetLevelAggList()[agg_idx];
-    assert(src_la_eqs->Size() == 1);
-    
-    auto src_keys = src_la_eqs->GetLevelAggSets()[0]->GetExtends();
-    for(const auto& la_eqs : level_mgr_->GetTotalAggs()[h]->GetLevelAggList()){
-        assert(la_eqs->Size() == 1);
-        auto keys = la_eqs->GetLevelAggSets()[0]->GetExtends();
-        bool matched = true;
-        for(const auto& src_key :src_keys){
-            if(keys.find(SMString(src_key)) == keys.end()){
-                matched = false;
+    assert(sort_idx != -1);
+    auto src_ls_eqs = src_aggs->GetLevelAggList()[sort_idx]->GetLevelAggSets();
+    std::unordered_set<AggAndSortEquivlence *>states;
+
+    for(const auto ls_pes : level_mgr_->GetTotalSorts()[h]->GetLevelAggList()){
+        for(const auto& pe: ls_pes->GetLevelAggSets()){
+            auto extends = pe->GetExtends();
+            for(const auto& src_eq: src_ls_eqs){
+                if(states.find(src_eq)!= states.end()){
+                    continue;
+                }else{
+                    bool matched = true;
+                    auto src_extends = src_eq->GetExtends();
+                    for(const auto& src_key : src_extends){
+                        if(extends.find(SMString(src_key))== extends.end()){
+                            matched = false;
+                        }
+                    }
+                    if(matched){
+                        states.insert(src_eq);
+                    }
+                }
             }
         }
-        if(matched){
+        if(states.size() == src_ls_eqs.size()){
             return true;
         }
     }
     return false;
+    // auto src_aggs = level_mgr->GetTotalAggs()[h];
+    // int agg_idx = -1;
+    // for(size_t i = 0;i< src_aggs->Size();++i){
+    //     if(src_aggs->GetLevelAggList()[i]->GetLpeId() == id){
+    //         agg_idx = i;
+    //         break;
+    //     }
+    // }
+    // assert(agg_idx != -1);
+    // auto src_la_eqs = src_aggs->GetLevelAggList()[agg_idx];
+    // assert(src_la_eqs->Size() == 1);
+    
+    // auto src_keys = src_la_eqs->GetLevelAggSets()[0]->GetExtends();
+    // for(const auto& la_eqs : level_mgr_->GetTotalAggs()[h]->GetLevelAggList()){
+    //     assert(la_eqs->Size() == 1);
+    //     auto keys = la_eqs->GetLevelAggSets()[0]->GetExtends();
+    //     bool matched = true;
+    //     for(const auto& src_key :src_keys){
+    //         if(keys.find(SMString(src_key)) == keys.end()){
+    //             matched = false;
+    //         }
+    //     }
+    //     if(matched){
+    //         return true;
+    //     }
+    // }
+    // return false;
 }
 
 bool LeafStrategy::SerachSort(LevelManager* level_mgr,int h,int id){
-    auto src_sorts = level_mgr->GetTotalAggs()[h];
+    auto src_sorts = level_mgr->GetTotalSorts()[h];
     int sort_idx = -1;
     for(size_t i = 0;i< src_sorts->Size();++i){
         if(src_sorts->GetLevelAggList()[i]->GetLpeId() == id){
