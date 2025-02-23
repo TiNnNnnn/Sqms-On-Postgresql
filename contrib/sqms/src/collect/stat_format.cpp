@@ -26,7 +26,7 @@ PlanStatFormat::PlanStatFormat(int psize)
     assert(found);
 }
 
-bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, bool slow){
+bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt,bool slow){
     Preprocessing(qd);
     if(!&hsps_){
         std::cout<<"hsps is nullptr"<<std::endl;
@@ -42,7 +42,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, bool slow){
     history_slow_plan_stat__pack(&hsps_,buffer);
     pid_t pid = getpid();
     
-    pool_->submit([msg_size,buffer,slow,pid,this]() -> bool {
+    pool_->submit([msg_size,buffer,slow,pid,this,oldcxt,qd]() -> bool {
         std::cout<<"Thread: "<<ThreadPool::GetTid()<<" Begin Working..."<<std::endl;
         /**
          * Due to the use of thread separation to ensure the main thread flow, we need 
@@ -117,7 +117,6 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, bool slow){
             std::vector<HistorySlowPlanStat*>sub_list;
             LevelOrder(hsps,sub_list);
             logger_->Logger("comming",("subplan size: "+std::to_string(sub_list.size())).c_str());
-            std::cout<<"subplan size : "<<sub_list.size()<<std::endl;
             size_t sub_idx = 0;
             for(const auto& p : sub_list){
                 /**
@@ -155,19 +154,22 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, bool slow){
                     pf_context_2->executeStrategy();
                     
                     if(shared_index->Search(level_mgr.get(),1)){
-                        CancelQuery();
-                    }
+                        CancelQuery(pid);
+                    } 
                     logger_->Logger("comming","****************************");
                     //return true;
                 //});
                 ++sub_idx;
             }
+            // std::unique_lock<std::mutex> lock(search_mutex_);
+            // search_cv_.wait(lock);
             logger_->Logger("comming","finish process comming query...");
         }
         history_slow_plan_stat__free_unpacked(hsps,NULL);
         std::cout<<"Thread: "<<ThreadPool::GetTid()<<" Finish Working..."<<std::endl;
         return true;
     });
+   
     return true;
 }
 
@@ -217,16 +219,20 @@ void PlanStatFormat::LevelOrder(HistorySlowPlanStat* hsps,std::vector<HistorySlo
     }
 }
 
-bool PlanStatFormat::CancelQuery(){
-    if(QueryCancelPending){
-        return false;
+bool PlanStatFormat::CancelQuery(pid_t pid){
+    Datum arg;
+    FunctionCallInfoBaseData fcinfo;
+    bool result;
+    arg = Int32GetDatum(pid);
+    InitFunctionCallInfoData(fcinfo, NULL, 1, InvalidOid, NULL, NULL);
+    fcinfo.args[0].value = arg;
+    fcinfo.args[0].isnull = false;
+    result = DatumGetBool(pg_cancel_backend(&fcinfo));
+    if(result){
+        logger_->Logger("comming","cancel query success...");
+    }else{
+        logger_->Logger("comming","cancel query failed or has been canceled...");
     }
-    QueryCancelPending = true;
-    InterruptPending = true;
-    ProcessInterrupts();
-    elog(WARNING, "Query is canceled by sqms.");
-    logger_->Logger("comming","Query is canceled by sqms.");
-    return true;
 }
 
 void PlanStatFormat::PrintIndent(int depth) {

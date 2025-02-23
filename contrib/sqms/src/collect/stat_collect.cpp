@@ -92,10 +92,7 @@ void StatCollecter::StmtExecutorStartWrapper(QueryDesc *queryDesc, int eflags){
             prev_ExecutorStart(queryDesc, eflags);
         else
             standard_ExecutorStart(queryDesc, eflags);
-		
-		/*analyse query whether a slow query or not*/
-		PlanStatFormat& es = PlanStatFormat::getInstance();
-		es.ProcQueryDesc(queryDesc,false);
+
         
         if (auto_explain_enabled())
         {
@@ -105,9 +102,14 @@ void StatCollecter::StmtExecutorStartWrapper(QueryDesc *queryDesc, int eflags){
                 MemoryContext oldcxt;
                 oldcxt = MemoryContextSwitchTo(queryDesc->estate->es_query_cxt);
                 queryDesc->totaltime = InstrAlloc(1, INSTRUMENT_ALL);
-                MemoryContextSwitchTo(oldcxt);
+				
+				/*analyse query whether a slow query or not*/
+				PlanStatFormat& es = PlanStatFormat::getInstance();
+				es.ProcQueryDesc(queryDesc,oldcxt,false);
+                
+				MemoryContextSwitchTo(oldcxt);
             }
-        }        
+        }
     }
 }
 
@@ -159,12 +161,16 @@ void StatCollecter::StmtExecutorEndWrapper(QueryDesc *queryDesc)
 		 */
 		InstrEndLoop(queryDesc->totaltime);
 		
+		std::cout<<"sleep: 1s ..."<<std::endl;
+		sleep(5);
+		
+		
 		/*stoage plan stats*/
 		msec = queryDesc->totaltime->total * 1000.0;
 		if (msec >= query_min_duration){
 		   PlanStatFormat& es = PlanStatFormat::getInstance();
-		   es.ProcQueryDesc(queryDesc,true);
-		}
+		   es.ProcQueryDesc(queryDesc,oldcxt,true);
+		} 
 		MemoryContextSwitchTo(oldcxt);
 	}
 

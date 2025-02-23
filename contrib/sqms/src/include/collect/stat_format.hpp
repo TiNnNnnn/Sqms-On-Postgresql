@@ -16,6 +16,7 @@ extern "C"{
     #include <string.h>
     #include "miscadmin.h"
     #include "tcop/tcopprot.h"
+    #include "utils/fmgrprotos.h"
 };
 /** 
  * TODO: the name of HistorySlowPanStat and SlowPlanStat is simlar, we need rename 
@@ -34,11 +35,11 @@ public:
     void Serialization();
     void Deserialization();
     bool Preprocessing(QueryDesc* qd);
-    bool ProcQueryDesc(QueryDesc* qd, bool slow = false);
+    bool ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt,bool slow = false);
 private:
     std::string HashCanonicalPlan(char *json_plan);
     void LevelOrder(HistorySlowPlanStat* hsps,std::vector<HistorySlowPlanStat*>& sub_list);
-    bool CancelQuery();
+    bool CancelQuery(pid_t pid);
     
     /* debug tools */
     void ShowAllHspsTree(HistorySlowPlanStat* hsps,int hdepth = 0);
