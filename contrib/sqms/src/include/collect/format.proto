@@ -135,11 +135,21 @@ message PredOperator {
 	repeated PredExpression childs = 2;
 }
 
+enum ValType{
+	UNKNOWN = 0;
+	INT = 1;
+	DOUBLE = 2;
+	STRING = 3;
+	BOOL = 4;
+	NULL = 5;
+}
+
 message Quals{
 	/*Common qual*/
 	string left = 1;
 	string right = 2;
 	string op = 3;
+
 	int64 l_type = 4;
 	int64 r_type = 5;
 
@@ -152,6 +162,9 @@ message Quals{
 	string sub_plan_name = 9;
 	
 	HistorySlowPlanStat hsps = 10;
+
+	uint32 left_val_type_id = 11;
+	uint32 right_val_type_id = 12;
 }
 
 

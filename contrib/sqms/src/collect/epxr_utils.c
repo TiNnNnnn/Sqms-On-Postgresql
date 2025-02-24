@@ -126,6 +126,11 @@ typedef struct
 	HistorySlowPlanStat	*hsp; 
 	Stack* expr_stack;
 	NodeTag actual_var_type;
+	/**
+	 * we want get value actually type in quals
+	 */
+	Quals* current_trace_qual;
+	int current_qual_pos;
 
 } deparse_context;
 
@@ -526,7 +531,8 @@ deparse_expression_pretty(Node *expr, List *dpcontext,
 	context.special_exprkind = EXPR_KIND_NONE;
 	context.appendparents = NULL;
 	context.hsp = dpns->hsp;
-
+	context.current_qual_pos = 0;
+	context.current_trace_qual = NULL;
 
 	context.expr_stack = stack_init();
 
@@ -3687,6 +3693,7 @@ get_variable(Var *var, int levelsup, bool istoplevel, deparse_context *context)
 	deparse_namespace *dpns;
 	Index		varno;
 	AttrNumber	varattno;
+	char*     valtype;
 	deparse_columns *colinfo;
 	char	   *refname;
 	char       *objectname;
@@ -3714,13 +3721,14 @@ get_variable(Var *var, int levelsup, bool istoplevel, deparse_context *context)
 	{
 		varno = var->varnosyn;
 		varattno = var->varattnosyn;
+		
 	}
 	else
 	{
 		varno = var->varno;
 		varattno = var->varattno;
 	}
-
+	
 	/*
 	 * Try to find the relevant RTE in this rtable.  In a plan tree, it's
 	 * likely that varno is OUTER_VAR or INNER_VAR, in which case we must dig
@@ -3893,11 +3901,27 @@ get_variable(Var *var, int levelsup, bool istoplevel, deparse_context *context)
 	context->varprefix = true;
 	if (refname && (context->varprefix || attname == NULL))
 	{
+		/**
+		 * here we want to get true relation name 
+		 */
 		//appendStringInfoString(buf, quote_identifier(refname));
 		appendStringInfoString(buf,quote_identifier(objectname));
 		appendStringInfoChar(buf, '.');
 	}
 
+	//valtype = pstrdup(format_type_be(var->vartype));
+	unsigned int val_type_id = var->vartype;
+	if(context->current_trace_qual){
+		if(context->current_qual_pos == 0){
+			context->current_trace_qual->left_val_type_id = val_type_id;
+		}else if(context->current_qual_pos == 1){
+			context->current_trace_qual->right_val_type_id = val_type_id;
+		}else{
+			//context->current_trace_qual->left_val_type_id = val_type_id;
+			elog(INFO, "invalid qual pos %d", context->current_qual_pos);
+		}
+	}
+	
 	if (attname)
 		appendStringInfoString(buf, quote_identifier(attname));
 	else
@@ -6494,7 +6518,10 @@ get_oper_expr(OpExpr *expr, deparse_context *context)
 		}
 		
 		context->actual_var_type = T_Invalid;
+		context->current_trace_qual = trace_qual;
+		context->current_qual_pos = 0;
 		get_rule_expr_paren(arg1, context, true, (Node *) expr,expr->location);
+		
 		if(is_compare_expr(op)){
 			int current_offset = context->buf->len;
 			
@@ -6514,6 +6541,7 @@ get_oper_expr(OpExpr *expr, deparse_context *context)
 		pre_offset = context->buf->len;
 
 		context->actual_var_type = T_Invalid;
+		context->current_qual_pos = 1;
 		get_rule_expr_paren(arg2, context, true, (Node *) expr,expr->location);
 
 		if(is_compare_expr(op)){
@@ -6528,10 +6556,6 @@ get_oper_expr(OpExpr *expr, deparse_context *context)
 				trace_qual->r_type = arg2->type;
 			}
 
-			// trace_qual->hsps = (HistorySlowPlanStat*)malloc(sizeof(HistorySlowPlanStat));
-			// history_slow_plan_stat__init(trace_qual->hsps);
-			// *trace_qual->hsps =  *context->hsp;
-
 			PredExpression* expr_node = (PredExpression*)malloc(sizeof(PredExpression));
 			pred_expression__init(expr_node);
 			expr_node->qual = trace_qual;
@@ -6541,6 +6565,9 @@ get_oper_expr(OpExpr *expr, deparse_context *context)
 			}
 			stack_push(context->expr_stack,expr_node);
 		}
+
+		context->current_trace_qual = NULL;
+		context->current_qual_pos = 0;
 	}
 	else
 	{
@@ -6964,6 +6991,11 @@ get_const_expr(Const *constval, deparse_context *context, int showtype)
 													  constval->consttypmod));		
 			get_const_collation(constval, context);
 		}
+		
+		if(context->current_trace_qual){
+			//context->current_trace_qual->
+		}
+
 		//appendStringInfo(ers.detail_str_,buf->data);
 		return;
 	}

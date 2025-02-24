@@ -47,6 +47,15 @@ typedef enum _PredTypeTag {
   PRED_TYPE_TAG__ORDER_BY = 8
     PROTOBUF_C__FORCE_ENUM_TO_BE_INT_SIZE(PRED_TYPE_TAG)
 } PredTypeTag;
+typedef enum _ValType {
+  VAL_TYPE__UNKNOWN = 0,
+  VAL_TYPE__INT = 1,
+  VAL_TYPE__DOUBLE = 2,
+  VAL_TYPE__STRING = 3,
+  VAL_TYPE__BOOL = 4,
+  VAL_TYPE__NULL = 5
+    PROTOBUF_C__FORCE_ENUM_TO_BE_INT_SIZE(VAL_TYPE)
+} ValType;
 
 /* --- messages --- */
 
@@ -268,10 +277,12 @@ struct  _Quals
   protobuf_c_boolean hash_sub_plan;
   char *sub_plan_name;
   HistorySlowPlanStat *hsps;
+  uint32_t left_val_type_id;
+  uint32_t right_val_type_id;
 };
 #define QUALS__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&quals__descriptor) \
-    , (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, 0, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, NULL }
+    , (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, 0, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, NULL, 0, 0 }
 
 
 /*
@@ -577,6 +588,7 @@ typedef void (*SlowPlanStat_Closure)
 /* --- descriptors --- */
 
 extern const ProtobufCEnumDescriptor    pred_type_tag__descriptor;
+extern const ProtobufCEnumDescriptor    val_type__descriptor;
 extern const ProtobufCMessageDescriptor history_slow_plan_stat__descriptor;
 extern const ProtobufCMessageDescriptor group_sort_key__descriptor;
 extern const ProtobufCMessageDescriptor group_keys__descriptor;

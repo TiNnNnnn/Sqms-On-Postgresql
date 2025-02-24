@@ -1111,6 +1111,7 @@ void PredEquivlenceRange::Copy(PredEquivlenceRange* new_range){
 	new_range->SetBoundaryConstraint(boundary_constraint_);
 	new_range->SetSubqueryName(subquery_name_);
 	new_range->SetList(list_);
+	new_range->SetPredVarType(new_range->PredVarType());
 }
 
 void PredEquivlenceRange::PrintPredEquivlenceRange(int depth){
@@ -1164,6 +1165,30 @@ std::string PredEquivlenceRange::PrintPredEquivlenceRange(int depth,std::string 
 	std::string output;
 	auto ll = lower_limit_ == LOWER_LIMIT?"-∞":lower_limit_;
 	auto ul = upper_limit_ == UPPER_LIMIT?"+∞":upper_limit_;
+
+	std::string var_type;
+	switch(var_type_){
+		case VarType::INT:{
+			var_type = "int";
+		}break;
+		case VarType::STRING:{
+			var_type = "string";
+		}break;
+		case VarType::DOUBLE:{
+			var_type = "double";
+		}break;
+		case VarType::BOOL:{
+			var_type = "bool";
+		}break;
+		case VarType::UNKNOWN:{
+			var_type = "unknown";
+		}break;
+		default:{
+			std::cerr<<"error var type!"<<std::endl;
+			exit(-1);
+		}
+	}
+	output += "<type:"+var_type+">";
 	switch(type_){
 		case PType::EQUAL:{
 			output += "=";
@@ -1210,6 +1235,7 @@ std::string PredEquivlenceRange::PrintPredEquivlenceRange(int depth,std::string 
 PredEquivlence::PredEquivlence(Quals* qual){
 	assert(qual);
 	PType type = QualType(qual);
+	auto var_type = QualVarType(qual);
 	PredEquivlenceRange* range = new PredEquivlenceRange(); 
 	switch(type){
 		case PType::JOIN_EQUAL:{
@@ -1217,6 +1243,7 @@ PredEquivlence::PredEquivlence(Quals* qual){
 			range->SetUpperLimit(UPPER_LIMIT);
 			range->SetLowerLimit(LOWER_LIMIT);
 			range->SetBoundaryConstraint(std::make_pair(true,true));
+			range->SetPredVarType(var_type);
 			ranges_.insert(range);
 			set_.insert(qual->left);
 			set_.insert(qual->right);
@@ -1224,6 +1251,7 @@ PredEquivlence::PredEquivlence(Quals* qual){
 		case PType::EQUAL:{
 			set_.insert(qual->left);
 			range->SetPredType(PType::RANGE);
+			range->SetPredVarType(var_type);
 			range->SetLowerLimit(qual->right);
 			range->SetUpperLimit(qual->right);
 			range->SetBoundaryConstraint(std::make_pair(true,true));
@@ -1234,10 +1262,12 @@ PredEquivlence::PredEquivlence(Quals* qual){
 			auto op = qual->op;
 			if(!strcmp(op,"!=") or !strcmp(op,"<>")){
 				range->SetPredType(PType::NOT_EQUAL);
+				range->SetPredVarType(var_type);
 				range->SetLowerLimit(qual->right);
 				range->SetUpperLimit(qual->right);
 			}else if(!strcmp(op,"!~")){
 				range->SetPredType(PType::NOT_EQUAL);
+				range->SetPredVarType(var_type);
 				/**
 				 * TODO: not implement: regular expression check
 				*/
@@ -1246,6 +1276,7 @@ PredEquivlence::PredEquivlence(Quals* qual){
 		}break;
 		case PType::RANGE:{
 			set_.insert(qual->left);
+			range->SetPredVarType(var_type);
 			auto op = qual->op;
 			if(!strcmp(op,">")){
 				range->SetPredType(PType::RANGE);
@@ -1270,6 +1301,7 @@ PredEquivlence::PredEquivlence(Quals* qual){
 			ranges_.insert(range);
 		}break;
 		case PType::LIST:{
+			range->SetPredVarType(var_type);
 			set_.insert(qual->left);
 			/**
 			 * TODO: not implement yet: we should convert str_list into true list
@@ -1299,7 +1331,8 @@ PredEquivlence::PredEquivlence(Quals* qual){
 			for(size_t i = 0; i < qual->hsps->n_subplans; i++){
 				auto sub_plan_hsp = qual->hsps->subplans[i];
 	
-				PredEquivlenceRange* new_range = new PredEquivlenceRange(); 
+				PredEquivlenceRange* new_range = new PredEquivlenceRange();
+				range->SetPredVarType(var_type);
 				new_range->SetPredType(PType::SUBQUERY);
 				new_range->SetSubqueryName(sub_plan_hsp->sub_plan_name);
 				ranges_.insert(new_range);
@@ -1331,8 +1364,8 @@ PredEquivlence::PredEquivlence(Quals* qual){
 			/*calualate pred equivlence here*/
 			for(size_t i = 0; i < qual->hsps->n_subplans; i++){
 				auto sub_plan_hsp = qual->hsps->subplans[i];
-				
 				PredEquivlenceRange* new_range = new PredEquivlenceRange(); 
+				new_range->SetPredVarType(var_type);
 				new_range->SetPredType(PType::SUBLINK);
 				new_range->SetSubqueryName(sub_plan_hsp->sub_plan_name);
 				ranges_.insert(new_range);
@@ -1502,6 +1535,53 @@ PType PredEquivlence::QualType(Quals* qual){
 		auto right_type = NodeTag(qual->r_type);
 		std::cerr<<"not support currnt type of quals: left: "<<left_type<<",right: "<<right_type<<std::endl;
 		return PType::UNKNOWN;
+	}
+}
+
+VarType PredEquivlence::QualVarType(Quals* qual){
+	assert(qual);
+	auto get_var_type = [](uint32_t type){
+		switch (type)
+		{
+			case BITOID:
+				return VarType::UNKNOWN;
+			case BOOLOID:
+				return VarType::BOOL;
+			case BPCHAROID:
+				return VarType::STRING; 
+			case FLOAT4OID:
+			case FLOAT8OID:
+				return VarType::DOUBLE;
+			case INT2OID:
+			case INT4OID:
+			case INT8OID:
+			case NUMERICOID:
+				return VarType::INT;
+			case INTERVALOID:
+				return VarType::UNKNOWN;
+			case TIMEOID:
+				return VarType::UNKNOWN;
+			case TIMETZOID:
+				return VarType::UNKNOWN;
+			case TIMESTAMPOID:
+				return VarType::UNKNOWN;
+			case TIMESTAMPTZOID:
+				return VarType::UNKNOWN;
+			case VARBITOID:
+				return VarType::UNKNOWN;
+			case VARCHAROID:
+				return VarType::STRING;
+			default:
+				return VarType::UNKNOWN;
+		}
+	};
+
+	if(qual->left_val_type_id){
+		return get_var_type(qual->left_val_type_id);
+	}else if(qual->left_val_type_id){
+		return get_var_type(qual->right_val_type_id);
+	}else{
+		return VarType::UNKNOWN;
 	}
 }
 

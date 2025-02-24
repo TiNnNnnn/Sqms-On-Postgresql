@@ -16,6 +16,7 @@
 #include "nodes/parsenodes.h"
 #include "nodes/pg_list.h"
 #include "format.pb-c.h"
+
 #include <postgres_ext.h>
 
 struct Plan;					/* avoid including plannodes.h here */

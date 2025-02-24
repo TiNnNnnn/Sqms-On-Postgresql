@@ -46,6 +46,14 @@ enum class PType{
     UNKNOWN,
 };
 
+enum class VarType{
+    INT = 0,
+    STRING,
+    DOUBLE,
+    BOOL,
+    UNKNOWN,
+};
+
 /*operator type set*/
 enum class PreProcessLabel{
     PREDICATE = 0,
@@ -106,6 +114,9 @@ public:
     void SetPredType(PType type){type_ = type;}
     PType PredType(){return type_;}
 
+    void SetPredVarType(VarType type){var_type_ = type;}
+    VarType PredVarType(){return var_type_;}
+
     void Copy(PredEquivlenceRange* new_range);
     bool Serach(PredEquivlenceRange* range);
 
@@ -121,6 +132,7 @@ public:
     }
 private:
     PType type_;
+    VarType var_type_;
     /*type == SUBQRUEY or SUBLINK*/
     std::string subquery_name_;
     std::string lower_limit_ = LOWER_LIMIT;
@@ -150,7 +162,9 @@ public:
     PredEquivlence(Quals* qual);
 
     static bool IsOnlyLeft(Quals* qual);
+
     static PType QualType(Quals* qual);
+    static VarType QualVarType(Quals* qual);
 
     static bool PredVariable(NodeTag node_tag);
     static bool PredSubquery(NodeTag node_tag);

@@ -1458,7 +1458,7 @@ const ProtobufCMessageDescriptor pred_operator__descriptor =
   (ProtobufCMessageInit) pred_operator__init,
   NULL,NULL,NULL    /* reserved[123] */
 };
-static const ProtobufCFieldDescriptor quals__field_descriptors[10] =
+static const ProtobufCFieldDescriptor quals__field_descriptors[12] =
 {
   {
     "left",
@@ -1580,6 +1580,30 @@ static const ProtobufCFieldDescriptor quals__field_descriptors[10] =
     0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
+  {
+    "left_val_type_id",
+    11,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_UINT32,
+    0,   /* quantifier_offset */
+    offsetof(Quals, left_val_type_id),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "right_val_type_id",
+    12,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_UINT32,
+    0,   /* quantifier_offset */
+    offsetof(Quals, right_val_type_id),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
 };
 static const unsigned quals__field_indices_by_name[] = {
   5,   /* field[5] = format_type */
@@ -1587,16 +1611,18 @@ static const unsigned quals__field_indices_by_name[] = {
   9,   /* field[9] = hsps */
   3,   /* field[3] = l_type */
   0,   /* field[0] = left */
+  10,   /* field[10] = left_val_type_id */
   2,   /* field[2] = op */
   4,   /* field[4] = r_type */
   1,   /* field[1] = right */
+  11,   /* field[11] = right_val_type_id */
   8,   /* field[8] = sub_plan_name */
   6,   /* field[6] = use_or */
 };
 static const ProtobufCIntRange quals__number_ranges[1 + 1] =
 {
   { 1, 0 },
-  { 0, 10 }
+  { 0, 12 }
 };
 const ProtobufCMessageDescriptor quals__descriptor =
 {
@@ -1606,7 +1632,7 @@ const ProtobufCMessageDescriptor quals__descriptor =
   "Quals",
   "",
   sizeof(Quals),
-  10,
+  12,
   quals__field_descriptors,
   quals__field_indices_by_name,
   1,  quals__number_ranges,
@@ -1883,5 +1909,41 @@ const ProtobufCEnumDescriptor pred_type_tag__descriptor =
   pred_type_tag__enum_values_by_name,
   1,
   pred_type_tag__value_ranges,
+  NULL,NULL,NULL,NULL   /* reserved[1234] */
+};
+static const ProtobufCEnumValue val_type__enum_values_by_number[6] =
+{
+  { "UNKNOWN", "VAL_TYPE__UNKNOWN", 0 },
+  { "INT", "VAL_TYPE__INT", 1 },
+  { "DOUBLE", "VAL_TYPE__DOUBLE", 2 },
+  { "STRING", "VAL_TYPE__STRING", 3 },
+  { "BOOL", "VAL_TYPE__BOOL", 4 },
+  { "NULL", "VAL_TYPE__NULL", 5 },
+};
+static const ProtobufCIntRange val_type__value_ranges[] = {
+{0, 0},{0, 6}
+};
+static const ProtobufCEnumValueIndex val_type__enum_values_by_name[6] =
+{
+  { "BOOL", 4 },
+  { "DOUBLE", 2 },
+  { "INT", 1 },
+  { "NULL", 5 },
+  { "STRING", 3 },
+  { "UNKNOWN", 0 },
+};
+const ProtobufCEnumDescriptor val_type__descriptor =
+{
+  PROTOBUF_C__ENUM_DESCRIPTOR_MAGIC,
+  "ValType",
+  "ValType",
+  "ValType",
+  "",
+  6,
+  val_type__enum_values_by_number,
+  6,
+  val_type__enum_values_by_name,
+  1,
+  val_type__value_ranges,
   NULL,NULL,NULL,NULL   /* reserved[1234] */
 };
