@@ -161,8 +161,8 @@ void StatCollecter::StmtExecutorEndWrapper(QueryDesc *queryDesc)
 		 */
 		InstrEndLoop(queryDesc->totaltime);
 		
-		std::cout<<"sleep: 1s ..."<<std::endl;
-		sleep(5);
+		std::cout<<"sleep: 5s ..."<<std::endl;
+		sleep(2);
 		
 		
 		/*stoage plan stats*/

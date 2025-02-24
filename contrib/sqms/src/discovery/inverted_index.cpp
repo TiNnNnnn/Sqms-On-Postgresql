@@ -54,8 +54,8 @@ void RangePostingList::Erase(SMPredEquivlence* range,int id){
 /*get all ranges which is superset of range,used in query index*/
 SMVector<int> RangePostingList::SuperSet(SMPredEquivlence* pe){
     SMVector<int> rets;
-    auto pos = sets_.lower_bound(pe);
-    for(auto iter = pos ; iter != sets_.end(); ++iter){
+    //auto pos = sets_.lower_bound(pe);
+    for(auto iter = sets_.begin() ; iter != sets_.end(); ++iter){
         if(SuperSetInternal(pe,*iter)){
             rets.push_back(set2id_[*iter]);
         }
@@ -116,47 +116,54 @@ bool RangePostingList::SuperSetInternal(SMPredEquivlence* dst_pe, SMPredEquivlen
         return false;
     }
 
-    /*here we just compare subquery name,such as SUBQUERY1, SUBQUERY2, we will compare */
     auto ranges = pe->GetRanges();
     for(const auto r :dst_pe->GetRanges()){
         bool match = false;
         if(r->PredType() == PType::EQUAL || r->PredType() == PType::NOT_EQUAL || r->PredType() == PType::RANGE){
             for(const auto& src_r : ranges){
-                bool super = true;
-                /* check lowlimit */
-                if(r->LowerLimit() == LOWER_LIMIT){
-                    if(src_r->LowerLimit() != LOWER_LIMIT){
-                        super = false;
-                        continue;
-                    }
-                }else{
-                    if(src_r->LowerLimit() != LOWER_LIMIT){
-                        if(r->LowerLimit() < src_r->LowerLimit()){
-                            super = false;
-                            continue;
-                        }
-                    }			
-                }
+                if(r->PredType() == PType::EQUAL || r->PredType() == PType::NOT_EQUAL || r->PredType() == PType::RANGE){
+                    bool super = true;
 
-                /* check upperlimit */
-                if(r->UpperLimit() == UPPER_LIMIT){
-                    if(src_r->UpperLimit() != UPPER_LIMIT){
-                        super = false;
-                        continue;
-                    }
-                }else{
-                    if(src_r->UpperLimit() != UPPER_LIMIT){
-                        if(r->UpperLimit() > src_r->UpperLimit()){
+                    /* check lowlimit */
+                    if(r->LowerLimit() == LOWER_LIMIT){
+                        if(src_r->LowerLimit() != LOWER_LIMIT){
                             super = false;
                             continue;
                         }
-                    }			
-                }
-                if(super){
-                    match = true;
-                    break;
+                    }else{
+                        if(src_r->LowerLimit() != LOWER_LIMIT){
+                            /*check if src_r is the superset of r, if true , then not match*/
+                            if((r->LowerLimit() > src_r->LowerLimit()) 
+                                || (r->LowerLimit() == src_r->LowerLimit() && r->GetLowerBoundaryConstraint() && !src_r->GetLowerBoundaryConstraint())){
+                                super = false;
+                                continue;
+                            }
+                        }			
+                    }
+    
+                    /* check upperlimit */
+                    if(r->UpperLimit() == UPPER_LIMIT){
+                        if(src_r->UpperLimit() != UPPER_LIMIT){
+                            super = false;
+                            continue;
+                        }
+                    }else{
+                        if(src_r->UpperLimit() != UPPER_LIMIT){
+                            if((r->UpperLimit() < src_r->UpperLimit()) || 
+                                (r->UpperLimit() == src_r->UpperLimit() && !r->GetUpperBoundaryConstraint() && src_r->GetUpperBoundaryConstraint())){
+                                super = false;
+                                continue;
+                            }
+                        }			
+                    }
+    
+                    if(super){
+                        match = true;
+                        break;
+                    }
                 }
             }
+
         }else{
             /*not support yet*/
             match = true;

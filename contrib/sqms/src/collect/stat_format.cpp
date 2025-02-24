@@ -161,8 +161,6 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt,bool slow
                 //});
                 ++sub_idx;
             }
-            // std::unique_lock<std::mutex> lock(search_mutex_);
-            // search_cv_.wait(lock);
             logger_->Logger("comming","finish process comming query...");
         }
         history_slow_plan_stat__free_unpacked(hsps,NULL);
@@ -221,17 +219,20 @@ void PlanStatFormat::LevelOrder(HistorySlowPlanStat* hsps,std::vector<HistorySlo
 
 bool PlanStatFormat::CancelQuery(pid_t pid){
     Datum arg;
-    FunctionCallInfoBaseData fcinfo;
-    bool result;
     arg = Int32GetDatum(pid);
+    
+    FunctionCallInfoBaseData fcinfo;
     InitFunctionCallInfoData(fcinfo, NULL, 1, InvalidOid, NULL, NULL);
     fcinfo.args[0].value = arg;
     fcinfo.args[0].isnull = false;
-    result = DatumGetBool(pg_cancel_backend(&fcinfo));
+    
+    auto result = DatumGetBool(pg_cancel_backend(&fcinfo));
     if(result){
         logger_->Logger("comming","cancel query success...");
+        return true;
     }else{
         logger_->Logger("comming","cancel query failed or has been canceled...");
+        return false;
     }
 }
 
