@@ -1,6 +1,6 @@
 #include "collect/level_mgr.hpp"
 #include <algorithm>
-
+#include <cfloat>
 /**
  * LevelManager::Format
  */
@@ -517,7 +517,6 @@ void LevelManager::GroupKeyDecompase(HistorySlowPlanStat* hsps){
 	LevelAggAndSortList* node_final_la_list = nullptr;
 
 	if(strcmp(hsps->group_sort_qlabel,"Group Key")){
-		
 		node_final_la_list = new LevelAggAndSortList(nodes_collector_map_[cur_hsps_]->node_equivlences_);
 		if(cur_height_ >= 1){
 			for(size_t i=0;i<cur_hsps_->n_childs;i++){
@@ -1048,14 +1047,16 @@ bool PredEquivlenceRange::Serach(PredEquivlenceRange* range){
 	switch(type_){
 		case PType::NOT_EQUAL:{
 			if(range->PredType() == PType::NOT_EQUAL){
-				return range->UpperLimit() == UpperLimit();	
+				return PredEquivlenceRange::LimitCompare(range->UpperLimit(),range->PredVarType(),UpperLimit(),var_type_) == 0;
+				//return range->UpperLimit() == UpperLimit();	
 			}else{
-				return false;
+				return false; 
 			}
 		}break;
 		case PType::EQUAL:{
 			if(range->PredType() == PType::NOT_EQUAL){
-				return range->UpperLimit() == UpperLimit();	
+				return PredEquivlenceRange::LimitCompare(range->UpperLimit(),range->PredVarType(),UpperLimit(),var_type_) == 0;
+				//return range->UpperLimit() == UpperLimit();	
 			}else{
 				return false;
 			}
@@ -1065,8 +1066,10 @@ bool PredEquivlenceRange::Serach(PredEquivlenceRange* range){
 				bool left_no_intersected = false;
 				if(range->LowerLimit() != LOWER_LIMIT){
 					if(upper_limit_ != UPPER_LIMIT){
-						left_no_intersected = (std::stoi(range->LowerLimit()) > std::stoi(upper_limit_)) 
-							|| (range->LowerLimit() == upper_limit_ && (!range->GetLowerBoundaryConstraint()&GetUpperBoundaryConstraint()));
+						// left_no_intersected = (std::stoi(range->LowerLimit()) > std::stoi(upper_limit_)) 
+						// 	|| (range->LowerLimit() == upper_limit_ && (!range->GetLowerBoundaryConstraint()&GetUpperBoundaryConstraint()));
+						auto ret = PredEquivlenceRange::LimitCompare(range->LowerLimit(),range->PredVarType(),upper_limit_,var_type_);
+						left_no_intersected = (ret > 0 || (!ret && (!range->GetLowerBoundaryConstraint()&GetUpperBoundaryConstraint())));
 					}else{
 						left_no_intersected = false;
 					}
@@ -1077,8 +1080,10 @@ bool PredEquivlenceRange::Serach(PredEquivlenceRange* range){
 				bool right_no_intersected = false;
 				if(range->UpperLimit() !=  UPPER_LIMIT){
 					if(lower_limit_ != LOWER_LIMIT){
-						right_no_intersected = (std::stoi(range->UpperLimit()) < std::stoi(lower_limit_))
-							|| (range->UpperLimit() == lower_limit_ && (!range->GetUpperBoundaryConstraint()&GetLowerBoundaryConstraint()));
+						// right_no_intersected = (std::stoi(range->UpperLimit()) < std::stoi(lower_limit_))
+						// 	|| (range->UpperLimit() == lower_limit_ && (!range->GetUpperBoundaryConstraint()&GetLowerBoundaryConstraint()));
+						auto ret = PredEquivlenceRange::LimitCompare(range->UpperLimit(),range->PredVarType(),lower_limit_,var_type_);
+						right_no_intersected = (ret < 0 || (!ret && (!range->GetUpperBoundaryConstraint()&GetLowerBoundaryConstraint())));						
 					}else{
 						right_no_intersected = false;
 					}
@@ -1102,6 +1107,102 @@ bool PredEquivlenceRange::Serach(PredEquivlenceRange* range){
 		}
 	}	
 	return false;
+}
+
+int PredEquivlenceRange::LimitCompare(const std::string& left_range,VarType left_type,const std::string& right_range,VarType right_type){
+	assert(left_range.size() && right_range.size());
+	/*pasrer string to int*/
+	auto int_parser = [](std::string range)->int{
+		int var = 0;
+		if(range == UPPER_LIMIT){
+			var = INT_MAX;
+		}else if(range == LOWER_LIMIT){
+			var = INT_MIN;
+		}else{
+			var = std::stoi(range);
+		}
+		return var;
+	};
+	
+	/*parser string to double*/
+	auto double_parser = [](std::string range)->double{
+		double var = 0;
+		if(range == UPPER_LIMIT){
+			var = DBL_MAX;
+		}else if(range == LOWER_LIMIT){
+			var = DBL_MIN;
+		}else{
+			var = std::stod(range);
+		}
+		return var;
+	};
+
+	switch(left_type){
+		case VarType::INT:{
+			int left_var = int_parser(left_range);
+			if(right_type == VarType::INT){
+				int right_var = int_parser(right_range);
+				return left_var - right_var;
+			}else if(right_type == VarType::DOUBLE){
+				double right_var = double_parser(right_range);
+				if(double(left_var) == right_var){
+					return 0;
+				}else{
+					return double(left_var) < right_var ? -1 : 1;
+				}
+			}else{
+				std::cerr<<"right type not match left type <int>"<<std::endl;
+				exit(-1);
+			}
+		}break;
+		case VarType::STRING:{
+			if(right_type == VarType::STRING){
+				if(left_range == right_range)return 0;
+				else{
+					return left_range < right_range ? -1 : 1;
+				}
+			}else{
+				std::cerr<<"right type not match left type <string>"<<std::endl;
+				exit(-1);
+			}
+		}break;
+		case VarType::DOUBLE:{
+			double left_var = double_parser(right_range);
+			if(right_type == VarType::DOUBLE){
+				double right_var = double_parser(right_range);
+				return left_var - right_var;
+			}else if(right_type == VarType::INT){
+				double right_var = int_parser(right_range);
+				return left_var - right_var;
+			}else{
+				std::cerr<<"right type not match left type <double>"<<std::endl;
+				exit(-1);
+			}
+		}break;
+		case VarType::BOOL:{
+			int left_var = int_parser(left_range);
+			if(right_type == VarType::BOOL){
+				int right_var = int_parser(right_range);
+				return left_var == right_var;
+			}else{
+				std::cerr<<"right type not match left type <double>"<<std::endl;
+				exit(-1);
+			}
+		}break;
+		case VarType::UNKNOWN:{
+			/*if it's a unknown type,we just compare them base on str*/
+			if(left_range == right_range){
+				return 0;
+			}else{
+				return left_range < right_range;
+			}
+		}break;
+		default:{
+			std::cerr<<"error type in limit comparing!"<<std::endl;
+			exit(-1);
+		}
+	}
+	return true;
 }
 
 void PredEquivlenceRange::Copy(PredEquivlenceRange* new_range){
@@ -1667,6 +1768,7 @@ bool PredEquivlence::MergePredEquivlenceRanges(const std::vector<PredEquivlenceR
 	
 	std::string upper_bound;
 	std::string lower_bound;
+	VarType cur_type = VarType::UNKNOWN;
 	bool left = false;
 	bool right = false;
 
@@ -1678,44 +1780,69 @@ bool PredEquivlence::MergePredEquivlenceRanges(const std::vector<PredEquivlenceR
 			lower_bound = old_range->LowerLimit();
 			left = old_range->GetLowerBoundaryConstraint();
 			right = old_range->GetUpperBoundaryConstraint();
+			cur_type = old_range->PredVarType();
+
 			auto r = *iter;
 			if(r->PredType() != PType::RANGE){
 				std::cerr<<"only support range type merge currently"<<std::endl;
 				exit(-1);
 			}
-		
-			if((r->UpperLimit() < upper_bound && r->UpperLimit() != UPPER_LIMIT && upper_bound != UPPER_LIMIT)
-					||(upper_bound == UPPER_LIMIT)
-					||(r->UpperLimit() == upper_bound && r->GetUpperBoundaryConstraint() && !right)
+			auto ret = PredEquivlenceRange::LimitCompare(r->UpperLimit(),r->PredVarType(),upper_bound,cur_type);
+			if((ret < 0 && r->UpperLimit() != UPPER_LIMIT && upper_bound != UPPER_LIMIT)
+				|| (upper_bound == UPPER_LIMIT)
+				|| (!ret && r->GetUpperBoundaryConstraint() && !right)
 			){
+				cur_type = r->PredVarType();
 				upper_bound = r->UpperLimit();
 				right = r->GetUpperBoundaryConstraint();
 			}
-				
-			if((r->LowerLimit() > lower_bound && r->LowerLimit() != LOWER_LIMIT &&  lower_bound != LOWER_LIMIT)
-					||(lower_bound  == LOWER_LIMIT)
-					||(r->LowerLimit() == lower_bound && r->GetLowerBoundaryConstraint() && !left)
+
+			// if((r->UpperLimit() < upper_bound && r->UpperLimit() != UPPER_LIMIT && upper_bound != UPPER_LIMIT)
+			// 		||(upper_bound == UPPER_LIMIT)
+			// 		||(r->UpperLimit() == upper_bound && r->GetUpperBoundaryConstraint() && !right)
+			// ){
+			// 	upper_bound = r->UpperLimit();
+			// 	right = r->GetUpperBoundaryConstraint();
+			// }
+
+			ret = PredEquivlenceRange::LimitCompare(r->LowerLimit(),r->PredVarType(),lower_bound,cur_type);
+			if((ret > 0 && r->LowerLimit() != LOWER_LIMIT &&  lower_bound != LOWER_LIMIT)
+				|| (lower_bound == UPPER_LIMIT)
+				|| (!ret && r->GetLowerBoundaryConstraint() && !left)
 			){
+				cur_type = r->PredVarType();
 				lower_bound = r->LowerLimit();
 				left = r->GetLowerBoundaryConstraint();
 			}
+				
+			// if((r->LowerLimit() > lower_bound && r->LowerLimit() != LOWER_LIMIT &&  lower_bound != LOWER_LIMIT)
+			// 		||(lower_bound  == LOWER_LIMIT)
+			// 		||(r->LowerLimit() == lower_bound && r->GetLowerBoundaryConstraint() && !left)
+			// ){
+			// 	lower_bound = r->LowerLimit();
+			// 	left = r->GetLowerBoundaryConstraint();
+			// }
 
 			ranges_.erase(r);
 			PredEquivlenceRange* new_range = new PredEquivlenceRange();
+			new_range->SetPredVarType(cur_type);
 			new_range->SetPredType(PType::RANGE);
 			new_range->SetLowerLimit(lower_bound);
 			new_range->SetUpperLimit(upper_bound);
 			new_range->SetLowerBoundaryConstraint(left);
 			new_range->SetUpperBoundaryConstraint(right);
 			ranges_.insert(new_range);
-
+			
+			
 			auto before_range = *iter;
 			if(pre_merge || early_check){
 				bool range_decrease = false;
 				if(before_range->LowerLimit() != LOWER_LIMIT){
 					if(new_range->LowerLimit() != LOWER_LIMIT){
-						range_decrease = (before_range->LowerLimit() < new_range->LowerLimit()) 
-									|| (before_range->LowerLimit() == new_range->LowerLimit() && before_range->GetLowerBoundaryConstraint() && !new_range->GetLowerBoundaryConstraint());
+						ret = PredEquivlenceRange::LimitCompare(before_range->LowerLimit(),before_range->PredVarType(),new_range->LowerLimit(),new_range->PredVarType());
+						range_decrease = (ret < 0) || (!ret && before_range->GetLowerBoundaryConstraint() && !new_range->GetLowerBoundaryConstraint());
+						// range_decrease = (before_range->LowerLimit() < new_range->LowerLimit()) 
+						// 			|| (before_range->LowerLimit() == new_range->LowerLimit() && before_range->GetLowerBoundaryConstraint() && !new_range->GetLowerBoundaryConstraint());
 					}else{
 						range_decrease = false;
 					}
@@ -1734,8 +1861,10 @@ bool PredEquivlence::MergePredEquivlenceRanges(const std::vector<PredEquivlenceR
 
 				if(before_range->UpperLimit() != UPPER_LIMIT){
 					if(new_range->UpperLimit() != UPPER_LIMIT){
-						range_decrease = (before_range->UpperLimit() > new_range->UpperLimit())
-									|| (before_range->UpperLimit() == new_range->UpperLimit() && before_range->GetUpperBoundaryConstraint() && !new_range->GetUpperBoundaryConstraint());
+						ret = PredEquivlenceRange::LimitCompare(before_range->UpperLimit(),before_range->PredVarType(),new_range->UpperLimit(),new_range->PredVarType());
+						range_decrease = (ret > 0) || (!ret && before_range->GetUpperBoundaryConstraint() && !new_range->GetUpperBoundaryConstraint());
+						// range_decrease = (before_range->UpperLimit() > new_range->UpperLimit())
+						// 			|| (before_range->UpperLimit() == new_range->UpperLimit() && before_range->GetUpperBoundaryConstraint() && !new_range->GetUpperBoundaryConstraint());
 					}else{
 						range_decrease = false;
 					}
@@ -1765,29 +1894,50 @@ bool PredEquivlence::MergePredEquivlenceRanges(const std::vector<PredEquivlenceR
 		if(idx == 0){
 			upper_bound = r->UpperLimit();
 			lower_bound = r->LowerLimit();
+			cur_type = r->PredVarType();
 			left = r->GetLowerBoundaryConstraint();
 			right = r->GetUpperBoundaryConstraint();
 		}else{
-			if((r->UpperLimit() < upper_bound && r->UpperLimit() != UPPER_LIMIT && upper_bound != UPPER_LIMIT)
-				||(upper_bound == UPPER_LIMIT)
-				||(r->UpperLimit() == upper_bound && r->GetUpperBoundaryConstraint() && !right)
+			auto ret = PredEquivlenceRange::LimitCompare(r->UpperLimit(),r->PredVarType(),upper_bound,cur_type);
+			if((ret < 0 && r->UpperLimit() != UPPER_LIMIT && upper_bound != UPPER_LIMIT)
+				|| (upper_bound == UPPER_LIMIT)
+				|| (!ret && r->GetUpperBoundaryConstraint() && !right)
 			){
+				cur_type = r->PredVarType();
 				upper_bound = r->UpperLimit();
 				right = r->GetUpperBoundaryConstraint();
 			}
-			
-			if((r->LowerLimit() > lower_bound && r->LowerLimit() != LOWER_LIMIT &&  lower_bound != LOWER_LIMIT)
-				||(lower_bound  == LOWER_LIMIT)
-				||(r->LowerLimit() == lower_bound && r->GetLowerBoundaryConstraint() && !left)
+			// if((r->UpperLimit() < upper_bound && r->UpperLimit() != UPPER_LIMIT && upper_bound != UPPER_LIMIT)
+			// 	||(upper_bound == UPPER_LIMIT)
+			// 	||(r->UpperLimit() == upper_bound && r->GetUpperBoundaryConstraint() && !right)
+			// ){
+			// 	upper_bound = r->UpperLimit();
+			// 	right = r->GetUpperBoundaryConstraint();
+			// }
+
+			ret = PredEquivlenceRange::LimitCompare(r->LowerLimit(),r->PredVarType(),lower_bound,cur_type);
+			if((ret > 0 && r->LowerLimit() != LOWER_LIMIT &&  lower_bound != LOWER_LIMIT)
+				|| (lower_bound == UPPER_LIMIT)
+				|| (!ret && r->GetLowerBoundaryConstraint() && !left)
 			){
+				cur_type = r->PredVarType();
 				lower_bound = r->LowerLimit();
 				left = r->GetLowerBoundaryConstraint();
 			}
+			
+			// if((r->LowerLimit() > lower_bound && r->LowerLimit() != LOWER_LIMIT &&  lower_bound != LOWER_LIMIT)
+			// 	||(lower_bound  == LOWER_LIMIT)
+			// 	||(r->LowerLimit() == lower_bound && r->GetLowerBoundaryConstraint() && !left)
+			// ){
+			// 	lower_bound = r->LowerLimit();
+			// 	left = r->GetLowerBoundaryConstraint();
+			// }
 		}
 		ranges_.erase(r);
 		++idx;
 	}
 	PredEquivlenceRange* new_range = new PredEquivlenceRange();
+	new_range->SetPredVarType(cur_type);
 	new_range->SetPredType(PType::RANGE);
 	new_range->SetLowerLimit(lower_bound);
 	new_range->SetUpperLimit(upper_bound);
@@ -1795,7 +1945,7 @@ bool PredEquivlence::MergePredEquivlenceRanges(const std::vector<PredEquivlenceR
 	new_range->SetUpperBoundaryConstraint(right);
 	ranges_.insert(new_range);
 	
-	std::cout<<"MERGE: "<<pre_merge<<" "<<early_check<<std::endl;
+	//std::cout<<"MERGE: "<<pre_merge<<" "<<early_check<<std::endl;
 	/*if not merge range is not from pre level, not need check if early_stop*/
 	if((!pre_merge) && (!early_check)){
 		return true;
@@ -1806,8 +1956,10 @@ bool PredEquivlence::MergePredEquivlenceRanges(const std::vector<PredEquivlenceR
 	bool range_decrease = false;
 	if(old_range->LowerLimit() != LOWER_LIMIT){
 		if(new_range->LowerLimit() != LOWER_LIMIT){
-			range_decrease = (old_range->LowerLimit() < new_range->LowerLimit()) 
-						|| (old_range->LowerLimit() == new_range->LowerLimit() && old_range->GetLowerBoundaryConstraint() && !new_range->GetLowerBoundaryConstraint());
+			auto ret = PredEquivlenceRange::LimitCompare(old_range->LowerLimit(),old_range->PredVarType(),new_range->LowerLimit(),new_range->PredVarType());
+			range_decrease = (ret < 0) || (!ret && old_range->GetLowerBoundaryConstraint() && !new_range->GetLowerBoundaryConstraint());
+			// range_decrease = (old_range->LowerLimit() < new_range->LowerLimit()) 
+			// 			|| (old_range->LowerLimit() == new_range->LowerLimit() && old_range->GetLowerBoundaryConstraint() && !new_range->GetLowerBoundaryConstraint());
 		}else{
 			range_decrease = false;
 		}
@@ -1826,8 +1978,10 @@ bool PredEquivlence::MergePredEquivlenceRanges(const std::vector<PredEquivlenceR
 
 	if(old_range->UpperLimit() != UPPER_LIMIT){
 		if(new_range->UpperLimit() != UPPER_LIMIT){
-			range_decrease = (old_range->UpperLimit() > new_range->UpperLimit())
-						|| (old_range->UpperLimit() == new_range->UpperLimit() && old_range->GetUpperBoundaryConstraint() && !new_range->GetUpperBoundaryConstraint());
+			auto ret = PredEquivlenceRange::LimitCompare(old_range->UpperLimit(),old_range->PredVarType(),new_range->UpperLimit(),new_range->PredVarType());
+			range_decrease = (ret > 0) || (!ret && old_range->GetUpperBoundaryConstraint() && !new_range->GetUpperBoundaryConstraint());
+			// range_decrease = (old_range->UpperLimit() > new_range->UpperLimit())
+			// 			|| (old_range->UpperLimit() == new_range->UpperLimit() && old_range->GetUpperBoundaryConstraint() && !new_range->GetUpperBoundaryConstraint());
 		}else{
 			range_decrease = false;
 		}
@@ -1907,10 +2061,15 @@ bool PredEquivlence::SuperSet(PredEquivlence* pe){
 					}
 				}else{
 					if(src_r->LowerLimit() != LOWER_LIMIT){
-						if(r->LowerLimit() < src_r->LowerLimit()){
+						auto ret = PredEquivlenceRange::LimitCompare(r->LowerLimit(),r->PredVarType(),src_r->LowerLimit(),src_r->PredVarType());
+						if(ret<0){
 							super = false;
-							continue;
+							continue;							
 						}
+						// if(r->LowerLimit() < src_r->LowerLimit()){
+						// 	super = false;
+						// 	continue;
+						// }
 					}			
 				}
 
@@ -1922,10 +2081,15 @@ bool PredEquivlence::SuperSet(PredEquivlence* pe){
 					}
 				}else{
 					if(src_r->UpperLimit() != UPPER_LIMIT){
-						if(r->UpperLimit() > src_r->UpperLimit()){
+						auto ret = PredEquivlenceRange::LimitCompare(r->UpperLimit(),r->PredVarType(),src_r->UpperLimit(),src_r->PredVarType());
+						if(ret>0){
 							super = false;
-							continue;
+							continue;							
 						}
+						// if(r->UpperLimit() > src_r->UpperLimit()){
+						// 	super = false;
+						// 	continue;
+						// }
 					}			
 				}
 				if(super){

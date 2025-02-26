@@ -123,7 +123,6 @@ bool RangePostingList::SuperSetInternal(SMPredEquivlence* dst_pe, SMPredEquivlen
             for(const auto& src_r : ranges){
                 if(r->PredType() == PType::EQUAL || r->PredType() == PType::NOT_EQUAL || r->PredType() == PType::RANGE){
                     bool super = true;
-
                     /* check lowlimit */
                     if(r->LowerLimit() == LOWER_LIMIT){
                         if(src_r->LowerLimit() != LOWER_LIMIT){
@@ -133,10 +132,15 @@ bool RangePostingList::SuperSetInternal(SMPredEquivlence* dst_pe, SMPredEquivlen
                     }else{
                         if(src_r->LowerLimit() != LOWER_LIMIT){
                             /*check if src_r is the superset of r, if true , then not match*/
-                            if((r->LowerLimit() > src_r->LowerLimit()) 
-                                || (r->LowerLimit() == src_r->LowerLimit() && r->GetLowerBoundaryConstraint() && !src_r->GetLowerBoundaryConstraint())){
+                            // if((r->LowerLimit() > src_r->LowerLimit()) 
+                            //     || (r->LowerLimit() == src_r->LowerLimit() && r->GetLowerBoundaryConstraint() && !src_r->GetLowerBoundaryConstraint())){
+                            //     super = false;
+                            //     continue;
+                            // }
+                            int ret = SMPredEquivlenceRange::LimitCompare(r->LowerLimit(),r->PredVarType(),src_r->LowerLimit(),src_r->PredVarType());
+                            if(ret > 0 || (!ret && r->GetLowerBoundaryConstraint() && !src_r->GetLowerBoundaryConstraint())){
                                 super = false;
-                                continue;
+                                continue;        
                             }
                         }			
                     }
@@ -149,10 +153,15 @@ bool RangePostingList::SuperSetInternal(SMPredEquivlence* dst_pe, SMPredEquivlen
                         }
                     }else{
                         if(src_r->UpperLimit() != UPPER_LIMIT){
-                            if((r->UpperLimit() < src_r->UpperLimit()) || 
-                                (r->UpperLimit() == src_r->UpperLimit() && !r->GetUpperBoundaryConstraint() && src_r->GetUpperBoundaryConstraint())){
+                            // if((r->UpperLimit() < src_r->UpperLimit()) || 
+                            //     (r->UpperLimit() == src_r->UpperLimit() && !r->GetUpperBoundaryConstraint() && src_r->GetUpperBoundaryConstraint())){
+                            //     super = false;
+                            //     continue;
+                            // }
+                            int ret = SMPredEquivlenceRange::LimitCompare(r->UpperLimit(),r->PredVarType(),src_r->UpperLimit(),src_r->PredVarType());
+                            if(ret < 0 || (!ret && !r->GetLowerBoundaryConstraint() && src_r->GetLowerBoundaryConstraint())){
                                 super = false;
-                                continue;
+                                continue;        
                             }
                         }			
                     }

@@ -130,6 +130,8 @@ public:
         str += boundary_constraint_.first ? "1":"0" + boundary_constraint_.second ? "1":"0";
         return str;
     }
+
+    static int LimitCompare(const std::string& left_range,VarType left_type,const std::string& right_range,VarType right_type);
 private:
     PType type_;
     VarType var_type_;
@@ -228,6 +230,10 @@ public:
 
     void CalSortInfo(){
         //assert(ranges_.size());
+
+        /**
+         * TODO: fix range easy compare
+         */
         std::string lower_limit = UPPER_LIMIT;
         std::string upper_limit = LOWER_LIMIT;
         for(const auto& range: ranges_){
@@ -238,16 +244,26 @@ public:
             }
             range_cnt_ ++;
             has_range_ = true;
-
-            if((lower_limit != UPPER_LIMIT && range->LowerLimit() < lower_limit)
-                || lower_limit == UPPER_LIMIT || lower_limit == LOWER_LIMIT){
+            auto ret = PredEquivlenceRange::LimitCompare(range->LowerLimit(),range->PredVarType(),lower_limit,range->PredVarType());
+            if((lower_limit != UPPER_LIMIT && ret < 0)
+                || lower_limit == UPPER_LIMIT 
+                || lower_limit == LOWER_LIMIT){
                 lower_limit = range->LowerLimit();
             }
 
-            if((upper_limit != LOWER_LIMIT && range->UpperLimit() > upper_limit)
+            // if((lower_limit != UPPER_LIMIT && range->LowerLimit() < lower_limit)
+            //     || lower_limit == UPPER_LIMIT || lower_limit == LOWER_LIMIT){
+            //     lower_limit = range->LowerLimit();
+            // }
+            ret = PredEquivlenceRange::LimitCompare(range->UpperLimit(),range->PredVarType(),upper_limit,range->PredVarType());
+            if((upper_limit != LOWER_LIMIT && ret)
                 || upper_limit == LOWER_LIMIT || upper_limit == UPPER_LIMIT){
                 upper_limit = range->UpperLimit();
             }
+            // if((upper_limit != LOWER_LIMIT && range->UpperLimit() > upper_limit)
+            //     || upper_limit == LOWER_LIMIT || upper_limit == UPPER_LIMIT){
+            //     upper_limit = range->UpperLimit();
+            // }
         }
         lower_limit_ = lower_limit;
         upper_limit_ = upper_limit;
@@ -324,7 +340,6 @@ public:
     bool Match(LevelPredEquivlences* lpes);
 
     bool MergePredEquivlences(const std::vector<PredEquivlence*>& merge_pe_list,bool pre_merged = false,bool early_check = false);
-
     void ShowLevelPredEquivlences(int depth = 0);
     std::string ShowLevelPredEquivlences(int depth,std::string tag, SqmsLogger* logger);
 

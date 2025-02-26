@@ -339,7 +339,7 @@ perl_embed_ldflags	=
 
 # Miscellaneous
 
-AWK	= gawk
+AWK	= mawk
 LN_S	= ln -s
 MSGFMT  = 
 MSGFMT_FLAGS = 
@@ -509,7 +509,7 @@ STRIP_SHARED_LIB = strip --strip-unneeded
 
 DBTOEPUB	= 
 FOP				= 
-XMLLINT			= /usr/bin/xmllint
+XMLLINT			= 
 XSLTPROC		= 
 
 # Code coverage

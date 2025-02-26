@@ -1,4 +1,108 @@
 #include "discovery/sm_level_mgr.hpp"
+#include <cfloat>
+
+void SMPredEquivlenceRange::Copy(PredEquivlenceRange* per){
+    type_ = per->PredType();
+    var_type_ = per->PredVarType();
+    subquery_name_ = SMString(per->GetSubqueryName());
+    lower_limit_ = SMString(per->LowerLimit());
+    upper_limit_ = SMString(per->UpperLimit());
+    boundary_constraint_ = per->GetBoundaryConstraint();
+    serialization_ = Serialization();
+}
+
+int SMPredEquivlenceRange::LimitCompare(const SMString& left_range,VarType left_type,const SMString& right_range,VarType right_type){
+	assert(left_range.size() && right_range.size());
+
+    	/*pasrer string to int*/
+	auto int_parser = [](const SMString& range)->int{
+		int var = 0;
+		if(range == UPPER_LIMIT){
+			var = INT_MAX;
+		}else if(range == LOWER_LIMIT){
+			var = INT_MIN;
+		}else{
+			var = std::atoi(range.c_str());
+		}
+		return var;
+	};
+	
+	/*parser string to double*/
+	auto double_parser = [](const SMString& range)->double{
+		double var = 0;
+		if(range == UPPER_LIMIT){
+			var = DBL_MAX;
+		}else if(range == LOWER_LIMIT){
+			var = DBL_MIN;
+		}else{
+			var = std::atof(range.c_str());
+		}
+		return var;
+	};
+
+	switch(left_type){
+		case VarType::INT:{
+			int left_var = int_parser(left_range);
+			if(right_type == VarType::INT){
+				int right_var = int_parser(right_range);
+				return left_var - right_var;
+			}else if(right_type == VarType::DOUBLE){
+				double right_var = double_parser(right_range);
+				if(double(left_var) == right_var){
+					return 0;
+				}else{
+					return double(left_var) < right_var ? -1 : 1;
+				}
+			}else{
+				std::cerr<<"right type not match left type <int>"<<std::endl;
+			}
+		}break;
+		case VarType::STRING:{
+			if(right_type == VarType::STRING){
+				if(left_range == right_range)return 0;
+				else{
+					return left_range < right_range ? -1 : 1;
+				}
+			}else{
+				std::cerr<<"right type not match left type <string>"<<std::endl;
+			}
+		}break;
+		case VarType::DOUBLE:{
+			double left_var = double_parser(right_range);
+			if(right_type == VarType::DOUBLE){
+				double right_var = double_parser(right_range);
+				return left_var - right_var;
+			}else if(right_type == VarType::INT){
+				double right_var = int_parser(right_range);
+				return left_var - right_var;
+			}else{
+				std::cerr<<"right type not match left type <double>"<<std::endl;
+			}
+		}break;
+		case VarType::BOOL:{
+			bool left_var = int_parser(left_range);
+			if(right_type == VarType::BOOL){
+				bool right_var = int_parser(right_range);
+				return left_var == right_var;
+			}else{
+				std::cerr<<"right type not match left type <double>"<<std::endl;
+			}
+		}break;
+		case VarType::UNKNOWN:{
+			/*if it's a unknown type,we just compare them base on str*/
+			if(left_range == right_range){
+				return 0;
+			}else{
+				return left_range < right_range;
+			}
+		}break;
+		default:{
+			std::cerr<<"error type in limit comparing!"<<std::endl;
+			exit(-1);
+		}
+	}
+	return true;
+}
 
 void SMPredEquivlence::Copy(PredEquivlence* pe){
     assert(pe);
@@ -40,5 +144,5 @@ void SMPredEquivlence::Copy(PredEquivlence* pe){
     }
     lower_limit_ = pe->LowerLimit();
     upper_limit_ = pe->UpperLimit();
-    
+     
 }

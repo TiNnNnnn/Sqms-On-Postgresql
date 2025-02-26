@@ -18,7 +18,7 @@ echo -e "${YELLOW}Clean complete.${RESET}"
 
 
 echo -e "${YELLOW}${BOLD}Building the extension...${RESET}"
-make
+make -j64
 echo -e "${YELLOW}Build complete.${RESET}"
 
 

@@ -13,6 +13,7 @@ public:
     bool GetUpperBoundaryConstraint(){return boundary_constraint_.second;}
     const SMString& GetSubqueryName(){return subquery_name_;}
     PType PredType(){return type_;}
+    VarType PredVarType(){return var_type_;}
     SMString Serialization(){
         SMString str;
         str += SMString(std::to_string(int(type_)));    
@@ -26,16 +27,11 @@ public:
         }
         return serialization_; 
     }
-    void Copy(PredEquivlenceRange* per){
-        type_ = per->PredType();
-        subquery_name_ = SMString(per->GetSubqueryName());
-        lower_limit_ = SMString(per->LowerLimit());
-        upper_limit_ = SMString(per->UpperLimit());
-        boundary_constraint_ = per->GetBoundaryConstraint();
-        serialization_ = Serialization();
-    }
+    void Copy(PredEquivlenceRange* per);
+    static int LimitCompare(const SMString& left_range,VarType left_type,const SMString& right_range,VarType right_type);
 private:
     PType type_;
+    VarType var_type_;
     SMString subquery_name_;
     SMString lower_limit_ = LOWER_LIMIT;
     SMString upper_limit_ = UPPER_LIMIT;
