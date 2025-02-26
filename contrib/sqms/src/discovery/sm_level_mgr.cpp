@@ -14,7 +14,7 @@ void SMPredEquivlenceRange::Copy(PredEquivlenceRange* per){
 int SMPredEquivlenceRange::LimitCompare(const SMString& left_range,VarType left_type,const SMString& right_range,VarType right_type){
 	assert(left_range.size() && right_range.size());
 
-    	/*pasrer string to int*/
+    /*pasrer string to int*/
 	auto int_parser = [](const SMString& range)->int{
 		int var = 0;
 		if(range == UPPER_LIMIT){

@@ -96,7 +96,7 @@ bool RangePostingList::SuperSetInternal(SMPredEquivlence* dst_pe, SMPredEquivlen
     /*externel check: subquery names in pe*/
     if(dst_pe->SubqueryNames().size() != pe->SubqueryNames().size()){
         return false;
-    }
+    } 
     auto dst_iter = dst_pe->SubqueryNames().begin();
     for(const auto& subquery_name : pe->SubqueryNames()){
         if(subquery_name != *dst_iter){
@@ -138,7 +138,7 @@ bool RangePostingList::SuperSetInternal(SMPredEquivlence* dst_pe, SMPredEquivlen
                             //     continue;
                             // }
                             int ret = SMPredEquivlenceRange::LimitCompare(r->LowerLimit(),r->PredVarType(),src_r->LowerLimit(),src_r->PredVarType());
-                            if(ret > 0 || (!ret && r->GetLowerBoundaryConstraint() && !src_r->GetLowerBoundaryConstraint())){
+                            if(ret < 0 || (!ret && r->GetLowerBoundaryConstraint() && !src_r->GetLowerBoundaryConstraint())){
                                 super = false;
                                 continue;        
                             }
@@ -159,7 +159,7 @@ bool RangePostingList::SuperSetInternal(SMPredEquivlence* dst_pe, SMPredEquivlen
                             //     continue;
                             // }
                             int ret = SMPredEquivlenceRange::LimitCompare(r->UpperLimit(),r->PredVarType(),src_r->UpperLimit(),src_r->PredVarType());
-                            if(ret < 0 || (!ret && !r->GetLowerBoundaryConstraint() && src_r->GetLowerBoundaryConstraint())){
+                            if(ret > 0 || (!ret && !r->GetLowerBoundaryConstraint() && src_r->GetLowerBoundaryConstraint())){
                                 super = false;
                                 continue;        
                             }
