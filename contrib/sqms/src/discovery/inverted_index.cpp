@@ -56,7 +56,7 @@ SMVector<int> RangePostingList::SuperSet(SMPredEquivlence* pe){
     SMVector<int> rets;
     //auto pos = sets_.lower_bound(pe);
     for(auto iter = sets_.begin() ; iter != sets_.end(); ++iter){
-        if(SuperSetInternal(pe,*iter)){
+        if(SuperSetInternal(*iter,pe)){
             rets.push_back(set2id_[*iter]);
         }
     }

@@ -598,7 +598,6 @@ bool LevelSortStrategy::Insert(NodeCollector* node_collector){
             }
             child_map_.insert(std::make_pair(hash_value,new_idx_node));
         }
-
     }
     return true;
 }
