@@ -7023,7 +7023,8 @@ get_const_expr(Const *constval, deparse_context *context, int showtype)
 
 			else
 			{
-				appendStringInfo(buf, "'%s'", extval);
+				appendStringInfoString(buf, extval);
+				//appendStringInfo(buf, "'%s'", extval);
 				needlabel = true;	/* we must attach a cast */
 			}
 			break;
@@ -7097,6 +7098,8 @@ get_const_expr(Const *constval, deparse_context *context, int showtype)
 			needlabel = true;
 			break;
 	}
+
+	needlabel = false;
 	if (needlabel || showtype > 0)
 		appendStringInfo(buf, "::%s",
 						 format_type_with_typemod(constval->consttype,
