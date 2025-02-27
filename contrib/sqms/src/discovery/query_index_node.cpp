@@ -233,7 +233,7 @@ bool LevelScalingStrategy::Search(NodeCollector* node_collector){
 }
 
 /**
- * LevelTwoStrategy::Insert
+ * LevelAggStrategy::Insert
  */
 bool LevelAggStrategy::Insert(LevelManager* level_mgr){
     assert(level_mgr);
@@ -264,7 +264,7 @@ bool LevelAggStrategy::Insert(LevelManager* level_mgr){
             auto child = acc->second;
             return child->Insert(level_mgr);
         }else{
-            size_t next_level = FindNextInsertLevel(level_mgr,5);
+            size_t next_level = FindNextInsertLevel(level_mgr,5 );
             //auto new_idx_node = std::make_shared<HistoryQueryIndexNode>(next_level,total_height_);
             HistoryQueryIndexNode* new_idx_node = (HistoryQueryIndexNode*)ShmemAlloc(sizeof(HistoryQueryIndexNode));
             if(!new_idx_node){
@@ -666,6 +666,31 @@ bool LevelRangeStrategy::Insert(LevelManager* level_mgr){
     HistoryQueryIndexNode* child_node = nullptr;
     
     auto top_eqs = level_mgr->GetTotalEquivlences().back();
+
+    /*top_eqs has no pes,we just insert a empty SET into child_map*/
+    if(!top_eqs->Size()){
+        SET empty_id_vecs;
+        SMConcurrentHashMap<SET,HistoryQueryIndexNode*,SetHasher>::const_accessor acc;
+        bool found = child_map_.find(acc,empty_id_vecs);
+        if(found){
+            auto child = acc->second;
+            return child->Insert(level_mgr);
+        }else{
+            size_t next_level = FindNextInsertLevel(level_mgr,3);
+            HistoryQueryIndexNode* new_idx_node = (HistoryQueryIndexNode*)ShmemAlloc(sizeof(HistoryQueryIndexNode));
+            if(!new_idx_node){
+                elog(ERROR, "ShmemAlloc failed: not enough shared memory");
+                exit(-1);
+            }
+            new (new_idx_node) HistoryQueryIndexNode(next_level,total_height_); 
+            if(!new_idx_node->Insert(level_mgr)){
+                return false;
+            }
+            child_map_.insert({empty_id_vecs,new_idx_node});
+        }
+        return true;
+    }
+
     for(const auto& lpes : *top_eqs){
         range_inverted_idx_->Insert(lpes);
         auto id_set = range_inverted_idx_->GetLpesIds(lpes);
@@ -724,6 +749,16 @@ bool LevelRangeStrategy::Serach(LevelManager* level_mgr,int id){
     assert(level_mgr);
 
     auto top_eqs = level_mgr->GetTotalEquivlences().back();
+    
+    /*if top_eqs, it means it can match all set in current node*/
+    if(!top_eqs->Size()){
+        for(const auto& iter : child_map_){
+            if(iter.second->Search(level_mgr,id)){
+                return true;
+            }
+        }
+        return false;
+    }
 
     size_t lpes_idx = 0;
     for(const auto& lpes : *top_eqs){
@@ -890,11 +925,18 @@ bool LeafStrategy::Serach(LevelManager* level_mgr,int id){
     /*check lpes from top to down*/
     int h = total_lpes_list.size() -1;
     int lpe_id = id;
-
-    /*lpe_id = -1, it indicates no predicates,just stop sarech*/
+    /**
+     * lpe_id = -1, it indicates two conditions: 
+     * 1. history query no predicates,just stop search
+     * 2. comming query on predicates,just stop search
+     */
     if(lpe_id == -1){
-        assert(!total_lpes_list[h]->GetLpesList().size());
-        return true;
+        if(total_lpes_list[h]->GetLpesList().size()){
+            assert(!level_mgr_->GetTotalEquivlences()[h]->GetLpesList().size());
+            return false;
+        }else{
+            return true;
+        }
     }
     
     while(h >= 0){
@@ -948,6 +990,10 @@ bool LeafStrategy::Search(NodeCollector* node_collector){
  */
 bool LeafStrategy::SerachAgg(LevelManager* level_mgr,int h,int id){
     auto src_aggs = level_mgr->GetTotalAggs()[h];
+    if(!src_aggs->Size()){
+        return true;
+    }
+
     int sort_idx = -1;
     for(size_t i = 0;i< src_aggs->Size();++i){
         if(src_aggs->GetLevelAggList()[i]->GetLpeId() == id){
@@ -1015,6 +1061,10 @@ bool LeafStrategy::SerachAgg(LevelManager* level_mgr,int h,int id){
 
 bool LeafStrategy::SerachSort(LevelManager* level_mgr,int h,int id){
     auto src_sorts = level_mgr->GetTotalSorts()[h];
+    if(!src_sorts->Size()){
+        return true;
+    }
+
     int sort_idx = -1;
     for(size_t i = 0;i< src_sorts->Size();++i){
         if(src_sorts->GetLevelAggList()[i]->GetLpeId() == id){
@@ -1143,9 +1193,10 @@ size_t LevelStrategy::FindNextInsertLevel(LevelManager* level_mgr, size_t cur_le
                 return h;
             }
         }else if(h == 3){
-            if(level_mgr->GetTotalEquivlences().back()->Size()){
-                return h;
-            }
+            // if(level_mgr->GetTotalEquivlences().back()->Size()){
+            //     return h;
+            // }
+            return h;
         }else if(h == 4){
             if(level_mgr->GetTotalSorts().back()->Size()){
                 return h;
@@ -1156,7 +1207,7 @@ size_t LevelStrategy::FindNextInsertLevel(LevelManager* level_mgr, size_t cur_le
             }
         }else if(h == 6){
         }else if(h == 7){
-            return h;
+            return total_height_;
         }else{
             std::cerr<<"error height"<<std::endl;
             exit(-1);
