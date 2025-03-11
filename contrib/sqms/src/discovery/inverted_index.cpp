@@ -170,12 +170,13 @@ bool RangePostingList::SuperSetInternal(SMPredEquivlence* dst_pe, SMPredEquivlen
                         match = true;
                         break;
                     }
+                }else{
+                    match = false;
                 }
             }
-
         }else{
             /*not support yet*/
-            match = true;
+            match = false;
         }
 
         if(!match){

@@ -5448,7 +5448,7 @@ get_rule_expr(Node *node, deparse_context *context,
 		case T_SubPlan:
 			{
 				SubPlan    *subplan = (SubPlan *) node;
-				
+
 				/*
 				 * We cannot see an already-planned subplan in rule deparsing,
 				 * only while EXPLAINing a query plan.  We don't try to

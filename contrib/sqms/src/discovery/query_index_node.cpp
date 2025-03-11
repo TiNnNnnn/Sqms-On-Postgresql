@@ -927,7 +927,7 @@ bool LeafStrategy::Serach(LevelManager* level_mgr,int id){
     /**
      * lpe_id = -1, it indicates two conditions: 
      * 1. history query no predicates,just stop search
-     * 2. comming query on predicates,just stop search
+     * 2. comming query no predicates,just stop search
      */
     if(lpe_id == -1){
         if(total_lpes_list[h]->GetLpesList().size()){
@@ -938,24 +938,32 @@ bool LeafStrategy::Serach(LevelManager* level_mgr,int id){
         }
     }
     
-    while(h >= 0){
+    while(h >= 1){
         auto lpes = total_lpes_list[h]->GetLpesList()[lpe_id];
-        if(lpes->EarlyStop()){
-            return true;
-        }
+        // if(lpes->EarlyStop()){
+        //     return true;
+        // }
         auto child_lpes_list = total_lpes_list[h]->GetChildLpesMap()[lpe_id];
-        for(const auto& child_id : child_lpes_list){
-            auto ret = SerachRange(level_mgr,h-1,child_id) 
-                && SerachSort(level_mgr,h-1,child_id) 
-                && SerachAgg(level_mgr,h-1,child_id) 
-                && SerachResidual(level_mgr,h-1,child_id);
-            if(!ret){
-                return false;
+
+        size_t i = 0;
+        for(;i<child_lpes_list.size();++i){
+            auto child_id = child_lpes_list[i];
+            SMLevelPredEquivlences *match_dst_lpes = nullptr;
+            if(SerachRange(level_mgr,h-1,child_id,match_dst_lpes)){
+                assert(match_dst_lpes);
+                if(SearchAgg(level_mgr,h-1,child_id,match_dst_lpes)
+                && SearchSort(level_mgr,h-1,child_id,match_dst_lpes)
+                && SerachResidual(level_mgr,h-1,child_id,match_dst_lpes)){
+                    --h;
+                    break;
+                }
             }
         }
-        --h;
+        if(i == child_lpes_list.size()){
+            return false;
+        }
     }
-    return false;
+    return true;
 }
 
 bool LeafStrategy::Remove(LevelManager* level_mgr){
@@ -1004,7 +1012,7 @@ bool LeafStrategy::SerachAgg(LevelManager* level_mgr,int h,int id){
     auto src_ls_eqs = src_aggs->GetLevelAggList()[sort_idx]->GetLevelAggSets();
     std::unordered_set<AggAndSortEquivlence *>states;
 
-    for(const auto ls_pes : level_mgr_->GetTotalSorts()[h]->GetLevelAggList()){
+    for(const auto ls_pes : level_mgr_->GetTotalAggs()[h]->GetLevelAggList()){
         for(const auto& pe: ls_pes->GetLevelAggSets()){
             auto extends = pe->GetExtends();
             for(const auto& src_eq: src_ls_eqs){
@@ -1029,33 +1037,6 @@ bool LeafStrategy::SerachAgg(LevelManager* level_mgr,int h,int id){
         }
     }
     return false;
-    // auto src_aggs = level_mgr->GetTotalAggs()[h];
-    // int agg_idx = -1;
-    // for(size_t i = 0;i< src_aggs->Size();++i){
-    //     if(src_aggs->GetLevelAggList()[i]->GetLpeId() == id){
-    //         agg_idx = i;
-    //         break;
-    //     }
-    // }
-    // assert(agg_idx != -1);
-    // auto src_la_eqs = src_aggs->GetLevelAggList()[agg_idx];
-    // assert(src_la_eqs->Size() == 1);
-    
-    // auto src_keys = src_la_eqs->GetLevelAggSets()[0]->GetExtends();
-    // for(const auto& la_eqs : level_mgr_->GetTotalAggs()[h]->GetLevelAggList()){
-    //     assert(la_eqs->Size() == 1);
-    //     auto keys = la_eqs->GetLevelAggSets()[0]->GetExtends();
-    //     bool matched = true;
-    //     for(const auto& src_key :src_keys){
-    //         if(keys.find(SMString(src_key)) == keys.end()){
-    //             matched = false;
-    //         }
-    //     }
-    //     if(matched){
-    //         return true;
-    //     }
-    // }
-    // return false;
 }
 
 bool LeafStrategy::SerachSort(LevelManager* level_mgr,int h,int id){
@@ -1102,12 +1083,13 @@ bool LeafStrategy::SerachSort(LevelManager* level_mgr,int h,int id){
     return false;
 }
 
-bool LeafStrategy::SerachRange(LevelManager* src_mgr,int h,int id){
+bool LeafStrategy::SerachRange(LevelManager* src_mgr,int h,int id, SMLevelPredEquivlences * &match_dst_lpes){
     assert(src_mgr);
     auto src_lpes = src_mgr->GetTotalEquivlences()[h]->GetLpesList()[id];
     auto dst_lpes_list = level_mgr_->GetTotalEquivlences()[h];
     for(const auto& dst_lpes : *dst_lpes_list){
         if(Match(src_lpes,dst_lpes)){
+            match_dst_lpes = dst_lpes;
             return true;
         }
     }
@@ -1181,6 +1163,96 @@ bool LeafStrategy::SuperSet(PredEquivlence* dst_pe, SMPredEquivlence* pe){
 }
 
 bool LeafStrategy::SerachResidual(LevelManager* src_mgr,int h,int id){
+    return true;
+}
+
+bool LeafStrategy::SearchAgg(LevelManager* src_mgr,int h,int id,SMLevelPredEquivlences *dst_lpes){
+    auto src_aggs = src_mgr->GetTotalAggs()[h];
+    if(!src_aggs->Size()){
+        return true;
+    }
+
+    int agg_idx = -1;
+    for(size_t i = 0;i< src_aggs->Size();++i){
+        if(src_aggs->GetLevelAggList()[i]->GetLpeId() == id){
+            agg_idx = i;
+            break;
+        }
+    }
+    assert(agg_idx != -1);
+    auto src_ls_eqs = src_aggs->GetLevelAggList()[agg_idx]->GetLevelAggSets();
+    std::unordered_set<AggAndSortEquivlence *>states;
+
+    auto ls_pes = level_mgr_->GetTotalAggs()[h]->GetLevelAggList()[dst_lpes->LpeId()];
+    for(const auto& pe: ls_pes->GetLevelAggSets()){
+            auto extends = pe->GetExtends();
+            for(const auto& src_eq: src_ls_eqs){
+                if(states.find(src_eq)!= states.end()){
+                    continue;
+                }else{
+                    bool matched = true;
+                    auto src_extends = src_eq->GetExtends();
+                    for(const auto& src_key : src_extends){
+                        if(extends.find(SMString(src_key))== extends.end()){
+                            matched = false;
+                        }
+                    }
+                    if(matched){
+                        states.insert(src_eq);
+                    }
+                }
+            }
+    }
+    if(states.size() == src_ls_eqs.size()){
+            return true;
+    }
+    return false;
+}
+
+bool LeafStrategy::SearchSort(LevelManager* src_mgr,int h,int id,SMLevelPredEquivlences *dst_lpes){
+    auto src_sorts = src_mgr->GetTotalSorts()[h];
+    if(!src_sorts->Size()){
+        return true;
+    }
+
+    int sort_idx = -1;
+    for(size_t i = 0;i< src_sorts->Size();++i){
+        if(src_sorts->GetLevelAggList()[i]->GetLpeId() == id){
+            sort_idx = i;
+            break;
+        }
+    }
+    assert(sort_idx != -1);
+    auto src_ls_eqs = src_sorts->GetLevelAggList()[sort_idx]->GetLevelAggSets();
+    std::unordered_set<AggAndSortEquivlence *>states;
+
+    auto ls_pes = level_mgr_->GetTotalSorts()[h]->GetLevelAggList()[dst_lpes->LpeId()];
+    for(const auto& pe: ls_pes->GetLevelAggSets()){
+        auto extends = pe->GetExtends();
+        for(const auto& src_eq: src_ls_eqs){
+            if(states.find(src_eq)!= states.end()){
+                continue;
+            }else{
+                bool matched = true;
+                auto src_extends = src_eq->GetExtends();
+                for(const auto& src_key : src_extends){
+                    if(extends.find(SMString(src_key))== extends.end()){
+                        matched = false;
+                    }
+                }
+                if(matched){
+                    states.insert(src_eq);
+                }
+            }
+        }
+    }
+    if(states.size() == src_ls_eqs.size()){
+        return true;
+    }
+    return false;
+}
+
+bool LeafStrategy::SerachResidual(LevelManager* src_mgr,int h,int id,SMLevelPredEquivlences *dst_lpes){
     return true;
 }
 

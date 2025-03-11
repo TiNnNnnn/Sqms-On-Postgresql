@@ -225,11 +225,19 @@ public:
     bool Remove(NodeCollector* node_collector);
     bool Search(NodeCollector* node_collector);
 
-private:
+private: 
+
+    bool SerachRange(LevelManager* src_mgr,int h,int id, SMLevelPredEquivlences * &match_dst_lpes);
+    /*old interface*/
     bool SerachAgg(LevelManager* src_mgr,int h,int id);
     bool SerachSort(LevelManager* src_mgr,int h,int id);
-    bool SerachRange(LevelManager* src_mgr,int h,int id);
     bool SerachResidual(LevelManager* src_mgr,int h,int id);
+    
+    /*new interface*/
+    bool SearchAgg(LevelManager* src_mgr,int h,int id,SMLevelPredEquivlences *dst_lpes);
+    bool SearchSort(LevelManager* src_mgr,int h,int id,SMLevelPredEquivlences *dst_lpes);
+    bool SerachResidual(LevelManager* src_mgr,int h,int id,SMLevelPredEquivlences *dst_lpes);
+    
     bool Match(LevelPredEquivlences* dst_lpes, SMLevelPredEquivlences* lpes);
     bool SuperSet(PredEquivlence* dst_pe, SMPredEquivlence* pe);
 private:

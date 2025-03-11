@@ -1907,6 +1907,7 @@ bool PredEquivlence::MergePredEquivlenceRanges(const std::vector<PredEquivlenceR
 				upper_bound = r->UpperLimit();
 				right = r->GetUpperBoundaryConstraint();
 			}
+			
 			// if((r->UpperLimit() < upper_bound && r->UpperLimit() != UPPER_LIMIT && upper_bound != UPPER_LIMIT)
 			// 	||(upper_bound == UPPER_LIMIT)
 			// 	||(r->UpperLimit() == upper_bound && r->GetUpperBoundaryConstraint() && !right)
