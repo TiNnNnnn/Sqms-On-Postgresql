@@ -62,6 +62,8 @@ void LevelManager::ComputeTotalClass(){
     }
 }
 
+
+
 void LevelManager::ComputeLevelClass(const std::vector<HistorySlowPlanStat*>& list){
     /*calulate equivlences first*/
 	ReSetAllPreProcessd();
@@ -73,17 +75,33 @@ void LevelManager::ComputeLevelClass(const std::vector<HistorySlowPlanStat*>& li
 		first_pred_check_ = true;
         HandleEquivleces(s);
 	}
-	
+
+	/*calualate */
+	auto lpes_list = total_equivlences_[cur_height_];
+	auto early_stop_map = lpes_list->EarlyStopMap();
+
+	auto child_map = lpes_list->GetChildLpesMap();
+
+	for(const auto item : child_map){
+		auto cur_lpes = lpes_list->GetLpes(item.first);
+		auto child_lpes_list = total_equivlences_[cur_height_-1];
+		for(const auto& child_id : item.second){
+			assert(cur_height_>=1);
+			if(cur_lpes->EarlyStop()){
+				auto grandchilds = child_lpes_list->EarlyStopMap()[child_id];
+				early_stop_map[item.first] = grandchilds;
+			}else{
+				for(const auto& id : item.second){
+					early_stop_map[item.first].push_back({cur_height_-1,id});
+				}
+			}
+		}
+	}
+
 	size_t idx = 0;
-	for(const auto& e : *total_equivlences_[cur_height_]){
+	for(const auto& e : *lpes_list){
 		e->SetLpeId(idx++);
 		e->BuildKey2PeMap();
-		if(idx == 0){
-			/**
-			 * TODO:collect all subqueries in predicates,we only need collecet on one of 
-			 * the level_pe_list in one level
-			**/
-		}
 
 		for(const auto& pe : *e){
 			pe->CalSortInfo();
@@ -1797,14 +1815,6 @@ bool PredEquivlence::MergePredEquivlenceRanges(const std::vector<PredEquivlenceR
 				right = r->GetUpperBoundaryConstraint();
 			}
 
-			// if((r->UpperLimit() < upper_bound && r->UpperLimit() != UPPER_LIMIT && upper_bound != UPPER_LIMIT)
-			// 		||(upper_bound == UPPER_LIMIT)
-			// 		||(r->UpperLimit() == upper_bound && r->GetUpperBoundaryConstraint() && !right)
-			// ){
-			// 	upper_bound = r->UpperLimit();
-			// 	right = r->GetUpperBoundaryConstraint();
-			// }
-
 			ret = PredEquivlenceRange::LimitCompare(r->LowerLimit(),r->PredVarType(),lower_bound,cur_type);
 			if((ret > 0 && r->LowerLimit() != LOWER_LIMIT &&  lower_bound != LOWER_LIMIT)
 				|| (lower_bound == UPPER_LIMIT)
@@ -1814,14 +1824,6 @@ bool PredEquivlence::MergePredEquivlenceRanges(const std::vector<PredEquivlenceR
 				lower_bound = r->LowerLimit();
 				left = r->GetLowerBoundaryConstraint();
 			}
-				
-			// if((r->LowerLimit() > lower_bound && r->LowerLimit() != LOWER_LIMIT &&  lower_bound != LOWER_LIMIT)
-			// 		||(lower_bound  == LOWER_LIMIT)
-			// 		||(r->LowerLimit() == lower_bound && r->GetLowerBoundaryConstraint() && !left)
-			// ){
-			// 	lower_bound = r->LowerLimit();
-			// 	left = r->GetLowerBoundaryConstraint();
-			// }
 
 			ranges_.erase(r);
 			PredEquivlenceRange* new_range = new PredEquivlenceRange();
@@ -1907,14 +1909,6 @@ bool PredEquivlence::MergePredEquivlenceRanges(const std::vector<PredEquivlenceR
 				upper_bound = r->UpperLimit();
 				right = r->GetUpperBoundaryConstraint();
 			}
-			
-			// if((r->UpperLimit() < upper_bound && r->UpperLimit() != UPPER_LIMIT && upper_bound != UPPER_LIMIT)
-			// 	||(upper_bound == UPPER_LIMIT)
-			// 	||(r->UpperLimit() == upper_bound && r->GetUpperBoundaryConstraint() && !right)
-			// ){
-			// 	upper_bound = r->UpperLimit();
-			// 	right = r->GetUpperBoundaryConstraint();
-			// }
 
 			ret = PredEquivlenceRange::LimitCompare(r->LowerLimit(),r->PredVarType(),lower_bound,cur_type);
 			if((ret > 0 && r->LowerLimit() != LOWER_LIMIT &&  lower_bound != LOWER_LIMIT)
@@ -1925,14 +1919,6 @@ bool PredEquivlence::MergePredEquivlenceRanges(const std::vector<PredEquivlenceR
 				lower_bound = r->LowerLimit();
 				left = r->GetLowerBoundaryConstraint();
 			}
-			
-			// if((r->LowerLimit() > lower_bound && r->LowerLimit() != LOWER_LIMIT &&  lower_bound != LOWER_LIMIT)
-			// 	||(lower_bound  == LOWER_LIMIT)
-			// 	||(r->LowerLimit() == lower_bound && r->GetLowerBoundaryConstraint() && !left)
-			// ){
-			// 	lower_bound = r->LowerLimit();
-			// 	left = r->GetLowerBoundaryConstraint();
-			// }
 		}
 		ranges_.erase(r);
 		++idx;
@@ -2261,7 +2247,6 @@ bool LevelPredEquivlences::Insert(Quals* quals,bool is_or){
 		early_stop &= pe->EarlyStop();
 	}
 	early_stop_ = early_stop;
-	
 	return true;
 }
 

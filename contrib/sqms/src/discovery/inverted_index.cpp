@@ -323,7 +323,7 @@ void RangeInvertedIndex::Insert(LevelPredEquivlences* lpes){
 
             for(auto attr : pe->GetPredSet()){
                 auto sm_attr = SMString(attr);
-                inverted_map_[sm_attr].Insert(pe,set2id_[sm_attr]);
+                inverted_map_[sm_attr].Insert(pe,set2id_[pe_serialization]);
                 items_cnt_ = inverted_map_.size();
             }
         }
@@ -337,7 +337,7 @@ void RangeInvertedIndex::Erase(LevelPredEquivlences* lpes){
         if(set2id_.find(pe_serialization) == set2id_.end())return;
         for(const auto& attr : pe->GetPredSet()){
             auto sm_attr = SMString(attr);
-            inverted_map_[sm_attr].Erase(pe,set2id_[sm_attr]);
+            inverted_map_[sm_attr].Erase(pe,set2id_[pe_serialization]);
             items_cnt_ = inverted_map_.size();
         }
     }

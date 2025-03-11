@@ -226,20 +226,21 @@ public:
     bool Search(NodeCollector* node_collector);
 
 private: 
-
-    bool SerachRange(LevelManager* src_mgr,int h,int id, SMLevelPredEquivlences * &match_dst_lpes);
+    bool SearchInternal(LevelManager* src_mgr,int h,int id,int dst_id);
+    bool SerachRange(LevelManager* src_mgr,int h,int id, std::vector<size_t> &match_lpes_idxs);
     /*old interface*/
     bool SerachAgg(LevelManager* src_mgr,int h,int id);
     bool SerachSort(LevelManager* src_mgr,int h,int id);
     bool SerachResidual(LevelManager* src_mgr,int h,int id);
     
     /*new interface*/
+    bool SearchRange(LevelManager* src_mgr,int h,int id, SMLevelPredEquivlences *dst_lpes);
     bool SearchAgg(LevelManager* src_mgr,int h,int id,SMLevelPredEquivlences *dst_lpes);
     bool SearchSort(LevelManager* src_mgr,int h,int id,SMLevelPredEquivlences *dst_lpes);
     bool SerachResidual(LevelManager* src_mgr,int h,int id,SMLevelPredEquivlences *dst_lpes);
     
     bool Match(LevelPredEquivlences* dst_lpes, SMLevelPredEquivlences* lpes);
-    bool SuperSet(PredEquivlence* dst_pe, SMPredEquivlence* pe);
+    bool SuperSet(SMPredEquivlence* dst_pe,PredEquivlence* pe);
 private:
     /*for plan level matching*/
     SMLevelManager* level_mgr_;

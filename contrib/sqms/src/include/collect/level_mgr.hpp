@@ -388,6 +388,7 @@ public:
     std::vector<LevelPredEquivlences*>::const_iterator end() const { return lpes_list_.cend();}
 
     std::vector<LevelPredEquivlences*>& GetLpesList(){return lpes_list_;}
+    LevelPredEquivlences* GetLpes(size_t idx){return lpes_list_[idx];}
 
     void ShowLevelPredEquivlencesList(int depth);
     std::string ShowLevelPredEquivlencesList(int depth, std::string tag, SqmsLogger* logger);
@@ -399,6 +400,9 @@ public:
 
     void SetChildLpesMap(const std::unordered_map<size_t,std::vector<size_t>>& map){child_lpes_map_ = map;}
     std::unordered_map<size_t,std::vector<size_t>>& GetChildLpesMap(){return child_lpes_map_;}
+
+    void SetEarlyStopMap(const std::unordered_map<size_t,std::vector<std::pair<size_t,size_t>>>& map){early_stop_map_ = map;}
+    std::unordered_map<size_t,std::vector<std::pair<size_t,size_t>>>& EarlyStopMap(){return early_stop_map_;}
 private:
     std::vector<LevelPredEquivlences*> lpes_list_;
     /**
@@ -406,6 +410,11 @@ private:
      * we just use idx as lpes's unique id in one level
      */
     std::unordered_map<size_t,std::vector<size_t>> child_lpes_map_;
+    /**
+     * a map from current level lpes to low level's lpes,
+     * lpe_idx --> (height,lpe_idx)
+     */
+    std::unordered_map<size_t,std::vector<std::pair<size_t,size_t>>> early_stop_map_;
     /*local id creator for each level*/
     int lpes_id_creator_ = 0;
 };

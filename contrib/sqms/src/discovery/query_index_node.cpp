@@ -909,13 +909,12 @@ bool LevelResidualStrategy::Search(NodeCollector* node_collector){
 bool LeafStrategy::Insert(LevelManager* level_mgr){
     if(level_mgr_){
         historys_.insert(historys_.begin(),level_mgr_);
-    }else{
-        auto new_level_mgr = (SMLevelManager*)ShmemAlloc(sizeof(SMLevelManager));
-        assert(new_level_mgr);
-        new (new_level_mgr) SMLevelManager();
-        new_level_mgr->Copy(level_mgr);
-        level_mgr_ = new_level_mgr;
     }
+    auto new_level_mgr = (SMLevelManager*)ShmemAlloc(sizeof(SMLevelManager));
+    assert(new_level_mgr);
+    new (new_level_mgr) SMLevelManager();
+    new_level_mgr->Copy(level_mgr);
+    level_mgr_ = new_level_mgr;
     return true;
 }
 
@@ -938,25 +937,41 @@ bool LeafStrategy::Serach(LevelManager* level_mgr,int id){
         }
     }
     
+    // h = h-1;
+    // auto child_lpes_list = total_lpes_list[h]->GetChildLpesMap()[lpe_id];
+    // auto dst_lpes_list = level_mgr_->GetTotalEquivlences()[h];
+    // size_t i = 0;
+    // for(;i<child_lpes_list.size();++i){
+    //     auto child_id = child_lpes_list[i];
+    //     std::vector<size_t> match_idxs;
+    //     if(SerachRange(level_mgr,h,child_id,match_idxs)){
+    //         bool match = false;
+    //         for(const auto& mid : match_idxs){
+    //             SMLevelPredEquivlences *match_dst_lpes = dst_lpes_list->GetLpesList()[mid];
+    //             if(SearchAgg(level_mgr,h,child_id,match_dst_lpes)
+    //             && SearchSort(level_mgr,h,child_id,match_dst_lpes)
+    //             && SerachResidual(level_mgr,h,child_id,match_dst_lpes)){
+    //                 if(SearchInternal(level_mgr,h-1,child_id,mid)){
+    //                     return true;
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
+    // return false;
     while(h >= 1){
-        auto lpes = total_lpes_list[h]->GetLpesList()[lpe_id];
-        // if(lpes->EarlyStop()){
-        //     return true;
-        // }
         auto child_lpes_list = total_lpes_list[h]->GetChildLpesMap()[lpe_id];
-
         size_t i = 0;
         for(;i<child_lpes_list.size();++i){
             auto child_id = child_lpes_list[i];
-            SMLevelPredEquivlences *match_dst_lpes = nullptr;
-            if(SerachRange(level_mgr,h-1,child_id,match_dst_lpes)){
-                assert(match_dst_lpes);
-                if(SearchAgg(level_mgr,h-1,child_id,match_dst_lpes)
-                && SearchSort(level_mgr,h-1,child_id,match_dst_lpes)
-                && SerachResidual(level_mgr,h-1,child_id,match_dst_lpes)){
-                    --h;
-                    break;
-                }
+            std::vector<size_t> match_idxs;
+            auto ret = SerachRange(level_mgr,h-1,child_id,match_idxs)
+                && SerachAgg(level_mgr,h-1,child_id)
+                && SerachSort(level_mgr,h-1,child_id)
+                && SerachResidual(level_mgr,h-1,child_id);
+            if(ret){
+                h--;
+                break;
             }
         }
         if(i == child_lpes_list.size()){
@@ -964,6 +979,29 @@ bool LeafStrategy::Serach(LevelManager* level_mgr,int id){
         }
     }
     return true;
+}
+
+bool LeafStrategy::SearchInternal(LevelManager* src_mgr,int h,int id,int dst_id){
+    if(h<0){
+        return true;
+    }
+    auto dst_lpes_list = level_mgr_->GetTotalEquivlences()[h];
+    SMLevelPredEquivlences *match_dst_lpes = dst_lpes_list->GetLpesList()[dst_id];
+
+    auto child_lpes_list = src_mgr->GetTotalEquivlences()[h]->GetChildLpesMap()[id];
+    
+    if(SearchRange(src_mgr,h,id,match_dst_lpes)
+        &&SearchAgg(src_mgr,h,id,match_dst_lpes)
+        && SearchSort(src_mgr,h,id,match_dst_lpes)
+        && SerachResidual(src_mgr,h,id,match_dst_lpes)){
+        for(const auto cid : child_lpes_list){
+            for(const auto dst_cid : dst_lpes_list->GetChildLpesMap()[dst_id]){
+                return SearchInternal(src_mgr,h-1,cid,dst_cid);
+            }
+        }
+    }else{
+        return false;
+    }
 }
 
 bool LeafStrategy::Remove(LevelManager* level_mgr){
@@ -1083,15 +1121,24 @@ bool LeafStrategy::SerachSort(LevelManager* level_mgr,int h,int id){
     return false;
 }
 
-bool LeafStrategy::SerachRange(LevelManager* src_mgr,int h,int id, SMLevelPredEquivlences * &match_dst_lpes){
+bool LeafStrategy::SerachRange(LevelManager* src_mgr,int h,int id, std::vector<size_t> &match_lpes_idxs){
     assert(src_mgr);
     auto src_lpes = src_mgr->GetTotalEquivlences()[h]->GetLpesList()[id];
     auto dst_lpes_list = level_mgr_->GetTotalEquivlences()[h];
+    size_t dst_idx = 0;
     for(const auto& dst_lpes : *dst_lpes_list){
         if(Match(src_lpes,dst_lpes)){
-            match_dst_lpes = dst_lpes;
-            return true;
+            match_lpes_idxs.push_back(dst_idx);
         }
+        dst_idx++;
+    }
+    return match_lpes_idxs.size() > 0;
+}
+
+bool LeafStrategy::SearchRange(LevelManager* src_mgr,int h,int id, SMLevelPredEquivlences *dst_lpes){
+    auto src_lpes = src_mgr->GetTotalEquivlences()[h]->GetLpesList()[id];
+    if(Match(src_lpes,dst_lpes)){
+        return true;
     }
     return false;
 }
@@ -1103,7 +1150,7 @@ bool LeafStrategy::Match(LevelPredEquivlences* dst_lpes, SMLevelPredEquivlences*
             auto key2pe = dst_lpes->GetKey2Pe();
             if(key2pe.find(std::string(attr)) != key2pe.end()){
                 auto dst_pe = key2pe[std::string(attr)];
-                if(SuperSet(dst_pe,pe)){
+                if(SuperSet(pe,dst_pe)){
                     continue;
                 }else{
                     return false;
@@ -1114,52 +1161,139 @@ bool LeafStrategy::Match(LevelPredEquivlences* dst_lpes, SMLevelPredEquivlences*
     return true;
 }
 
-bool LeafStrategy::SuperSet(PredEquivlence* dst_pe, SMPredEquivlence* pe){
-    assert(pe);
-    auto range = pe->GetRanges();
-    for(const auto r : dst_pe->GetRanges()){
-        bool match = false;
-        for(const auto src_r : range){
-            bool super = true;
-            /* check lowlimit */
-            if(r->LowerLimit() == LOWER_LIMIT){
-                if(src_r->LowerLimit() != LOWER_LIMIT){
-                    super = false;
-                    continue;
-                }
-            }else{
-                if(src_r->LowerLimit() != LOWER_LIMIT){
-                    if(r->LowerLimit() < std::string(src_r->LowerLimit())){
-                        super = false;
-                        continue;
-                    }
-                }			
-            }
+// bool LeafStrategy::SuperSet(PredEquivlence* dst_pe, SMPredEquivlence* pe){
+//     assert(pe);
+//     auto range = pe->GetRanges();
+//     for(const auto r : dst_pe->GetRanges()){
+//         bool match = false;
+//         for(const auto src_r : range){
+//             bool super = true;
+//             /* check lowlimit */
+//             if(r->LowerLimit() == LOWER_LIMIT){
+//                 if(src_r->LowerLimit() != LOWER_LIMIT){
+//                     super = false;
+//                     continue;
+//                 }
+//             }else{
+//                 if(src_r->LowerLimit() != LOWER_LIMIT){
+//                     if(r->LowerLimit() < std::string(src_r->LowerLimit())){
+//                         super = false;
+//                         continue;
+//                     }
+//                 }			
+//             }
 
-            /* check upperlimit */
-            if(r->UpperLimit() == UPPER_LIMIT){
-                if(src_r->UpperLimit() != UPPER_LIMIT){
-                    super = false;
-                    continue;
-                }
-            }else{
-                if(src_r->UpperLimit() != UPPER_LIMIT){
-                    if(r->UpperLimit() > std::string(src_r->UpperLimit())){
-                        super = false;
-                        continue;
-                    }
-                }			
-            }
-            if(super){
-                match = true;
-                break;
-            }
-        }
-        if(!match){
-            return false;
-        }
-    }
-    return true;
+//             /* check upperlimit */
+//             if(r->UpperLimit() == UPPER_LIMIT){
+//                 if(src_r->UpperLimit() != UPPER_LIMIT){
+//                     super = false;
+//                     continue;
+//                 }
+//             }else{
+//                 if(src_r->UpperLimit() != UPPER_LIMIT){
+//                     if(r->UpperLimit() > std::string(src_r->UpperLimit())){
+//                         super = false;
+//                         continue;
+//                     }
+//                 }			
+//             }
+//             if(super){
+//                 match = true;
+//                 break;
+//             }
+//         }
+//         if(!match){
+//             return false;
+//         }
+//     }
+//     return true;
+// }
+
+/**
+ * PredEquivlence::SuperSet: check if this input pe is a superset of the current pe
+ */
+bool LeafStrategy::SuperSet(SMPredEquivlence* dst_pe,PredEquivlence* pe){
+	assert(pe);
+	
+	/*if one pe has more then one range,it must be return 0 tuple*/
+	if(dst_pe->RangeCnt() >= 2 && !dst_pe->HasSubquery()){
+		return true;
+	}
+
+	/*here we just compare subquery name,such as SUBQUERY1, SUBQUERY2, we will compare */
+	auto ranges = pe->GetRanges();
+	std::vector<std::string> subquery_names;
+	for(const auto r :dst_pe->GetRanges()){
+		bool match = false;
+		if(r->PredType() == PType::SUBQUERY || r->PredType() == PType::SUBLINK){
+			assert(!r->GetSubqueryName().empty());
+			subquery_names.push_back(std::string(r->GetSubqueryName()));
+			match = true;
+		}else if(r->PredType() == PType::EQUAL || r->PredType() == PType::NOT_EQUAL || r->PredType() == PType::RANGE){
+			for(const auto& src_r : ranges){
+				bool super = true;
+				/* check lowlimit */
+				if(r->LowerLimit() == LOWER_LIMIT){
+					if(src_r->LowerLimit() != LOWER_LIMIT){
+						super = false;
+						continue;
+					}
+				}else{
+					if(src_r->LowerLimit() != LOWER_LIMIT){
+						auto ret = PredEquivlenceRange::LimitCompare(std::string(r->LowerLimit()),r->PredVarType(),src_r->LowerLimit(),src_r->PredVarType());
+						if(ret<0){
+							super = false;
+							continue;							
+						}
+					}			
+				}
+
+				/* check upperlimit */
+				if(r->UpperLimit() == UPPER_LIMIT){
+					if(src_r->UpperLimit() != UPPER_LIMIT){
+						super = false;
+						continue;
+					}
+				}else{
+					if(src_r->UpperLimit() != UPPER_LIMIT){
+						auto ret = PredEquivlenceRange::LimitCompare(std::string(r->UpperLimit()),r->PredVarType(),src_r->UpperLimit(),src_r->PredVarType());
+						if(ret>0){
+							super = false;
+							continue;							
+						}
+					}			
+				}
+				if(super){
+					match = true;
+					break;
+				}
+			}
+		}else{
+			/*not support yet*/
+			match = true;
+		}
+		if(!match){
+			return false;
+		}
+	}
+
+	/*externel check: subquery names in pe*/
+	size_t sub_src_idx = 0;
+	for(const auto& r : ranges){
+		if(r->PredType() == PType::SUBQUERY || r->PredType() == PType::SUBLINK){
+			if(sub_src_idx >= subquery_names.size()){
+				return false;
+			}
+			if(r->GetSubqueryName() != subquery_names[sub_src_idx]){
+				return false;
+			}
+			/**
+			 * TODO: here we check the true subquery
+			 */
+			++sub_src_idx;
+		}
+	}
+	return true;
 }
 
 bool LeafStrategy::SerachResidual(LevelManager* src_mgr,int h,int id){
