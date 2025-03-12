@@ -131,12 +131,6 @@ bool RangePostingList::SuperSetInternal(SMPredEquivlence* dst_pe, SMPredEquivlen
                         }
                     }else{
                         if(src_r->LowerLimit() != LOWER_LIMIT){
-                            /*check if src_r is the superset of r, if true , then not match*/
-                            // if((r->LowerLimit() > src_r->LowerLimit()) 
-                            //     || (r->LowerLimit() == src_r->LowerLimit() && r->GetLowerBoundaryConstraint() && !src_r->GetLowerBoundaryConstraint())){
-                            //     super = false;
-                            //     continue;
-                            // }
                             int ret = SMPredEquivlenceRange::LimitCompare(r->LowerLimit(),r->PredVarType(),src_r->LowerLimit(),src_r->PredVarType());
                             if(ret < 0 || (!ret && r->GetLowerBoundaryConstraint() && !src_r->GetLowerBoundaryConstraint())){
                                 super = false;
@@ -153,11 +147,6 @@ bool RangePostingList::SuperSetInternal(SMPredEquivlence* dst_pe, SMPredEquivlen
                         }
                     }else{
                         if(src_r->UpperLimit() != UPPER_LIMIT){
-                            // if((r->UpperLimit() < src_r->UpperLimit()) || 
-                            //     (r->UpperLimit() == src_r->UpperLimit() && !r->GetUpperBoundaryConstraint() && src_r->GetUpperBoundaryConstraint())){
-                            //     super = false;
-                            //     continue;
-                            // }
                             int ret = SMPredEquivlenceRange::LimitCompare(r->UpperLimit(),r->PredVarType(),src_r->UpperLimit(),src_r->PredVarType());
                             if(ret > 0 || (!ret && !r->GetLowerBoundaryConstraint() && src_r->GetLowerBoundaryConstraint())){
                                 super = false;
@@ -174,8 +163,10 @@ bool RangePostingList::SuperSetInternal(SMPredEquivlence* dst_pe, SMPredEquivlen
                     match = false;
                 }
             }
-        }else{
+        }else if(r->PredType() == PType::SUBQUERY || r->PredType() == PType::SUBLINK){
             /*not support yet*/
+            match = true;
+        }else{
             match = false;
         }
 
@@ -321,6 +312,14 @@ void RangeInvertedIndex::Insert(LevelPredEquivlences* lpes){
             set2id_[pe_serialization] = set_cnt_;
             id2set_[set_cnt_] = pe_serialization;
 
+            if(pe->GetPredSet().empty()){
+                assert(pe->HasSubquery());
+                for(const auto& sub_name : pe->SubqueryNames()){
+                    inverted_map_[SMString(sub_name)].Insert(pe,set2id_[pe_serialization]);
+                    items_cnt_ = inverted_map_.size();
+                }
+            }
+
             for(auto attr : pe->GetPredSet()){
                 auto sm_attr = SMString(attr);
                 inverted_map_[sm_attr].Insert(pe,set2id_[pe_serialization]);
@@ -367,6 +366,15 @@ SMSet<int> RangeInvertedIndex::SuperSets(LevelPredEquivlences* lpes){
     std::shared_lock<std::shared_mutex> lock(rw_mutex_);
     SMSet<int>pe_id_set;
     for(const auto& pe : *sm_lpes){
+        if(pe->GetPredSet().empty()){
+            assert(pe->HasSubquery());
+            for(const auto& sub_name : pe->SubqueryNames()){
+                auto ids = inverted_map_[SMString(sub_name)].SuperSet(pe);
+                for(const auto& id : ids){
+                    pe_id_set.insert(id);
+                }
+            }
+        }
         for(const auto& attr : pe->GetPredSet()){
             auto ids = inverted_map_[SMString(attr)].SuperSet(pe);
             for(const auto & id : ids){
