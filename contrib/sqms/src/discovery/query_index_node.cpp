@@ -770,6 +770,7 @@ bool LevelRangeStrategy::Serach(LevelManager* level_mgr,int id){
         for(const auto& set : sub_set){
             SMConcurrentHashMap<SET,HistoryQueryIndexNode*,SetHasher>::const_accessor acc;
             bool found = child_map_.find(acc,set);
+            
             assert(found);
             auto child = acc->second;
             if(child->Search(level_mgr,lpes_idx)){
@@ -907,6 +908,7 @@ bool LevelResidualStrategy::Search(NodeCollector* node_collector){
 }
 
 bool LeafStrategy::Insert(LevelManager* level_mgr){
+    std::unique_lock<std::shared_mutex> lock(rw_mutex_);
     if(level_mgr_){
         historys_.insert(historys_.begin(),level_mgr_);
     }
@@ -923,19 +925,20 @@ bool LeafStrategy::Serach(LevelManager* level_mgr,int id){
     /*check lpes from top to down*/
     int h = total_lpes_list.size() -1;
     int lpe_id = id;
+
     /**
      * lpe_id = -1, it indicates two conditions: 
      * 1. history query no predicates,just stop search
      * 2. comming query no predicates,just stop search
      */
-    if(lpe_id == -1){
-        if(total_lpes_list[h]->GetLpesList().size()){
-            assert(!level_mgr_->GetTotalEquivlences()[h]->GetLpesList().size());
-            return false;
-        }else{
-            return true;
-        }
-    }
+    // if(lpe_id == -1){
+    //     if(total_lpes_list[h]->GetLpesList().size()){
+    //         assert(!level_mgr_->GetTotalEquivlences()[h]->GetLpesList().size());
+    //         return false;
+    //     }else{
+    //         return true;
+    //     }
+    // }
     
     // h = h-1;
     // auto child_lpes_list = total_lpes_list[h]->GetChildLpesMap()[lpe_id];
@@ -959,8 +962,21 @@ bool LeafStrategy::Serach(LevelManager* level_mgr,int id){
     //     }
     // }
     // return false;
+
+    std::shared_lock<std::shared_mutex>lock(rw_mutex_);
     while(h >= 1){
+        // if(!total_lpes_list[h]->GetChildLpesMap().size() && !level_mgr_->GetTotalEquivlences()[h]->GetChildLpesMap().size()){
+        //     h--;
+        //     continue;
+        // }
         auto child_lpes_list = total_lpes_list[h]->GetChildLpesMap()[lpe_id];
+        if(child_lpes_list.empty()){
+            /*cur heighr no predicates*/
+            if( SerachAgg(level_mgr,h-1,0)&& SerachSort(level_mgr,h-1,0)&& SerachResidual(level_mgr,h-1,0)){
+                h--;
+                continue;
+            }
+        }
         size_t i = 0;
         for(;i<child_lpes_list.size();++i){
             auto child_id = child_lpes_list[i];
@@ -1160,54 +1176,6 @@ bool LeafStrategy::Match(LevelPredEquivlences* dst_lpes, SMLevelPredEquivlences*
     }
     return true;
 }
-
-// bool LeafStrategy::SuperSet(PredEquivlence* dst_pe, SMPredEquivlence* pe){
-//     assert(pe);
-//     auto range = pe->GetRanges();
-//     for(const auto r : dst_pe->GetRanges()){
-//         bool match = false;
-//         for(const auto src_r : range){
-//             bool super = true;
-//             /* check lowlimit */
-//             if(r->LowerLimit() == LOWER_LIMIT){
-//                 if(src_r->LowerLimit() != LOWER_LIMIT){
-//                     super = false;
-//                     continue;
-//                 }
-//             }else{
-//                 if(src_r->LowerLimit() != LOWER_LIMIT){
-//                     if(r->LowerLimit() < std::string(src_r->LowerLimit())){
-//                         super = false;
-//                         continue;
-//                     }
-//                 }			
-//             }
-
-//             /* check upperlimit */
-//             if(r->UpperLimit() == UPPER_LIMIT){
-//                 if(src_r->UpperLimit() != UPPER_LIMIT){
-//                     super = false;
-//                     continue;
-//                 }
-//             }else{
-//                 if(src_r->UpperLimit() != UPPER_LIMIT){
-//                     if(r->UpperLimit() > std::string(src_r->UpperLimit())){
-//                         super = false;
-//                         continue;
-//                     }
-//                 }			
-//             }
-//             if(super){
-//                 match = true;
-//                 break;
-//             }
-//         }
-//         if(!match){
-//             return false;
-//         }
-//     }
-//     return true;
-// }
 
 /**
  * PredEquivlence::SuperSet: check if this input pe is a superset of the current pe

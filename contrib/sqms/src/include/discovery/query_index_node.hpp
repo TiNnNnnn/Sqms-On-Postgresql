@@ -250,6 +250,8 @@ private:
     SMVector<int>inputs_;
 
     SMVector<SMLevelManager*>historys_;
+
+    std::shared_mutex rw_mutex_;
 };
 
 /**
