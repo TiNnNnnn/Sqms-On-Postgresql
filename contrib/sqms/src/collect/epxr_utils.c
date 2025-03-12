@@ -3782,8 +3782,19 @@ get_variable(Var *var, int levelsup, bool istoplevel, deparse_context *context)
 		}
 
 		rte = rt_fetch(varno, dpns->rtable);
+		// ListCell *lc;
+		// foreach(lc,dpns->rtable_names){
+		// 	printf("rtable_names: %s \n",(char *)lc->ptr_value);
+		// }
+		// printf("-------------------\n");
 		refname = (char *) list_nth(dpns->rtable_names, varno - 1);
 		objectname = get_rel_name(rte->relid);
+		/**
+		 * FIXME: Find a more elegant way to solve the alias acquisition problem
+		 */
+		if(!objectname){
+			objectname = (char *) list_nth(dpns->rtable_names, varno);
+		}
 		colinfo = deparse_columns_fetch(varno, dpns);
 		attnum = varattno;
 	}

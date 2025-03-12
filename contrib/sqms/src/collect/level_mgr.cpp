@@ -711,7 +711,7 @@ void LevelAggAndSortList::Insert(HistorySlowPlanStat* hsps,std::string label){
 		LevelAggAndSortEquivlences* new_ae_list = new LevelAggAndSortEquivlences();
 		new_ae_list->Insert(new_agg);
 		
-		new_ae_list->SetLpeId(-1);
+		new_ae_list->SetLpeId(0);
 
 		level_agg_list_.push_back(new_ae_list);
 	}else{
@@ -1216,7 +1216,7 @@ int PredEquivlenceRange::LimitCompare(const std::string& left_range,VarType left
 			}
 		}break;
 		default:{
-			std::cerr<<"error type in limit comparing!"<<std::endl;
+			std::cerr<<"error type in limit comparing! left:"<<int(left_type)<<"right:"<<int(right_type)<<std::endl;
 			exit(-1);
 		}
 	}

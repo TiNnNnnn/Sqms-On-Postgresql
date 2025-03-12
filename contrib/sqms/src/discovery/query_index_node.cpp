@@ -965,10 +965,6 @@ bool LeafStrategy::Serach(LevelManager* level_mgr,int id){
 
     std::shared_lock<std::shared_mutex>lock(rw_mutex_);
     while(h >= 1){
-        // if(!total_lpes_list[h]->GetChildLpesMap().size() && !level_mgr_->GetTotalEquivlences()[h]->GetChildLpesMap().size()){
-        //     h--;
-        //     continue;
-        // }
         auto child_lpes_list = total_lpes_list[h]->GetChildLpesMap()[lpe_id];
         if(child_lpes_list.empty()){
             /*cur heighr no predicates*/
@@ -1052,7 +1048,10 @@ bool LeafStrategy::Search(NodeCollector* node_collector){
 bool LeafStrategy::SerachAgg(LevelManager* level_mgr,int h,int id){
     auto src_aggs = level_mgr->GetTotalAggs()[h];
     if(!src_aggs->Size()){
-        return true;
+        if(!level_mgr_->GetTotalAggs()[h]->Size()){
+            return true;
+        }
+        return false;
     }
 
     int sort_idx = -1;
@@ -1096,7 +1095,10 @@ bool LeafStrategy::SerachAgg(LevelManager* level_mgr,int h,int id){
 bool LeafStrategy::SerachSort(LevelManager* level_mgr,int h,int id){
     auto src_sorts = level_mgr->GetTotalSorts()[h];
     if(!src_sorts->Size()){
-        return true;
+        if(!level_mgr_->GetTotalSorts()[h]->Size()){
+             return true;
+        }
+        return false;
     }
 
     int sort_idx = -1;
