@@ -1230,7 +1230,7 @@ void PredEquivlenceRange::Copy(PredEquivlenceRange* new_range){
 	new_range->SetBoundaryConstraint(boundary_constraint_);
 	new_range->SetSubqueryName(subquery_name_);
 	new_range->SetList(list_);
-	new_range->SetPredVarType(new_range->PredVarType());
+	new_range->SetPredVarType(var_type_);
 }
 
 void PredEquivlenceRange::PrintPredEquivlenceRange(int depth){
@@ -1697,7 +1697,7 @@ VarType PredEquivlence::QualVarType(Quals* qual){
 
 	if(qual->left_val_type_id){
 		return get_var_type(qual->left_val_type_id);
-	}else if(qual->left_val_type_id){
+	}else if(qual->right_val_type_id){
 		return get_var_type(qual->right_val_type_id);
 	}else{
 		return VarType::UNKNOWN;
