@@ -146,3 +146,26 @@ void SMPredEquivlence::Copy(PredEquivlence* pe){
     upper_limit_ = pe->UpperLimit();
      
 }
+
+SMString SMPredEquivlence::Serialization(){
+	SMString str;
+	for(const auto& name : set_){
+		str += name;
+	}
+	for(const auto& range : ranges_){
+		str += range->GetSerialization();
+	}
+	for(const auto& item: sublink_level_pe_lists_){
+		str += item.second->GetJsonFullSubPlan();
+	}
+	return str;
+}    
+SMString SMPredEquivlence::GetSerialization(){
+	if(serialization_.empty())
+		return Serialization();
+	return serialization_; 
+}
+
+
+const SMString& SMLevelManager::GetJsonSubPlan(){return json_sub_plan_;}
+const SMString& SMLevelManager::GetJsonFullSubPlan(){return json_full_sub_plan_;}

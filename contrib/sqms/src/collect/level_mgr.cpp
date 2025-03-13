@@ -2227,6 +2227,34 @@ std::string PredEquivlence::ShowPredEquivlenceSets(int depth,std::string tag,Sqm
 	return str;
 }
 
+std::string PredEquivlence::GetPredSetStr(){
+	std::string str;
+	for(const auto& name : set_){
+		str += name;
+	}
+	return str;
+}
+
+std::string PredEquivlence::Serialization() const{
+	std::string str;
+	for(const auto& name : set_){
+		str += name;
+	}
+	for(const auto& range : ranges_){
+		str += range->Serialization();
+	}
+	for(const auto& item: sublink_level_pe_lists_){
+		str += item.second->GetPlanFullJson();
+	}
+	return str;
+}
+
+std::string PredEquivlence::GetSerialization() const{
+	if(serialization_.empty())
+		return Serialization();
+	return serialization_;
+}
+
 /**
  * LevelPredEquivlences::Insert
  */
@@ -2426,6 +2454,16 @@ std::string LevelPredEquivlences::ShowLevelPredEquivlences(int depth,std::string
 		idx++;
 	}
 	str += "}\n";
+	return str;
+}
+
+std::string LevelPredEquivlences::Serialization() const{
+	std::string str;
+	std::vector<PredEquivlence*>list(level_pe_sets_.begin(),level_pe_sets_.end());
+	std::sort(list.begin(),list.end(),PeCompare());
+	for(const auto& item : list){
+		str+=item->GetSerialization();
+	}
 	return str;
 }
 
@@ -2716,3 +2754,32 @@ std::string LevelManager::GetTotalPredClassStr(int depth){
 	}
 	return str;
 }
+
+std::string LevelManager::Serialization() const{
+	std::string str;
+	for(const auto& item: total_equivlences_){
+		str+= item->GetSerialization();
+	}
+	for(const auto& item: total_aggs_){
+		str+= item->GetSerialization();
+	}
+	for(const auto& item: total_sorts_){
+		str+= item->GetSerialization();
+	}
+	for(const auto& item: total_tbls_){
+		str+= item->GetSerialization();
+	}
+	for(const auto& item: total_outputs_){
+		str+= item->GetSerialization();
+	}
+	return str;
+}
+
+std::string LevelManager::GetSerialization() const{
+	if(serialization_.empty())
+		return Serialization();
+	return serialization_;
+}
+
+std::string LevelManager::GetPlanFullJson() const {return std::string(hsps_->json_plan);}
+std::string LevelManager::GetPlanCannonicalJson() const {return std::string(hsps_->canonical_json_plan);}

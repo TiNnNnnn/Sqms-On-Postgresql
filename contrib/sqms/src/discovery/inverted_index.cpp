@@ -105,7 +105,9 @@ bool RangePostingList::SuperSetInternal(SMPredEquivlence* dst_pe, SMPredEquivlen
         /**
          * MARK: here we compare subquery contents
          */
-        SearchSubquery(dst_pe->GetSubLinkLevelPeLists()[subquery_name],pe->GetSubLinkLevelPeLists()[subquery_name]);
+        if(!SearchSubquery(pe->GetSubLinkLevelPeLists()[subquery_name],dst_pe->GetSubLinkLevelPeLists()[subquery_name])){
+            return false;
+        }
         dst_iter++;
     }
 
@@ -189,9 +191,10 @@ bool RangePostingList::SearchSubquery(SMLevelManager* src_mgr,SMLevelManager* ds
     /*check join node*/
     auto src_scaling_info = std::make_shared<ScalingInfo>(src_mgr->GetJoinTypeList());
     auto dst_scaling_info = std::make_shared<ScalingInfo>(dst_mgr->GetJoinTypeList());
-    if(src_scaling_info->Match(dst_scaling_info.get())){
-        return true;
+    if(!src_scaling_info->Match(dst_scaling_info.get())){
+        return false;
     }
+
     for(int h = src_mgr->GetTotalEquivlences().size()-1; h>=0;--h){
         auto& src_lpes_list = src_mgr->GetTotalEquivlences()[h]->GetLpesList();
         auto& dst_lpes_list = dst_mgr->GetTotalEquivlences()[h]->GetLpesList();
@@ -200,32 +203,53 @@ bool RangePostingList::SearchSubquery(SMLevelManager* src_mgr,SMLevelManager* ds
         auto& src_aggs = src_mgr->GetTotalAggs()[h]->GetLevelAggList();
         auto& dst_aggs = dst_mgr->GetTotalAggs()[h]->GetLevelAggList();
         
+        bool match = false;
         for(size_t src_idx = 0; src_idx < src_lpes_list.size(); ++src_idx){
             for(size_t dst_idx = 0; dst_idx < dst_lpes_list.size(); ++dst_idx){
                 /*check range*/
                 if(!SearchRange(src_lpes_list[src_idx],dst_lpes_list[dst_idx])){
-                    return false;
+                    continue;
                 }
                 /*check sort*/
-                if(!SearchSort(src_sorts[src_idx],dst_sorts[dst_idx])){
-                    return false;
+                if(src_sorts.size() && dst_sorts.size()){
+                    if(!SearchSort(src_sorts[src_idx],dst_sorts[dst_idx])){
+                        continue;
+                    }
+                }else if(src_sorts.size() && dst_sorts.empty()) {
+                    continue;
+                }else if(src_sorts.empty() && dst_sorts.size()){
+                    continue;
                 }
                 /*check agg*/
-                if(!SearchAgg(src_aggs[src_idx],dst_aggs[dst_idx])){
-                    return false;
+                if(src_aggs.size() && dst_aggs.size()){
+                    if(!SearchAgg(src_aggs[src_idx],dst_aggs[dst_idx])){
+                        continue;
+                    }
+                }else if(src_aggs.size() && dst_aggs.empty()){
+                    continue;
+                }else if(src_aggs.empty() && dst_aggs.size()){
+                    continue;
                 }
                 if(src_lpes_list[src_idx]->EarlyStop()){
                     return true;
                 }
+                match = true;
+                break;
             }
+            if(match){
+                break;
+            }
+        }
+        if(!match){
+            return false;
         }
     }
     return true;
 }
 
 bool RangePostingList::SearchRange(SMLevelPredEquivlences * src_lpes,SMLevelPredEquivlences * dst_lpes){
-    if(Match(src_lpes,dst_lpes)){
-            return true;
+    if(Match(dst_lpes,src_lpes)){
+        return true;
     }
     return false;
 }
@@ -306,6 +330,9 @@ bool RangePostingList::Match(SMLevelPredEquivlences* dst_lpes, SMLevelPredEquivl
 void RangeInvertedIndex::Insert(LevelPredEquivlences* lpes){
     std::unique_lock<std::shared_mutex> lock(rw_mutex_);
     for(const auto & pe : *lpes){
+        /**
+         * subquery has same subquery_names but without same contents will not be add.
+         */
         auto pe_serialization = SMString(pe->GetSerialization());
         if(set2id_.find(pe_serialization) == set2id_.end()){
             set_cnt_++;

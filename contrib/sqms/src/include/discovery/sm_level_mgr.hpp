@@ -54,22 +54,8 @@ public:
     bool EarlyStop(){return early_stop_;}
     //SMPredEquivlence* Child(){return child_;}
     void Copy(PredEquivlence* pe);
-    SMString Serialization(){
-        SMString str;
-        for(const auto& name : set_){
-            str += name;
-        }
-        for(const auto& range : ranges_){
-            str += range->GetSerialization();
-        }
-        return str;
-    }    
-    SMString GetSerialization(){
-        if(serialization_.empty())
-            return Serialization();
-        return serialization_; 
-    }
-
+    SMString Serialization();
+    SMString GetSerialization();
     const bool HasSubquery() const {return has_subquery_;}
     const bool HasRange() const {return has_range_;}
     const SMSet<SMString> SubqueryNames() const {return subquery_names_;}
@@ -296,7 +282,8 @@ public:
     const SMVector<SMLevelAggAndSortList*>& GetTotalSorts(){return total_sorts_;}
     const SMVector<SMLevelPredEquivlencesList*>& GetTotalResidualEquivlences(){return total_residual_equivlences_;}
     const SMVector<SMString>& GetJoinTypeList(){return join_type_list_;}
-    const SMString& GetJsonSubPlan(){return json_sub_plan_;}
+    const SMString& GetJsonSubPlan();
+    const SMString& GetJsonFullSubPlan();
     void Copy(LevelManager* level_mgr){
         for(const auto& pe : level_mgr->GetTotalEquivlences()){
             SMLevelPredEquivlencesList* sm_lpes_list = (SMLevelPredEquivlencesList*)ShmemAlloc(sizeof(SMLevelPredEquivlencesList));
@@ -341,6 +328,7 @@ public:
             total_residual_equivlences_.push_back(sm_lpes_list);
         }
         json_sub_plan_ = SMString(level_mgr->GetHsps()->canonical_json_plan);
+        json_full_sub_plan_ = SMString(level_mgr->GetPlanFullJson());
         for(const auto& join_type : level_mgr->GetJoinTypeList()){
             join_type_list_.push_back(SMString(join_type));
         }
@@ -360,5 +348,6 @@ private:
     SMVector<SMLevelPredEquivlencesList*> total_residual_equivlences_;
     /*hsps of sub_plan root*/
     SMString json_sub_plan_;
+    SMString json_full_sub_plan_;
     SMVector<SMString> join_type_list_;
 };

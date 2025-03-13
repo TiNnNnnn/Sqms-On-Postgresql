@@ -209,25 +209,8 @@ public:
     //void SetChild(std::shared_ptr<PredEquivlence> child){child_ = child;}
     //std::shared_ptr<PredEquivlence> Child(){return child_;}
 
-    std::string GetPredSetStr(){
-        std::string str;
-        for(const auto& name : set_){
-            str += name;
-        }
-        return str;
-    }
-
-    std::string Serialization(){
-        std::string str;
-        for(const auto& name : set_){
-            str += name;
-        }
-        for(const auto& range : ranges_){
-            str += range->Serialization();
-        }
-        return str;
-    }
-
+    std::string GetPredSetStr();
+    std::string Serialization() const;
     void CalSortInfo(){
         //assert(ranges_.size());
 
@@ -276,11 +259,7 @@ public:
     bool HasRange(){return has_range_;}
     std::set<std::string>& SubqueryNames(){return subquery_names_;}
     int RangeCnt(){return range_cnt_;}
-    std::string GetSerialization(){
-        if(serialization_.empty())
-            return Serialization();
-        return serialization_;
-    }
+    std::string GetSerialization() const;
 private:
     std::string extract_field(const std::string& expression) {
         size_t start_pos = expression.find('(');  
@@ -320,7 +299,13 @@ private:
 };
 
 class LevelPredEquivlences{
+    struct PeCompare {
+        bool operator()(const PredEquivlence* left, const PredEquivlence* right) const {
+            return left->GetSerialization() < right->GetSerialization();
+        }
+    };
 public:
+
     bool Insert(Quals* quals,bool is_or = false);
     bool Insert(PredEquivlence* pe);
     bool Insert(LevelPredEquivlences* pe,bool pre_merged = false,bool early_check = false);
@@ -359,6 +344,13 @@ public:
     /* this must be used after a LevelPredEquivlencesList not changed*/
     void BuildKey2PeMap();
     const std::unordered_map<std::string,PredEquivlence*>& GetKey2Pe(){return key2pe_;}
+
+    std::string Serialization() const;
+    std::string GetSerialization() const{
+        if(serialization_.empty())
+            return Serialization();
+        return serialization_;
+    }
     
 private:
     std::unordered_set<PredEquivlence*> level_pe_sets_;
@@ -369,6 +361,8 @@ private:
 
     bool early_stop_ = true;
     int  lpe_id_;
+
+    std::string serialization_;
 };
 
 /**
@@ -403,6 +397,20 @@ public:
 
     void SetEarlyStopMap(const std::unordered_map<size_t,std::vector<std::pair<size_t,size_t>>>& map){early_stop_map_ = map;}
     std::unordered_map<size_t,std::vector<std::pair<size_t,size_t>>>& EarlyStopMap(){return early_stop_map_;}
+
+    std::string Serialization() const{
+        std::string str;
+        for(const auto& item : lpes_list_){
+            str += item->GetSerialization();
+        }
+        return str;
+    }
+    std::string GetSerialization() const{
+        if(serialization_.empty())
+            return Serialization();
+        return serialization_;
+    }
+    
 private:
     std::vector<LevelPredEquivlences*> lpes_list_;
     /**
@@ -417,6 +425,8 @@ private:
     std::unordered_map<size_t,std::vector<std::pair<size_t,size_t>>> early_stop_map_;
     /*local id creator for each level*/
     int lpes_id_creator_ = 0;
+
+    std::string serialization_;
 };
 
 /**
@@ -445,10 +455,27 @@ public:
     int GetLpeId(int pos){return lpe_id_list_[pos];}
 
     const std::vector<int>& GetLpeIdList(){return lpe_id_list_;}
+
+    /**
+     * TODO: mot implement yet.
+     */
+    std::string Serialization() const{
+        std::string str;
+        return str;
+    }
+
+    std::string GetSerialization() const{
+        if(serialization_.empty())
+            return Serialization();
+        return serialization_;
+    }
+    
 private:
     std::vector<int> lpe_id_list_;
     std::vector<UMAP> output2pe_list_;
     std::vector<USET> output_extend_list_;
+
+    std::string serialization_;
 };
 
 /**
@@ -466,12 +493,28 @@ public:
 
     const std::map<std::string, PredEquivlence*>& GetKey2Pe(){return key2pe_;}
     const std::set<std::string>& GetExtends(){return extends_;}
+
+    std::string Serialization() const{
+        std::string str;
+        for(const auto& item: extends_){
+            str+=item;
+        }
+        return str;
+    }
+
+    std::string GetSerialization() const{
+        if(serialization_.empty())
+            return Serialization();
+        return serialization_;
+    }
+
 private:
     std::map<std::string, PredEquivlence*>key2pe_;
     std::set<std::string> extends_;
     /*agg true level*/
     int agg_level_;
     std::string tag_;
+    std::string serialization_;
 };
 
 /**
@@ -490,9 +533,25 @@ public:
 
     void SetLpeId(int id){lpe_id_ = id;}
     int GetLpeId(){return lpe_id_;}
+
+    std::string Serialization() const{
+        std::string str;
+        for(const auto& item: level_agg_sets_){
+            str+=item->GetSerialization();
+        }
+        return str;
+    }
+
+    std::string GetSerialization() const{
+        if(serialization_.empty())
+            return Serialization();
+        return serialization_;
+    }
+
 private:
     std::vector<AggAndSortEquivlence*> level_agg_sets_;
     int lpe_id_;
+    std::string serialization_;
 };
 
 /**
@@ -517,9 +576,24 @@ public:
     const std::vector<LevelAggAndSortEquivlences*>& GetLevelAggList(){return level_agg_list_;}
     LevelPredEquivlencesList* GetLpesList(){return lpes_list_;}
 
+    std::string Serialization() const{
+        std::string str;
+        for(const auto& item: level_agg_list_){
+            str+=item->GetSerialization();
+        }
+        return str;
+    }
+
+    std::string GetSerialization() const{
+        if(serialization_.empty())
+            return Serialization();
+        return serialization_;
+    }
+
 private:
     std::vector<LevelAggAndSortEquivlences*> level_agg_list_;
     LevelPredEquivlencesList* lpes_list_ = nullptr;
+    std::string serialization_;
 };
 
 
@@ -536,8 +610,23 @@ public:
     std::string ShowLevelTblList(int depth,std::string tag,SqmsLogger* logger);
 
     const std::set<std::string>& GetTblSet(){return tbl_set_;}
+
+    std::string Serialization() const{
+        std::string str;
+        for(const auto& item: tbl_set_){
+            str+= item;
+        }
+        return str;
+    }
+
+    std::string GetSerialization() const{
+        if(serialization_.empty())
+            return Serialization();
+        return serialization_;
+    }
 private:
     std::set<std::string> tbl_set_;
+    std::string serialization_;
 };
 
 /**
@@ -602,6 +691,11 @@ public:
     std::unordered_map<HistorySlowPlanStat*, NodeCollector*>& GetNodeCollector(){return nodes_collector_map_;}
     const std::unordered_map <int,std::vector<LevelManager*>>& GetPredSubQueryMap(){return pred_subquery_map_;}
 
+    std::string Serialization() const;
+    std::string GetSerialization() const;
+    std::string GetPlanFullJson() const;
+    std::string GetPlanCannonicalJson() const;
+
 private:
     void ComputeLevelClass(const std::vector<HistorySlowPlanStat*>& list);
     void HandleEquivleces(HistorySlowPlanStat* hsps);
@@ -656,7 +750,9 @@ private:
 
     SqmsLogger* logger_;
 
-    std::string log_tag_;    
+    std::string log_tag_;
+
+    std::string serialization_;
 };
 
 class PredOperatorWrap: public AbstractPredNode{
