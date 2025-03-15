@@ -30,18 +30,19 @@ bool NodeManager::Search(){
     PlanPartition(hsps_);
 
     double total_time(0);
-    std::mutex time_mtx;
+    auto time_mtx = std::make_shared<std::mutex>();
 
     logger_->Logger("comming",("stitch thread num: "+std::to_string(partition_list.size())).c_str());
 
-    std::vector<bool>finish_list(partition_list.size(),0);
-    std::vector<std::condition_variable> cv_list(partition_list.size());
-    std::vector<std::mutex> mtx_list(partition_list.size());
-    auto node_collector_map = level_mgr_->GetNodeCollector();
+    int p_size = partition_list.size();
+    std::vector<bool>finish_list(p_size,false);
+    auto cv_list = std::make_shared<std::vector<std::condition_variable>>(p_size);
+    auto mtx_list = std::make_shared<std::vector<std::mutex>>(1);
 
-    size_t part_idx;
+    int part_idx = 0;
     for(const auto& part : partition_list){
-        pool_->submit([&](){
+        pool_->submit([part_idx,mtx_list,cv_list,&finish_list,part,this,time_mtx,&total_time](){
+            std::cout<<"cv_list size: "<< cv_list->size() <<",mtx_list size:"<<mtx_list->size()<<std::endl;
             for(size_t i = 0;i < part.size(); ++i){
                 /*check if need wait*/
                 auto node_collector = part[i];
@@ -50,13 +51,14 @@ bool NodeManager::Search(){
                 if(pos != dependencies_.end()){
                     has_right = true;
                     {
-                        std::unique_lock<std::mutex> lock(mtx_list[pos->second]);
-                        cv_list[pos->second].wait(lock, [&] {
+                        std::unique_lock<std::mutex> lock((*mtx_list)[pos->second]);
+                        (*cv_list)[pos->second].wait(lock, [&] {
                             if (!finish_list[pos->second]) 
                                 return false;
                             return true;
                         });
                     }
+                    logger_->Logger("comming",("task["+std::to_string(part_idx) + "] wait task["+std::to_string(pos->second)+"] success.").c_str());
                 }
                 
                 assert(!node_collector->inputs.size());
@@ -78,16 +80,21 @@ bool NodeManager::Search(){
                 if(shared_index_->Search(node_collector)){
                     logger_->Logger("comming","match node success,fetch history output");
                     {
-                        std::lock_guard<std::mutex> lock(mtx_list[part_idx]);
-                        assert(node_collector->output);
+                        logger_->Logger("comming",("part_idx:"+std::to_string(part_idx)).c_str());
+                        std::unique_lock<std::mutex> lock((*mtx_list)[part_idx]);
                         finish_list[part_idx] = true;
-                        cv_list[part_idx].notify_all();
+                        logger_->Logger("comming",("task["+std::to_string(part_idx) + "] has notify.").c_str());
+                        (*cv_list)[part_idx].notify_one();
                     }
                     {
-                        std::lock_guard<std::mutex> lock(time_mtx);
+                        logger_->Logger("comming",("match node time:"+std::to_string(node_collector->time)).c_str());
+                        std::lock_guard<std::mutex> lock(*time_mtx);
                         total_time += node_collector->time;
+                        
                         if(total_time >= query_min_duration){
+                            logger_->Logger("comming",("task["+std::to_string(part_idx) + "] cancel query.").c_str());
                             CancelQuery(pid_);
+                            return true;
                         }
                     }
                 }else{

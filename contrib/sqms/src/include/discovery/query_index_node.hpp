@@ -248,6 +248,7 @@ private:
     /*for node level matching*/
     int output_;
     SMVector<int>inputs_;
+    double time_;
 
     SMVector<SMLevelManager*>historys_;
 

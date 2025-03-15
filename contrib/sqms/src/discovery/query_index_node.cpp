@@ -1026,6 +1026,8 @@ bool LeafStrategy::Insert(NodeCollector* node_collector){
         inputs_.push_back(in);
     }
     output_ = node_collector->output;
+    time_ = node_collector->time;
+    std::cout<<"insert node_collector: time:"<<time_<<std::endl;
     return true;
 }
 
@@ -1039,6 +1041,8 @@ bool LeafStrategy::Search(NodeCollector* node_collector){
         node_collector->inputs.push_back(in);
     }
     node_collector->output = output_;
+    node_collector->time = time_;
+    
     return true;
 }
 

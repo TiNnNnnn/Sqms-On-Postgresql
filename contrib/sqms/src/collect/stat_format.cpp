@@ -173,12 +173,8 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt,bool slow
             pf_context_1->SetStrategy(level_mgr);
             pf_context_1->executeStrategy();
             level_mgr->ShowTotalPredClass();
-            
-            PlanFormatContext* pf_context_2 = new PlanFormatContext();
+    
             auto node_mgr = std::make_shared<NodeManager>(top_p,level_mgr,pid);
-            //pf_context_2->SetStrategy(node_mgr);
-            //pf_context_2->executeStrategy();
-
             node_mgr->Search();
 
             logger_->Logger("comming","finish process comming query...");

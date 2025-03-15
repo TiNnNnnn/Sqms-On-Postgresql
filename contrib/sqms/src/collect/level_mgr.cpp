@@ -62,8 +62,6 @@ void LevelManager::ComputeTotalClass(){
     }
 }
 
-
-
 void LevelManager::ComputeLevelClass(const std::vector<HistorySlowPlanStat*>& list){
     /*calulate equivlences first*/
 	ReSetAllPreProcessd();
@@ -71,6 +69,9 @@ void LevelManager::ComputeLevelClass(const std::vector<HistorySlowPlanStat*>& li
 		cur_hsps_ = s;
 		NodeCollector* new_node_collector =  new NodeCollector();
 		nodes_collector_map_[s] = new_node_collector;
+		new_node_collector->json_sub_plan = s->canonical_json_plan;
+		new_node_collector->output = s->actual_rows;
+		new_node_collector->time = s->actual_total;
 
 		first_pred_check_ = true;
         HandleEquivleces(s);
