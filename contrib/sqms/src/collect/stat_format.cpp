@@ -97,6 +97,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt,bool slow
                 // }
                 
                 for(const auto& node_collector : node_manager->GetNodeCollectorList()){
+                    std::cout<<"NODE time: "<<node_collector->time<<",output:"<<node_collector->output<<std::endl;
                     if(!shared_index->Insert(node_collector)){
                         logger_->Logger("slow","shared_index insert error in strategy 2");
                         exit(-1);
@@ -172,9 +173,12 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt,bool slow
             auto level_mgr = std::make_shared<LevelManager>(top_p,sps,logger_,"comming");
             pf_context_1->SetStrategy(level_mgr);
             pf_context_1->executeStrategy();
-            level_mgr->ShowTotalPredClass();
-    
+            //level_mgr->ShowTotalPredClass();
+
+            //PlanFormatContext* pf_context_2 = new PlanFormatContext();
             auto node_mgr = std::make_shared<NodeManager>(top_p,level_mgr,pid);
+            //pf_context_2->SetStrategy(node_mgr);
+            //pf_context_2->executeStrategy();
             node_mgr->Search();
 
             logger_->Logger("comming","finish process comming query...");

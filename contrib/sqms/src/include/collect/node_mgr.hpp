@@ -51,7 +51,7 @@ public:
     bool Search();
     std::vector<NodeCollector*>& GetNodeCollectorList(){return node_collector_list_;}
 private:
-    void ComputeTotalNodes(HistorySlowPlanStat* hsps,std::unordered_map<HistorySlowPlanStat*, NodeCollector*> nodes_collector_map);
+    void ComputeTotalNodes(HistorySlowPlanStat* hsps);
     void PlanPartition(HistorySlowPlanStat* hsps);
     bool CancelQuery(pid_t pid);
 private:
@@ -68,4 +68,5 @@ private:
     SqmsLogger* logger_;
     HistoryQueryLevelTree *shared_index_;
     pid_t pid_;
+    int node_num_ = 0;
 };

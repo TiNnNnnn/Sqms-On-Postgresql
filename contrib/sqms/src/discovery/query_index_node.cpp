@@ -264,7 +264,7 @@ bool LevelAggStrategy::Insert(LevelManager* level_mgr){
             auto child = acc->second;
             return child->Insert(level_mgr);
         }else{
-            size_t next_level = FindNextInsertLevel(level_mgr,5 );
+            size_t next_level = FindNextInsertLevel(level_mgr,5);
             //auto new_idx_node = std::make_shared<HistoryQueryIndexNode>(next_level,total_height_);
             HistoryQueryIndexNode* new_idx_node = (HistoryQueryIndexNode*)ShmemAlloc(sizeof(HistoryQueryIndexNode));
             if(!new_idx_node){
@@ -372,7 +372,7 @@ bool LevelAggStrategy::Insert(NodeCollector* node_collector){
             return child->Insert(node_collector);
         }else{
             size_t next_level = FindNextInsertLevel(node_collector,5);
-            assert(next_level == total_height_);
+            // assert(next_level == total_height_);
 
             HistoryQueryIndexNode* new_idx_node = (HistoryQueryIndexNode*)ShmemAlloc(sizeof(HistoryQueryIndexNode));
             if(!new_idx_node){
@@ -396,17 +396,18 @@ bool LevelAggStrategy::Remove(NodeCollector* node_collector){
 }
 
 bool LevelAggStrategy::Search(NodeCollector* node_collector){
+
     assert(node_collector);
     assert(node_collector->node_aggs_);
     auto top_aggs = node_collector->node_aggs_;
     
+    int id = node_collector->pe_idx;
     LevelAggAndSortEquivlences * la_eq = nullptr;
-    if(node_collector->pe_idx == -1){
+    if(id != -1){
+        la_eq = top_aggs->GetLevelAggList()[id];
+    }else{
         assert(top_aggs->Size() == 1);
         la_eq = top_aggs->GetLevelAggList()[0];
-    }else{
-        assert(top_aggs->Size() > 1);
-        la_eq = top_aggs->GetLevelAggList()[node_collector->pe_idx];
     }
     
     SMVector<SMVector<int>> agg_vec_id_list;
@@ -443,6 +444,54 @@ bool LevelAggStrategy::Search(NodeCollector* node_collector){
         }
     }
     return false;
+
+    // assert(node_collector);
+    // assert(node_collector->node_aggs_);
+    // auto top_aggs = node_collector->node_aggs_;
+    
+    // LevelAggAndSortEquivlences * la_eq = nullptr;
+    // if(node_collector->pe_idx == -1){
+    //     assert(top_aggs->Size() == 1);
+    //     la_eq = top_aggs->GetLevelAggList()[0];
+    // }else{
+    //     assert(top_aggs->Size() > 1);
+    //     la_eq = top_aggs->GetLevelAggList()[node_collector->pe_idx];
+    // }
+    
+    // SMVector<SMVector<int>> agg_vec_id_list;
+    // for(const auto& agg : la_eq->GetLevelAggSets()){
+    //     auto agg_extends = agg->GetExtends();
+    //     SET agg_vec;
+    //     for(const auto& expr : agg_extends){
+    //         agg_vec.push_back(SMString(expr));
+    //     }
+    //     std::sort(agg_vec.begin(),agg_vec.end());
+
+    //     SMVector<int>match_set_id_list;
+    //     auto match_set = inverted_idx_->SuperSets(agg_vec);
+    //     for(const auto& m_set : match_set){
+    //         int set_id = inverted_idx_->GetSetIdBySet(m_set);
+    //         assert(set_id != -1);
+    //         match_set_id_list.push_back(set_id);
+    //     }
+    //     std::sort(match_set_id_list.begin(),match_set_id_list.end());
+    //     agg_vec_id_list.push_back(match_set_id_list);
+    // }
+    // SMVector<SMVector<int>> combination;
+    // SMVector<int> currentCombination(agg_vec_id_list.size());
+    // generateCombinations(agg_vec_id_list, currentCombination, 0, combination);
+
+    // for(const auto& c_id_list : combination){
+    //     auto hash_value = hash_array(c_id_list);
+    //     SMConcurrentHashMap<uint32_t,HistoryQueryIndexNode*>::const_accessor acc;
+    //     if(child_map_.find(acc,hash_value)){
+    //         auto child = acc->second;
+    //         if(child->Serach(node_collector)){
+    //             return true;
+    //         }
+    //     }
+    // }
+    // return false;
 }
 
 
@@ -609,14 +658,15 @@ bool LevelSortStrategy::Search(NodeCollector* node_collector){
     assert(node_collector->node_sorts_);
     auto top_sorts = node_collector->node_sorts_;
 
-    LevelAggAndSortEquivlences * la_eq = nullptr;
-    if(node_collector->pe_idx == -1){
+    LevelAggAndSortEquivlences* la_eq = nullptr;
+    int id = node_collector->pe_idx;
+    if(id != -1){
+        la_eq = top_sorts->GetLevelAggList()[id];
+    }else{
         assert(top_sorts->Size() == 1);
         la_eq = top_sorts->GetLevelAggList()[0];
-    }else{
-        assert(top_sorts->Size() > 1);
-        la_eq = top_sorts->GetLevelAggList()[node_collector->pe_idx];
     }
+    
     
     SMVector<SMVector<int>> sort_vec_id_list;
     for(const auto& sort : la_eq->GetLevelAggSets()){
@@ -652,6 +702,53 @@ bool LevelSortStrategy::Search(NodeCollector* node_collector){
         }
     }
     return false;
+    // assert(node_collector);
+    // assert(node_collector->node_sorts_);
+    // auto top_sorts = node_collector->node_sorts_;
+
+    // LevelAggAndSortEquivlences * la_eq = nullptr;
+    // if(node_collector->pe_idx == -1){
+    //     assert(top_sorts->Size() == 1);
+    //     la_eq = top_sorts->GetLevelAggList()[0];
+    // }else{
+    //     assert(top_sorts->Size() > 1);
+    //     la_eq = top_sorts->GetLevelAggList()[node_collector->pe_idx];
+    // }
+    
+    // SMVector<SMVector<int>> sort_vec_id_list;
+    // for(const auto& sort : la_eq->GetLevelAggSets()){
+    //     auto sort_extends = sort->GetExtends();
+    //     SET sort_vec;
+    //     for(const auto& expr : sort_extends){
+    //         sort_vec.push_back(SMString(expr));
+    //     }
+    //     std::sort(sort_vec.begin(),sort_vec.end());
+
+    //    SMVector<int>match_set_id_list;
+    //     auto match_set = inverted_idx_->SuperSets(sort_vec);
+    //     for(const auto& m_set : match_set){
+    //         int set_id = inverted_idx_->GetSetIdBySet(m_set);
+    //         assert(set_id != -1);
+    //         match_set_id_list.push_back(set_id);
+    //     }
+    //     std::sort(match_set_id_list.begin(),match_set_id_list.end());
+    //     sort_vec_id_list.push_back(match_set_id_list);
+    // }
+    // SMVector<SMVector<int>> combination;
+    // SMVector<int> currentCombination(sort_vec_id_list.size());
+    // generateCombinations(sort_vec_id_list, currentCombination, 0, combination);
+
+    // for(const auto& c_id_list : combination){
+    //     auto hash_value = hash_array(c_id_list);
+    //     SMConcurrentHashMap<uint32_t,HistoryQueryIndexNode*>::const_accessor acc;
+    //     if(child_map_.find(acc,hash_value)){
+    //         auto child = acc->second;
+    //         if(child->Serach(node_collector)){
+    //             return true;
+    //         }
+    //     }
+    // }
+    // return false;
 }
 
 /**
@@ -799,6 +896,30 @@ bool LevelRangeStrategy::Insert(NodeCollector* node_collector){
     
     auto top_eqs = node_collector->node_equivlences_;
 
+    /*top_eqs has no pes,we just insert a empty SET into child_map*/
+    if(!top_eqs->Size()){
+        SET empty_id_vecs;
+        SMConcurrentHashMap<SET,HistoryQueryIndexNode*,SetHasher>::const_accessor acc;
+        bool found = child_map_.find(acc,empty_id_vecs);
+        if(found){
+            auto child = acc->second;
+            return child->Insert(node_collector);
+        }else{
+            size_t next_level = FindNextInsertLevel(node_collector,3);
+            HistoryQueryIndexNode* new_idx_node = (HistoryQueryIndexNode*)ShmemAlloc(sizeof(HistoryQueryIndexNode));
+            if(!new_idx_node){
+                elog(ERROR, "ShmemAlloc failed: not enough shared memory");
+                exit(-1);
+            }
+            new (new_idx_node) HistoryQueryIndexNode(next_level,total_height_); 
+            if(!new_idx_node->Insert(node_collector)){
+                return false;
+            }
+            child_map_.insert({empty_id_vecs,new_idx_node});
+        }
+        return true;
+    }
+
     for(const auto& lpes : *top_eqs){
         range_inverted_idx_->Insert(lpes);
         auto id_set = range_inverted_idx_->GetLpesIds(lpes);
@@ -859,6 +980,17 @@ bool LevelRangeStrategy::Search(NodeCollector* node_collector){
     assert(node_collector);
 
     auto top_eqs = node_collector->node_equivlences_;
+
+    /*if top_eqs, it means it can match all set in current node*/
+    if(!top_eqs->Size()){
+        for(const auto& iter : child_map_){
+            if(iter.second->Serach(node_collector)){
+                return true;
+            }
+        }
+        return false;
+    }
+
     size_t lpes_idx = 0;
     for(const auto& lpes : *top_eqs){
         auto set = range_inverted_idx_->SuperSets(lpes);
@@ -1022,12 +1154,13 @@ bool LeafStrategy::Remove(LevelManager* level_mgr){
 
 bool LeafStrategy::Insert(NodeCollector* node_collector){
     assert(node_collector);
+    inputs_.clear();
     for(const auto& in : node_collector->inputs){
         inputs_.push_back(in);
     }
     output_ = node_collector->output;
     time_ = node_collector->time;
-    std::cout<<"insert node_collector: time:"<<time_<<std::endl;
+    std::cout<<"insert node_collector: time:"<<node_collector->time<<std::endl;
     return true;
 }
 
@@ -1037,12 +1170,13 @@ bool LeafStrategy::Remove(NodeCollector* node_collector){
 
 bool LeafStrategy::Search(NodeCollector* node_collector){
     assert(node_collector);
-    for(const auto& in : inputs_){
-        node_collector->inputs.push_back(in);
+    for(size_t i = 0;i<node_collector->inputs.size();++i){
+        if(node_collector->inputs[i] <= inputs_[i]){
+            return false;
+        }
     }
     node_collector->output = output_;
     node_collector->time = time_;
-    
     return true;
 }
 
@@ -1404,9 +1538,10 @@ size_t LevelStrategy::FindNextInsertLevel(NodeCollector* node_collector, size_t 
                 return h;
             }
         }else if(h == 3){
-            if(node_collector->node_equivlences_){
-                return h;
-            }
+            // if(node_collector->node_equivlences_){
+            //     return h;
+            // }
+            return h;
         }else if(h == 4){
             if(node_collector->node_sorts_){
                 return h;

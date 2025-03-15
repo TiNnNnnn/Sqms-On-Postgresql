@@ -655,7 +655,6 @@ public:
     double time;
 
     int pe_idx = -1;
-
 };
 
 /**
