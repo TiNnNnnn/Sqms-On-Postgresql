@@ -22,3 +22,4 @@ message SlowPlanStat{
     /*size of stats is qual with slow plan's level num*/
     repeated SlowPlanLevelStat stats = 1;
 }
+

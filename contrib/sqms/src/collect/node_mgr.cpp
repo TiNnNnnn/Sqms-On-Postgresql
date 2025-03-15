@@ -5,8 +5,8 @@
 #include <chrono>
 #include <algorithm>
 
-NodeManager::NodeManager(HistorySlowPlanStat* hsps,std::shared_ptr<LevelManager> level_mgr)
-: hsps_(hsps),level_mgr_(level_mgr),pool_(std::make_shared<ThreadPool>(10,true)){
+NodeManager::NodeManager(HistorySlowPlanStat* hsps,std::shared_ptr<LevelManager> level_mgr,pid_t pid)
+: hsps_(hsps),level_mgr_(level_mgr),pool_(std::make_shared<ThreadPool>(10,true)),pid_(pid){
     bool found = false;
     logger_ = (SqmsLogger*)ShmemInitStruct("SqmsLogger", sizeof(SqmsLogger), &found);
     assert(logger_ && found);
@@ -26,6 +26,9 @@ bool NodeManager::PrintPredEquivlences(){
 }
 
 bool NodeManager::Search(){
+
+    PlanPartition(hsps_);
+
     double total_time(0);
     std::mutex time_mtx;
 
@@ -73,6 +76,7 @@ bool NodeManager::Search(){
 
                 /*search*/
                 if(shared_index_->Search(node_collector)){
+                    logger_->Logger("comming","match node success,fetch history output");
                     {
                         std::lock_guard<std::mutex> lock(mtx_list[part_idx]);
                         assert(node_collector->output);
@@ -83,7 +87,7 @@ bool NodeManager::Search(){
                         std::lock_guard<std::mutex> lock(time_mtx);
                         total_time += node_collector->time;
                         if(total_time >= query_min_duration){
-                            CancelQuery();
+                            CancelQuery(pid_);
                         }
                     }
                 }else{
@@ -95,7 +99,7 @@ bool NodeManager::Search(){
         ++part_idx;
         return true;
     }
-    return false;
+    return true;
 }
     
 void NodeManager::ComputeTotalNodes(HistorySlowPlanStat* hsps,std::unordered_map<HistorySlowPlanStat*, NodeCollector*> nodes_collector_map){
@@ -122,6 +126,9 @@ void NodeManager::ComputeTotalNodes(HistorySlowPlanStat* hsps,std::unordered_map
     }
 }
 
+/**
+ * divide plan into multi tasks. 
+ */
 void NodeManager::PlanPartition(HistorySlowPlanStat* hsps){
     assert(hsps);
     auto node_collector_map = level_mgr_->GetNodeCollector();
@@ -155,14 +162,21 @@ void NodeManager::PlanPartition(HistorySlowPlanStat* hsps){
     }
 }
 
-bool NodeManager::CancelQuery(){
-    if(QueryCancelPending){
+bool NodeManager::CancelQuery(pid_t pid){
+    Datum arg;
+    arg = Int32GetDatum(pid);
+    
+    FunctionCallInfoBaseData fcinfo;
+    InitFunctionCallInfoData(fcinfo, NULL, 1, InvalidOid, NULL, NULL);
+    fcinfo.args[0].value = arg;
+    fcinfo.args[0].isnull = false;
+    
+    auto result = DatumGetBool(pg_cancel_backend(&fcinfo));
+    if(result){
+        logger_->Logger("comming","cancel query success...");
+        return true;
+    }else{
+        logger_->Logger("comming","cancel query failed or has been canceled...");
         return false;
     }
-    QueryCancelPending = true;
-    InterruptPending = true;
-    ProcessInterrupts();
-    elog(WARNING, "Query is canceled by sqms.");
-    logger_->Logger("comming","Query is canceled by sqms.");
-    return true;
 }

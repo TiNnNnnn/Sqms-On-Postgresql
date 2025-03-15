@@ -44,7 +44,7 @@ private:
  */
 class NodeManager : public AbstractFormatStrategy{
 public:
-    NodeManager(HistorySlowPlanStat* hsps,std::shared_ptr<LevelManager> level_mgr);
+    NodeManager(HistorySlowPlanStat* hsps,std::shared_ptr<LevelManager> level_mgr,pid_t pid);
     virtual bool Format() override;
     virtual bool PrintPredEquivlences() override;
     
@@ -53,7 +53,7 @@ public:
 private:
     void ComputeTotalNodes(HistorySlowPlanStat* hsps,std::unordered_map<HistorySlowPlanStat*, NodeCollector*> nodes_collector_map);
     void PlanPartition(HistorySlowPlanStat* hsps);
-    bool CancelQuery();
+    bool CancelQuery(pid_t pid);
 private:
     int branch_num_;
     HistorySlowPlanStat* hsps_ = nullptr;
@@ -67,4 +67,5 @@ private:
 
     SqmsLogger* logger_;
     HistoryQueryLevelTree *shared_index_;
+    pid_t pid_;
 };
