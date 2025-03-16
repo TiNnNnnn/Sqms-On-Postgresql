@@ -1171,7 +1171,7 @@ bool LeafStrategy::Remove(NodeCollector* node_collector){
 bool LeafStrategy::Search(NodeCollector* node_collector){
     assert(node_collector);
     for(size_t i = 0;i<node_collector->inputs.size();++i){
-        if(node_collector->inputs[i] <= inputs_[i]){
+        if(node_collector->inputs[i] < inputs_[i]){
             return false;
         }
     }

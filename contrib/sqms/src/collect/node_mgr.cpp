@@ -101,7 +101,8 @@ bool NodeManager::Search(){
                             return true;
                         }
                     }
-                }else{
+                }else{ 
+                    logger_->Logger("comming","match node failed");
                     return false;
                 }
             }
