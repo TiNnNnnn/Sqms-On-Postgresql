@@ -18,16 +18,16 @@ void DisconnectCallback(const redisAsyncContext *c, int status) {
 
 RedisSlowPlanStatProvider::RedisSlowPlanStatProvider(const std::string& redis_host, int redis_port,long totalFetchTimeoutMillis, long totalSetTimeMillis, long defaultTTLSeconds)
         : totalFetchTimeoutMillis_(totalFetchTimeoutMillis),
-          totalSetTimeMillis_(totalSetTimeMillis),
-          defaultTTLSeconds_(defaultTTLSeconds) {
-        /*async connect to redis*/
-        redisContext_ = redisAsyncConnect(redis_host.c_str(), redis_port);
-        if (redisContext_ == nullptr || redisContext_->err) {
-            throw std::runtime_error("Unable to connect to Redis server");
-        }
-        redisLibuvAttach(redisContext_, uv_default_loop());
-        redisAsyncSetConnectCallback(redisContext_, ConnectCallback);
-        redisAsyncSetDisconnectCallback(redisContext_, DisconnectCallback);
+    totalSetTimeMillis_(totalSetTimeMillis),
+    defaultTTLSeconds_(defaultTTLSeconds) {
+    /*async connect to redis*/
+    redisContext_ = redisAsyncConnect(redis_host.c_str(), redis_port);
+    if (redisContext_ == nullptr || redisContext_->err) {
+        throw std::runtime_error("Unable to connect to Redis server");
+    }
+    redisLibuvAttach(redisContext_, uv_default_loop());
+    redisAsyncSetConnectCallback(redisContext_, ConnectCallback);
+    redisAsyncSetDisconnectCallback(redisContext_, DisconnectCallback);
 }
 
 RedisSlowPlanStatProvider::~RedisSlowPlanStatProvider(){
@@ -39,7 +39,8 @@ std::string RedisSlowPlanStatProvider::getName(){
     return "redis";
 }
 
-void RedisSlowPlanStatProvider::PutStat(std::string hash_plan, HistorySlowPlanStat* hsps){
+void RedisSlowPlanStatProvider::PutStat(std::string hash_plan, uint8_t *buffer){
+    assert(buffer);
     redisProviderApiStats_.execute<void>([&](){
         
     }, RedisProviderApiStats::Operation::PutStats);

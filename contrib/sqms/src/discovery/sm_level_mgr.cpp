@@ -1,5 +1,6 @@
 #include "discovery/sm_level_mgr.hpp"
 #include <cfloat>
+#include "utils/date.h"
 
 void SMPredEquivlenceRange::Copy(PredEquivlenceRange* per){
     type_ = per->PredType();
@@ -38,6 +39,19 @@ int SMPredEquivlenceRange::LimitCompare(const SMString& left_range,VarType left_
 			var = std::atof(range.c_str());
 		}
 		return var;
+	};
+
+	auto date_parser = [](const SMString& range) -> DateADT {
+		DateADT d;
+		if (range == UPPER_LIMIT) {
+			d = DatumGetDateADT(DirectFunctionCall1(date_in, CStringGetDatum("5874897-12-31")));
+		} else if (range == LOWER_LIMIT) {
+			d = DatumGetDateADT(DirectFunctionCall1(date_in, CStringGetDatum("4713-01-01 BC")));
+		} else {
+			d = DatumGetDateADT(DirectFunctionCall1(date_in, CStringGetDatum(range.c_str())));
+		}
+	
+		return d;
 	};
 
 	switch(left_type){
@@ -86,6 +100,17 @@ int SMPredEquivlenceRange::LimitCompare(const SMString& left_range,VarType left_
 				return left_var == right_var;
 			}else{
 				std::cerr<<"right type not match left type <double>"<<std::endl;
+			}
+		}break;
+		case VarType::DATE:{
+			auto left_var = date_parser(left_range);
+			if(right_type == VarType::DATE){
+				auto right_var = date_parser(right_range);
+				std::cout<<"left_data:"<<left_var<<",right_date:"<<right_var<<std::endl;
+				return left_var - right_var;
+			}else{
+				std::cerr<<"right type not match left type <date>"<<std::endl;
+				exit(-1);
 			}
 		}break;
 		case VarType::UNKNOWN:{

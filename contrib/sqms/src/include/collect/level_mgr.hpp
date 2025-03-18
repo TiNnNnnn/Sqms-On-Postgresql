@@ -51,6 +51,7 @@ enum class VarType{
     STRING,
     DOUBLE,
     BOOL,
+    DATE,
     UNKNOWN,
 };
 

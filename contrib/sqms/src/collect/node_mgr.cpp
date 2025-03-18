@@ -151,7 +151,6 @@ void NodeManager::PlanPartition(HistorySlowPlanStat* hsps){
         std::vector<NodeCollector*>partition;
         bool left_check = false;
         while(cur){
-            std::cout<<"partiton node: "<<node_collector_map[cur]->json_sub_plan<<std::endl;
             partition.push_back(node_collector_map[cur]);
             st.push(cur);
             if(cur->n_childs >= 1){

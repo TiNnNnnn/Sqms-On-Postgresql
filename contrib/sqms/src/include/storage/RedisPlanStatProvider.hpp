@@ -24,7 +24,7 @@ public:
     ~RedisSlowPlanStatProvider();
 
     std::string getName();
-    void PutStat(std::string hash_plan, HistorySlowPlanStat* hsps);
+    void PutStat(std::string hash_plan, uint8_t *buffer);
     bool GetStat(std::string hash_plan);
 private:
     redisAsyncContext* redisContext_;

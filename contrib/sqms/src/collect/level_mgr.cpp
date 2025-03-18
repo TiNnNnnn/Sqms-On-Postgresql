@@ -1,6 +1,7 @@
 #include "collect/level_mgr.hpp"
 #include <algorithm>
 #include <cfloat>
+#include "utils/date.h"
 /**
  * LevelManager::Format
  */
@@ -1131,7 +1132,7 @@ bool PredEquivlenceRange::Serach(PredEquivlenceRange* range){
 int PredEquivlenceRange::LimitCompare(const std::string& left_range,VarType left_type,const std::string& right_range,VarType right_type){
 	assert(left_range.size() && right_range.size());
 	/*pasrer string to int*/
-	auto int_parser = [](std::string range)->int{
+	auto int_parser = [](const std::string& range)->int{
 		int var = 0;
 		if(range == UPPER_LIMIT){
 			var = INT_MAX;
@@ -1144,7 +1145,7 @@ int PredEquivlenceRange::LimitCompare(const std::string& left_range,VarType left
 	};
 	
 	/*parser string to double*/
-	auto double_parser = [](std::string range)->double{
+	auto double_parser = [](const std::string& range)->double{
 		double var = 0;
 		if(range == UPPER_LIMIT){
 			var = DBL_MAX;
@@ -1155,6 +1156,20 @@ int PredEquivlenceRange::LimitCompare(const std::string& left_range,VarType left
 		}
 		return var;
 	};
+
+	auto date_parser = [](const std::string& range) -> DateADT {
+		DateADT d;
+		if (range == UPPER_LIMIT) {
+			d = DatumGetDateADT(DirectFunctionCall1(date_in, CStringGetDatum("5874897-12-31")));
+		} else if (range == LOWER_LIMIT) {
+			d = DatumGetDateADT(DirectFunctionCall1(date_in, CStringGetDatum("4713-01-01 BC")));
+		} else {
+			d = DatumGetDateADT(DirectFunctionCall1(date_in, CStringGetDatum(range.c_str())));
+		}
+	
+		return d;
+	};
+	
 
 	switch(left_type){
 		case VarType::INT:{
@@ -1205,6 +1220,16 @@ int PredEquivlenceRange::LimitCompare(const std::string& left_range,VarType left
 				return left_var == right_var;
 			}else{
 				std::cerr<<"right type not match left type <double>"<<std::endl;
+				exit(-1);
+			}
+		}break;
+		case VarType::DATE:{
+			auto left_var = date_parser(left_range);
+			if(right_type == VarType::DATE){
+				auto right_var = date_parser(right_range);
+				return left_var - right_var;
+			}else{
+				std::cerr<<"right type not match left type <date>"<<std::endl;
 				exit(-1);
 			}
 		}break;
@@ -1299,6 +1324,9 @@ std::string PredEquivlenceRange::PrintPredEquivlenceRange(int depth,std::string 
 		}break;
 		case VarType::BOOL:{
 			var_type = "bool";
+		}break;
+		case VarType::DATE:{
+			var_type = "date";
 		}break;
 		case VarType::UNKNOWN:{
 			var_type = "unknown";
@@ -1691,6 +1719,8 @@ VarType PredEquivlence::QualVarType(Quals* qual){
 				return VarType::UNKNOWN;
 			case VARCHAROID:
 				return VarType::STRING;
+			case DATEOID:
+				return VarType::DATE;
 			default:
 				return VarType::UNKNOWN;
 		}
