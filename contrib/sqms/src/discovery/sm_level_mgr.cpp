@@ -106,7 +106,7 @@ int SMPredEquivlenceRange::LimitCompare(const SMString& left_range,VarType left_
 			auto left_var = date_parser(left_range);
 			if(right_type == VarType::DATE){
 				auto right_var = date_parser(right_range);
-				std::cout<<"left_data:"<<left_var<<",right_date:"<<right_var<<std::endl;
+				//std::cout<<"left_data:"<<left_var<<",right_date:"<<right_var<<std::endl;
 				return left_var - right_var;
 			}else{
 				std::cerr<<"right type not match left type <date>"<<std::endl;

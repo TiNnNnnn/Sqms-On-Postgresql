@@ -1654,8 +1654,6 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		appendStringInfoString(ces->str,ret.canonical_str_->data);
 		push_node_type_set(rs.node_type_set_,ret.node_type_set_);
 
-		// hsp.childs[1] = malloc(sizeof(HistorySlowPlanStat));
-		// *hsp.childs[1] = ret.hps_;
 		HistorySlowPlanStat* child = malloc(sizeof(HistorySlowPlanStat));
 		history_slow_plan_stat__init(child);
 		*child = ret.hps_;
@@ -1744,7 +1742,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	rs.hps_ = hsp;
 
 	if(debug){
-		elog(stat_log_level,es->str->data);
+		//elog(stat_log_level,es->str->data);
 		//elog(stat_log_level,ces->str->data);
 	}
 	//elog(stat_log_level,"finish a node format");

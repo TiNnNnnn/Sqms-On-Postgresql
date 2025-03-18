@@ -78,7 +78,8 @@ StatCollecter::StatCollecter(){
 }
 
 void StatCollecter::StmtExecutorStartWrapper(QueryDesc *queryDesc, int eflags){
-    
+
+	/*sqi just process cmd_select*/
     if(auto_explain_enabled()){
 		/* Enable per-node instrumentation iff log_analyze is required. */
 		if ((eflags & EXEC_FLAG_EXPLAIN_ONLY) == 0)
@@ -93,8 +94,7 @@ void StatCollecter::StmtExecutorStartWrapper(QueryDesc *queryDesc, int eflags){
         else
             standard_ExecutorStart(queryDesc, eflags);
 
-        
-        if (auto_explain_enabled())
+        if (auto_explain_enabled() && queryDesc->operation == CMD_SELECT)
         {
             //global elapsed for query
             if (queryDesc->totaltime == NULL)
@@ -113,8 +113,8 @@ void StatCollecter::StmtExecutorStartWrapper(QueryDesc *queryDesc, int eflags){
     }
 }
 
-void StatCollecter::StmtExecutorRunWrapper(QueryDesc *queryDesc,ScanDirection direction,uint64 count, bool execute_once){
-    nesting_level++;
+void StatCollecter::StmtExecutorRunWrapper(QueryDesc *queryDesc,ScanDirection direction,uint64 count, bool execute_once){	
+	nesting_level++;
 	PG_TRY();
 	{
 		if (prev_ExecutorRun)
@@ -147,7 +147,7 @@ void StatCollecter::StmtExecutorFinishWrapper(QueryDesc *queryDesc){
 
 void StatCollecter::StmtExecutorEndWrapper(QueryDesc *queryDesc)
 {
-	if (queryDesc->totaltime && auto_explain_enabled()){
+	if (queryDesc->totaltime && auto_explain_enabled() && queryDesc->operation == CMD_SELECT){
 		MemoryContext oldcxt;
 		double		msec; 
 		/*
@@ -163,7 +163,6 @@ void StatCollecter::StmtExecutorEndWrapper(QueryDesc *queryDesc)
 		
 		std::cout<<"sleep: 5s ..."<<std::endl;
 		sleep(2);
-		
 		
 		/*stoage plan stats*/
 		msec = queryDesc->totaltime->total * 1000.0;
