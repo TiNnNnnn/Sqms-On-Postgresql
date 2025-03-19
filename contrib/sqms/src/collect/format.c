@@ -1619,7 +1619,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	}
 
 	hsp.child_idx = 0;
-	hsp.subplan_idx = 0;
+	hsp.subplan_idx = -1;
 
 	RecureState rs = NewRecureState();
 	rs.node_type_set_ = lappend_int(rs.node_type_set_,(void*)nodeTag(plan));
@@ -1742,7 +1742,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	rs.hps_ = hsp;
 
 	if(debug){
-		//elog(stat_log_level,es->str->data);
+		elog(stat_log_level,es->str->data);
 		//elog(stat_log_level,ces->str->data);
 	}
 	//elog(stat_log_level,"finish a node format");
@@ -3427,8 +3427,10 @@ ExplainSubPlans(List *plans, List *ancestors,
 		 * do not worry too much about which plan node we show the subplan as
 		 * attached to in such cases.)
 		 */
-		if (bms_is_member(sp->plan_id, total_es->printed_subplans))
+		if (bms_is_member(sp->plan_id, total_es->printed_subplans)){
 			continue;
+		}
+		hsp->subplan_idx++;
 		total_es->printed_subplans = bms_add_member(total_es->printed_subplans,
 											  sp->plan_id);
 		/*
@@ -3448,8 +3450,9 @@ ExplainSubPlans(List *plans, List *ancestors,
 		history_slow_plan_stat__init(child);
 		*child = ret.hps_;
 		hsp->subplans[hsp->subplan_idx] = child;
-		++hsp->subplan_idx;
+		//++hsp->subplan_idx;
 	}
+	hsp->n_subplans = hsp->subplan_idx + 1;
 	return rs;
 }
 
