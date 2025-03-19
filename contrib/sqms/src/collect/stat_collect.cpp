@@ -14,7 +14,7 @@ extern "C" {
 	static emit_log_hook_type prev_log_hook = NULL;
 	
 	static char time_str[20];
-	static int MyTrancheId = -1;
+	//static int MyTrancheId = -1;
 
 	void StmtExecutorStart(QueryDesc *queryDesc, int eflags);
 	void StmtExecutorRun(QueryDesc *queryDesc, ScanDirection direction, uint64 count, bool execute_once);
@@ -52,11 +52,7 @@ extern "C" {
         prev_ExecutorEnd = ExecutorEnd_hook;
         ExecutorEnd_hook = StmtExecutorEnd;
 
-		//prev_log_hook = emit_log_hook;
-		//emit_log_hook = ShuntLog;
 		RequestAddinShmemSpace(shared_mem_size);		
-		//std::cout<<"register tranche id finish"<<std::endl;
-		/* create index in pg shared_memory */
 		
 		prev_shmem_startup_hook = shmem_startup_hook;
 		shmem_startup_hook = RegisterQueryIndex;
@@ -75,7 +71,6 @@ extern "C" {
 
 int StatCollecter::nesting_level = 0;
 bool StatCollecter::current_query_sampled = false;
-LWLock* StatCollecter::shared_lock_ = nullptr; 
 /*we hope the index built while database starting*/
 
 StatCollecter::StatCollecter(){
@@ -108,7 +103,7 @@ void StatCollecter::StmtExecutorStartWrapper(QueryDesc *queryDesc, int eflags){
                 queryDesc->totaltime = InstrAlloc(1, INSTRUMENT_ALL);
 				
 				/*analyse query whether a slow query or not*/
-				PlanStatFormat& es = PlanStatFormat::getInstance(shared_lock_);
+				PlanStatFormat& es = PlanStatFormat::getInstance();
 				es.ProcQueryDesc(queryDesc,oldcxt,false);
                 
 				MemoryContextSwitchTo(oldcxt);
@@ -165,13 +160,13 @@ void StatCollecter::StmtExecutorEndWrapper(QueryDesc *queryDesc)
 		 */
 		InstrEndLoop(queryDesc->totaltime);
 		
-		std::cout<<"sleep: 5s ..."<<std::endl;
+		std::cout<<"sleep: 2s ..."<<std::endl;
 		sleep(2);
 		
 		/*stoage plan stats*/
 		msec = queryDesc->totaltime->total * 1000.0;
 		if (msec >= query_min_duration){
-		   PlanStatFormat& es = PlanStatFormat::getInstance(shared_lock_);
+		   PlanStatFormat& es = PlanStatFormat::getInstance();
 		   es.ProcQueryDesc(queryDesc,oldcxt,true);
 		} 
 		MemoryContextSwitchTo(oldcxt);
@@ -187,27 +182,25 @@ void StatCollecter::StmtExecutorEndWrapper(QueryDesc *queryDesc)
 extern "C" void RegisterQueryIndex(){
 	std::cout<<"begin building history query index..."<<std::endl;
 
-	MyTrancheId = LWLockNewTrancheId();
-	LWLockRegisterTranche(MyTrancheId, "sqms");
-	std::cout<<"register shmem lwlock tranche id: "<<MyTrancheId<<std::endl;
-	
-	bool found = true;
-	StatCollecter::shared_lock_ = (LWLock *)ShmemInitStruct("SqmsShmemLock", sizeof(LWLock), &found);
-	if (!found)
-    {
-        LWLockInitialize(StatCollecter::shared_lock_, MyTrancheId);
-    }
+	// MyTrancheId = LWLockNewTrancheId();
+	// LWLockRegisterTranche(MyTrancheId, "sqms");
+	// std::cout<<"register shmem lwlock tranche id: "<<MyTrancheId<<std::endl;
 
-	LWLockAcquire(StatCollecter::shared_lock_, LW_EXCLUSIVE);
+	bool found = true;
+	// StatCollecter::shared_lock_ = (LWLock *)ShmemInitStruct("SqmsShmemLock", sizeof(LWLock), &found);
+	// if (!found)
+    // {
+    //     LWLockInitialize(StatCollecter::shared_lock_, MyTrancheId);
+    // }
+
 	auto shared_index = (HistoryQueryLevelTree*)ShmemInitStruct(shared_index_name, sizeof(HistoryQueryLevelTree), &found);
-	LWLockRelease(StatCollecter::shared_lock_);
 
 	if (!shared_index) {
         elog(ERROR, "Failed to allocate shared memory for root node.");
         return;
     }
 	if(!found){
-		new (shared_index) HistoryQueryLevelTree(StatCollecter::shared_lock_,1);
+		new (shared_index) HistoryQueryLevelTree(1);
 	}
 	/**
 	 * TODO: here we should load history slow queries in redis into shared_index
@@ -217,12 +210,10 @@ extern "C" void RegisterQueryIndex(){
 	std::cout<<"begin building sqms logger..."<<std::endl;
 	found = false;
 
-	LWLockAcquire(StatCollecter::shared_lock_, LW_EXCLUSIVE);
 	auto logger = (SqmsLogger*)ShmemInitStruct("SqmsLogger", sizeof(SqmsLogger), &found);
-	LWLockRelease(StatCollecter::shared_lock_);
 	
 	if(!found){
-		new (logger) SqmsLogger(StatCollecter::shared_lock_);
+		new (logger) SqmsLogger();
 	}
 
 	std::cout<<"finsh building sqms logger..."<<std::endl;

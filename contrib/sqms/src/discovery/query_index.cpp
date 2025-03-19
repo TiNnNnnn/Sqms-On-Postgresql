@@ -1,49 +1,64 @@
 #include "discovery/query_index.hpp"
 
  /* rebuild the history query level tree */
-HistoryQueryLevelTree::HistoryQueryLevelTree(LWLock* shmem_lock,int origin_height)
-    :shmem_lock_(shmem_lock){
-    LWLockAcquire(shmem_lock, LW_EXCLUSIVE);
+HistoryQueryLevelTree::HistoryQueryLevelTree(int origin_height){
     root_ = (HistoryQueryIndexNode*)ShmemAlloc(sizeof(HistoryQueryIndexNode));
-    LWLockRelease(shmem_lock);
-    if (!root_)
+    if (!root_){
         elog(ERROR, "ShmemAlloc failed: not enough shared memory");
-    new (root_) HistoryQueryIndexNode(origin_height,height_,shmem_lock_);
+        exit(-1);
+    }
+    new (root_) HistoryQueryIndexNode(origin_height,height_);
 }
 
 bool HistoryQueryLevelTree::Insert(LevelManager* level_mgr,int l){
-    return root_->Insert(level_mgr);
+    //LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
+    auto ret = root_->Insert(level_mgr);
+    //LWLockRelease(shmem_lock_);
+    return ret;
 }
 
 bool HistoryQueryLevelTree::Remove(LevelManager* level_mgr,int l){
-    return root_->Remove(level_mgr);
+    //LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
+    auto ret =  root_->Remove(level_mgr);
+    //LWLockRelease(shmem_lock_);
+    return ret;
 }
 
 bool HistoryQueryLevelTree::Search(LevelManager* level_mgr,int l){
-    return root_->Search(level_mgr,-1);
+    //LWLockAcquire(shmem_lock_, LW_SHARED);
+    auto ret =  root_->Search(level_mgr,-1);
+    //LWLockRelease(shmem_lock_);
+    return ret;
 }
 
 bool HistoryQueryLevelTree::Insert(NodeCollector* node_collector){
-    return root_->Insert(node_collector);
+    //LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
+    auto ret = root_->Insert(node_collector);
+    //LWLockRelease(shmem_lock_);
+    return ret;
 }
 bool HistoryQueryLevelTree::Remove(NodeCollector* node_collector){
-    return root_->Remove(node_collector);
+    //LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
+    auto ret = root_->Remove(node_collector);
+    //LWLockRelease(shmem_lock_);
+    return ret;
 }
 bool HistoryQueryLevelTree::Search(NodeCollector* node_collector){
-    return root_->Serach(node_collector);
+    auto ret = root_->Serach(node_collector);
+    return ret;
 }
 
 /**
  * HistoryQueryIndexNode
  */
-HistoryQueryIndexNode::HistoryQueryIndexNode(int l,int total_height,LWLock* shmem_lock)
-    :level_(l),shmem_lock_(shmem_lock){
-    LWLockAcquire(shmem_lock, LW_EXCLUSIVE);
+HistoryQueryIndexNode::HistoryQueryIndexNode(int l,int total_height)
+    :level_(l){
+    //LWLockAcquire(shmem_lock, LW_EXCLUSIVE);
     level_strategy_context_ = (LevelStrategyContext*)ShmemAlloc(sizeof(LevelStrategyContext));
-    LWLockRelease(shmem_lock);
+    //LWLockRelease(shmem_lock);
     if (!level_strategy_context_)
         elog(ERROR, "ShmemAlloc failed: not enough shared memory");
-    new (level_strategy_context_) LevelStrategyContext(shmem_lock_);
+    new (level_strategy_context_) LevelStrategyContext();
     level_strategy_context_->SetStrategy(l,total_height);
 }
 

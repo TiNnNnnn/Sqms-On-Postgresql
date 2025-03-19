@@ -71,17 +71,14 @@ SMVector<int> RangePostingList::SubSet(SMPredEquivlence* range){
     return rets;
 }
 
-void RangePostingList::Insert(PredEquivlence* pe,int id,LWLock* shmem_lock){
+void RangePostingList::Insert(PredEquivlence* pe,int id){
     assert(pe);
-    if(!shmem_lock_){
-        SetShmemLock(shmem_lock);
-    }
     /*copy a pe in shared_memory*/
-    LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
+    //LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
     SMPredEquivlence* sm_pe = (SMPredEquivlence*)ShmemAlloc(sizeof(SMPredEquivlence));
     new (sm_pe) SMPredEquivlence();
     sm_pe->Copy(pe);
-    LWLockRelease(shmem_lock_);
+    //LWLockRelease(shmem_lock_);
     assert(sm_pe);
 
     sets_.insert(sm_pe);
@@ -347,14 +344,14 @@ void RangeInvertedIndex::Insert(LevelPredEquivlences* lpes){
             if(pe->GetPredSet().empty()){
                 assert(pe->HasSubquery());
                 for(const auto& sub_name : pe->SubqueryNames()){
-                    inverted_map_[SMString(sub_name)].Insert(pe,set2id_[pe_serialization],shmem_lock_);
+                    inverted_map_[SMString(sub_name)].Insert(pe,set2id_[pe_serialization]);
                     items_cnt_ = inverted_map_.size();
                 }
             }
 
             for(auto attr : pe->GetPredSet()){
                 auto sm_attr = SMString(attr);
-                inverted_map_[sm_attr].Insert(pe,set2id_[pe_serialization],shmem_lock_);
+                inverted_map_[sm_attr].Insert(pe,set2id_[pe_serialization]);
                 items_cnt_ = inverted_map_.size();
             }
         }
@@ -390,11 +387,11 @@ SMSet<int> RangeInvertedIndex::SuperSets(LevelPredEquivlences* lpes){
     /**
      * MARK: can we escape shmemalloc while just seraching
      */
-    LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
+    //LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
     SMLevelPredEquivlences* sm_lpes = (SMLevelPredEquivlences*)ShmemAlloc(sizeof(SMLevelPredEquivlences));
     new (sm_lpes) SMLevelPredEquivlences();
     sm_lpes->Copy(lpes);
-    LWLockRelease(shmem_lock_);
+    //LWLockRelease(shmem_lock_);
     assert(sm_lpes);
     
     std::shared_lock<std::shared_mutex> lock(rw_mutex_);

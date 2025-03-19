@@ -9,22 +9,20 @@
 
 static std::hash<std::string> hash_fn;
 
-PlanStatFormat& PlanStatFormat::getInstance(LWLock* shmem_lock) {
-    static PlanStatFormat instance(shmem_lock);
+PlanStatFormat& PlanStatFormat::getInstance() {
+    static PlanStatFormat instance;
     return instance;
 }
 
 PlanStatFormat::~PlanStatFormat() {}
 
-PlanStatFormat::PlanStatFormat(LWLock* shmem_lock,int psize)
-    : shmem_lock_(shmem_lock),pool_(std::make_shared<ThreadPool>(psize)),pool_size_(psize){
+PlanStatFormat::PlanStatFormat(int psize)
+    : pool_(std::make_shared<ThreadPool>(psize)),pool_size_(psize){
     history_slow_plan_stat__init(&hsps_);
     storage_ = std::make_shared<RedisSlowPlanStatProvider>(std::string(redis_host),redis_port,totalFetchTimeoutMillis,totalSetTimeMillis,defaultTTLSeconds); 
 
     bool found = false;
-    LWLockAcquire(shmem_lock_, LW_SHARED);
     logger_ = (SqmsLogger*)ShmemInitStruct("SqmsLogger", sizeof(SqmsLogger), &found);
-    LWLockRelease(shmem_lock_);
     assert(found);
 }
 
@@ -56,9 +54,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt,bool slow
         }
 
         bool found = true;
-        LWLockAcquire(shmem_lock_, LW_SHARED);
         auto shared_index = (HistoryQueryLevelTree*)ShmemInitStruct(shared_index_name, sizeof(HistoryQueryLevelTree), &found);
-        LWLockRelease(shmem_lock_);
         if(!found || !shared_index){
             std::cerr<<"shared_index not exist!"<<std::endl;
             exit(-1);
@@ -92,7 +88,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt,bool slow
                 auto node_manager = std::make_shared<NodeManager>(p,level_mgr,pid);
                 pf_context_2->SetStrategy(node_manager);
                 pf_context_2->executeStrategy();
-
+                
                 if(!shared_index->Insert(level_mgr.get(),1)){
                     logger_->Logger("slow","shared_index insert error in strategy 1");
                     exit(-1);
@@ -146,13 +142,13 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt,bool slow
                     auto level_mgr = std::make_shared<LevelManager>(p,sps,logger_,"comming");
                     pf_context_1->SetStrategy(level_mgr);
                     pf_context_1->executeStrategy();
-                    level_mgr->ShowTotalPredClass();
+                    //level_mgr->ShowTotalPredClass();
 
                     if(debug){
                         auto node_collect_map = level_mgr->GetNodeCollector();
                         logger_->Logger("comming",ShowAllNodeCollect(p,node_collect_map,"comming").c_str());
                     }
-                    
+
                     if(shared_index->Search(level_mgr.get(),1)){
                         CancelQuery(pid);
                     }

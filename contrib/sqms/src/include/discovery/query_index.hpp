@@ -17,7 +17,7 @@
  */
 class HistoryQueryLevelTree{
 public:
-    HistoryQueryLevelTree(LWLock* shmem_lock,int origin_height = 1);
+    HistoryQueryLevelTree(int origin_height = 1);
     
     bool Insert(LevelManager* level_mgr,int l = 0);
     bool Remove(LevelManager* level_mgr,int l = 0);
@@ -32,7 +32,6 @@ public:
 private:
     HistoryQueryIndexNode* root_;
     size_t height_ = 7;
-    LWLock* shmem_lock_;
 };
 
 // /**

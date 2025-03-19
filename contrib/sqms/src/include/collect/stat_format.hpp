@@ -31,7 +31,7 @@ class PlanFormatContext;
 class PlanStatFormat{
     typedef const char *(*explain_get_index_name_hook_type) (Oid indexId);
 public:
-    static PlanStatFormat& getInstance(LWLock* shmem_lock);
+    static PlanStatFormat& getInstance();
 
     PlanStatFormat(const PlanStatFormat&) = delete;
     PlanStatFormat& operator=(const PlanStatFormat&) = delete;
@@ -56,7 +56,7 @@ private:
     void PrintIndent(int depth);
     std::string GetIndent(int depth);
 
-    PlanStatFormat(LWLock* shmem_lock,int psize = 10);
+    PlanStatFormat(int psize = 10);
     ~PlanStatFormat();
 private:
     std::shared_ptr<ThreadPool> pool_;
@@ -69,7 +69,6 @@ private:
     std::mutex search_mutex_;
     bool search_found_ =false; 
     std::condition_variable search_cv_; 
-    LWLock* shmem_lock_;
 };
 
 /**

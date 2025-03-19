@@ -235,7 +235,7 @@ public:
     SMVector<int> SubSet(SMPredEquivlence* range);
 
     /*a group of more light interfaces*/
-    void Insert(PredEquivlence* range,int id,LWLock* shmem_lock);
+    void Insert(PredEquivlence* range,int id);
     void Erase(PredEquivlence* range,int id);
     SMVector<int> SuperSet(PredEquivlence* pe);
     SMVector<int> SubSet(PredEquivlence* range);
@@ -258,8 +258,6 @@ private:
 
 class RangeInvertedIndex{
 public:
-    RangeInvertedIndex(LWLock*shmem_lock)
-        :shmem_lock_(shmem_lock){}
     /*insert a set into inverted index*/
     void Insert(LevelPredEquivlences* lpes);
     /*erase a set from inverted index*/
@@ -283,6 +281,5 @@ private:
     std::atomic<long long> set_cnt_{-1}; 
     std::atomic<int>items_cnt_{0};
     std::shared_mutex rw_mutex_;
-    LWLock* shmem_lock_;
 };
 
