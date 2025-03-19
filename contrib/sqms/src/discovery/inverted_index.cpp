@@ -79,9 +79,9 @@ void RangePostingList::Insert(PredEquivlence* pe,int id,LWLock* shmem_lock){
     /*copy a pe in shared_memory*/
     LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
     SMPredEquivlence* sm_pe = (SMPredEquivlence*)ShmemAlloc(sizeof(SMPredEquivlence));
-    LWLockRelease(shmem_lock_);
     new (sm_pe) SMPredEquivlence();
     sm_pe->Copy(pe);
+    LWLockRelease(shmem_lock_);
     assert(sm_pe);
 
     sets_.insert(sm_pe);
@@ -392,9 +392,9 @@ SMSet<int> RangeInvertedIndex::SuperSets(LevelPredEquivlences* lpes){
      */
     LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
     SMLevelPredEquivlences* sm_lpes = (SMLevelPredEquivlences*)ShmemAlloc(sizeof(SMLevelPredEquivlences));
-    LWLockRelease(shmem_lock_);
     new (sm_lpes) SMLevelPredEquivlences();
     sm_lpes->Copy(lpes);
+    LWLockRelease(shmem_lock_);
     assert(sm_lpes);
     
     std::shared_lock<std::shared_mutex> lock(rw_mutex_);
