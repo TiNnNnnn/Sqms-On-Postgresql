@@ -1600,7 +1600,7 @@ PType PredEquivlence::QualType(Quals* qual){
 						return PType::SUBQUERY;
 					}break;
 					default:{
-						std::cerr<<"unsupport right value type :"<<right_type<<" of quals"<<std::endl;
+						std::cerr<<"right is not variable,unsupport right value type :"<<right_type<<" of quals"<<std::endl;
 						return PType::UNKNOWN;
 					}
 				}
@@ -1609,7 +1609,7 @@ PType PredEquivlence::QualType(Quals* qual){
 				std::swap(qual->left,qual->right);
 				std::swap(qual->l_type,qual->r_type);
 				auto& op = qual->op;
-				switch(right_type){
+				switch(qual->r_type){
 					case T_Const:{
 						if(!strcmp(op,"=")){
 							return PType::EQUAL;
@@ -1667,12 +1667,12 @@ PType PredEquivlence::QualType(Quals* qual){
 						return PType::SUBQUERY;
 					}break;
 					default:{
-						std::cerr<<"unsupport right value type :"<<right_type<<" of quals"<<std::endl;
+						std::cerr<<"right is variable,unsupport right value type :"<<right_type<<" of quals."<<std::endl;
 						return PType::UNKNOWN;
 					}
 				}
 			}else{
-				std::cerr<<"not support currnt type of quals: left: "<<left_type<<",right: "<<right_type<<std::endl;
+				std::cerr<<"not support current type of quals: left: "<<left_type<<",right: "<<right_type<<std::endl;
 				return PType::UNKNOWN;
 			}
 		}
