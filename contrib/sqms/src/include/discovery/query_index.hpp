@@ -17,7 +17,7 @@
  */
 class HistoryQueryLevelTree{
 public:
-    HistoryQueryLevelTree(int origin_height = 1);
+    HistoryQueryLevelTree(LWLock* shmem_lock,int origin_height = 1);
     
     bool Insert(LevelManager* level_mgr,int l = 0);
     bool Remove(LevelManager* level_mgr,int l = 0);
@@ -32,15 +32,16 @@ public:
 private:
     HistoryQueryIndexNode* root_;
     size_t height_ = 7;
+    LWLock* shmem_lock_;
 };
 
-/**
- * QueryIndexManager
- * MARK: unused 
- */
-class QueryIndexManager{
-public:
-    static void RegisterQueryIndex();
-    static void Task();
-    static void DeRegisterQueryIndex();
-};
+// /**
+//  * QueryIndexManager
+//  * MARK: unused 
+//  */
+// class QueryIndexManager{
+// public:
+//     static void RegisterQueryIndex();
+//     static void Task();
+//     static void DeRegisterQueryIndex();
+// };

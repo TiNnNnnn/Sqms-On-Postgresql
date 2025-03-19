@@ -17,6 +17,9 @@ extern "C"{
     #include "miscadmin.h"
     #include "tcop/tcopprot.h"
     #include "utils/fmgrprotos.h"
+    #include "storage/lwlock.h"
+    #include "utils/guc.h"
+    #include "miscadmin.h"
 };
 /** 
  * TODO: the name of HistorySlowPanStat and SlowPlanStat is simlar, we need rename 
@@ -28,7 +31,7 @@ class PlanFormatContext;
 class PlanStatFormat{
     typedef const char *(*explain_get_index_name_hook_type) (Oid indexId);
 public:
-    static PlanStatFormat& getInstance();
+    static PlanStatFormat& getInstance(LWLock* shmem_lock);
 
     PlanStatFormat(const PlanStatFormat&) = delete;
     PlanStatFormat& operator=(const PlanStatFormat&) = delete;
@@ -53,7 +56,7 @@ private:
     void PrintIndent(int depth);
     std::string GetIndent(int depth);
 
-    PlanStatFormat(int psize = 10);
+    PlanStatFormat(LWLock* shmem_lock,int psize = 10);
     ~PlanStatFormat();
 private:
     std::shared_ptr<ThreadPool> pool_;
@@ -66,6 +69,7 @@ private:
     std::mutex search_mutex_;
     bool search_found_ =false; 
     std::condition_variable search_cv_; 
+    LWLock* shmem_lock_;
 };
 
 /**

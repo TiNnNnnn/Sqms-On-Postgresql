@@ -9,20 +9,22 @@
 
 static std::hash<std::string> hash_fn;
 
-PlanStatFormat& PlanStatFormat::getInstance() {
-    static PlanStatFormat instance;
+PlanStatFormat& PlanStatFormat::getInstance(LWLock* shmem_lock) {
+    static PlanStatFormat instance(shmem_lock);
     return instance;
 }
 
 PlanStatFormat::~PlanStatFormat() {}
 
-PlanStatFormat::PlanStatFormat(int psize)
-    : pool_(std::make_shared<ThreadPool>(psize)),pool_size_(psize){
+PlanStatFormat::PlanStatFormat(LWLock* shmem_lock,int psize)
+    : shmem_lock_(shmem_lock),pool_(std::make_shared<ThreadPool>(psize)),pool_size_(psize){
     history_slow_plan_stat__init(&hsps_);
     storage_ = std::make_shared<RedisSlowPlanStatProvider>(std::string(redis_host),redis_port,totalFetchTimeoutMillis,totalSetTimeMillis,defaultTTLSeconds); 
 
     bool found = false;
+    LWLockAcquire(shmem_lock_, LW_SHARED);
     logger_ = (SqmsLogger*)ShmemInitStruct("SqmsLogger", sizeof(SqmsLogger), &found);
+    LWLockRelease(shmem_lock_);
     assert(found);
 }
 
@@ -54,7 +56,9 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt,bool slow
         }
 
         bool found = true;
+        LWLockAcquire(shmem_lock_, LW_SHARED);
         auto shared_index = (HistoryQueryLevelTree*)ShmemInitStruct(shared_index_name, sizeof(HistoryQueryLevelTree), &found);
+        LWLockRelease(shmem_lock_);
         if(!found || !shared_index){
             std::cerr<<"shared_index not exist!"<<std::endl;
             exit(-1);
@@ -180,7 +184,6 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt,bool slow
         std::cout<<"Thread: "<<ThreadPool::GetTid()<<" Finish Working..."<<std::endl;
         return true;
     });
-   
     return true;
 }
 

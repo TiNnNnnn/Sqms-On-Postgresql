@@ -34,6 +34,9 @@ extern "C"{
     #include "utils/builtins.h"
     #include "utils/memutils.h"
     #include "utils/elog.h"
+    #include "storage/lwlock.h"
+    #include "utils/guc.h"
+    #include "miscadmin.h"
 }
 
 //extern HistoryQueryLevelTree* history_idx;
@@ -54,5 +57,6 @@ private:
 public:
     static int nesting_level;
     static bool current_query_sampled;
+    static LWLock* shared_lock_;
     static std::shared_ptr<HistoryQueryLevelTree> history_index_;
 };

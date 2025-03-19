@@ -22,7 +22,7 @@ extern "C" {
 class LevelStrategyContext;
 class HistoryQueryIndexNode{
 public:
-    HistoryQueryIndexNode(int l,int total_height);
+    HistoryQueryIndexNode(int l,int total_height,LWLock* shmem_lock);
     ~HistoryQueryIndexNode();
     
     HistoryQueryIndexNode* Child(size_t l,HistorySlowPlanStat* hsps);
@@ -41,12 +41,14 @@ private:
     LevelStrategyContext* level_strategy_context_;
     /*current node level*/
     size_t level_;
+    
+    LWLock* shmem_lock_;
 };
 
 class LevelStrategy{
 public:
-    LevelStrategy(size_t total_height)
-        :total_height_(total_height){}
+    LevelStrategy(size_t total_height,LWLock* shmem_lock)
+        :total_height_(total_height),shmem_lock_(shmem_lock){}
     virtual SMString Name() = 0;
     virtual bool Insert(LevelManager* level_mgr) = 0;
     virtual bool Serach(LevelManager* level_mgr,int id) = 0;
@@ -60,6 +62,7 @@ public:
     size_t FindNextInsertLevel(NodeCollector* node_collector, size_t cur_level);
 
     size_t total_height_;
+    LWLock* shmem_lock_;
 };
 
 /**
@@ -69,7 +72,7 @@ public:
  */
 class LevelHashStrategy : public LevelStrategy{
 public:
-    LevelHashStrategy(size_t total_height): LevelStrategy(total_height){}
+    LevelHashStrategy(size_t total_height,LWLock* lock): LevelStrategy(total_height,lock){}
     SMString Name(){return "PlanHashStrategy";}
     bool Insert(LevelManager* level_mgr);
     bool Serach(LevelManager* level_mgr,int id);
@@ -89,7 +92,7 @@ private:
  */
 class LevelScalingStrategy : public LevelStrategy{
 public:
-    LevelScalingStrategy(size_t total_height): LevelStrategy(total_height){}
+    LevelScalingStrategy(size_t total_height,LWLock* lock): LevelStrategy(total_height,lock){}
     SMString Name(){return "PlanHashStrategy";}
     bool Insert(LevelManager* level_mgr);
     bool Serach(LevelManager* level_mgr,int id);
@@ -108,9 +111,11 @@ private:
 
 class LevelAggStrategy : public LevelStrategy{
 public:
-    LevelAggStrategy(size_t total_height)
-        :LevelStrategy(total_height){
+    LevelAggStrategy(size_t total_height,LWLock* lock)
+        :LevelStrategy(total_height,lock){
+            LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
             inverted_idx_ = (InvertedIndex<PostingList>*) ShmemAlloc(sizeof(InvertedIndex<PostingList>));
+            LWLockRelease(shmem_lock_);
             assert(inverted_idx_);
             new (inverted_idx_) InvertedIndex<PostingList>();
         }
@@ -130,9 +135,11 @@ private:
 
 class LevelSortStrategy : public LevelStrategy{
 public:
-    LevelSortStrategy(size_t total_height)
-        :LevelStrategy(total_height){
+    LevelSortStrategy(size_t total_height,LWLock* lock)
+        :LevelStrategy(total_height,lock){
+            LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
             inverted_idx_ = (InvertedIndex<PostingList>*) ShmemAlloc(sizeof(InvertedIndex<PostingList>));
+            LWLockRelease(shmem_lock_);
             assert(inverted_idx_);
             new (inverted_idx_) InvertedIndex<PostingList>();
         }
@@ -152,15 +159,21 @@ private:
 
 class LevelRangeStrategy : public LevelStrategy{
 public:
-    LevelRangeStrategy(size_t total_height)
-        : LevelStrategy(total_height){
+    LevelRangeStrategy(size_t total_height,LWLock* lock)
+        : LevelStrategy(total_height,lock){
+            LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
             inverted_idx_ = (InvertedIndex<PostingList>*) ShmemAlloc(sizeof(InvertedIndex<PostingList>));
+            LWLockRelease(shmem_lock_);
+
             assert(inverted_idx_);
             new (inverted_idx_) InvertedIndex<PostingList>();
 
+            LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
             range_inverted_idx_ = (RangeInvertedIndex*) ShmemAlloc(sizeof(RangeInvertedIndex));
+            LWLockRelease(shmem_lock_);
+
             assert(range_inverted_idx_);
-            new (range_inverted_idx_) RangeInvertedIndex();
+            new (range_inverted_idx_) RangeInvertedIndex(shmem_lock_);
         }
     SMString Name(){return "PlanRangePredsStrategy";}
     bool Insert(LevelManager* level_mgr);
@@ -183,9 +196,11 @@ private:
 
 class LevelResidualStrategy : public LevelStrategy{
 public:
-    LevelResidualStrategy(size_t total_height)
-        : LevelStrategy(total_height){
+    LevelResidualStrategy(size_t total_height,LWLock* lock)
+        : LevelStrategy(total_height,lock){
+            LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
             inverted_idx_ = (InvertedIndex<PostingList>*) ShmemAlloc(sizeof(InvertedIndex<PostingList>));
+            LWLockRelease(shmem_lock_);
             assert(inverted_idx_);
             new (inverted_idx_) InvertedIndex<PostingList>();
         }
@@ -214,8 +229,8 @@ class SMPredEquivlence;
 class SMLevelManager;
 class LeafStrategy : public LevelStrategy{
 public:
-    LeafStrategy(size_t total_height)
-        : LevelStrategy(total_height){}
+    LeafStrategy(size_t total_height,LWLock* lock)
+        : LevelStrategy(total_height,lock){}
     SMString Name(){return "LeafStrategy";}
     bool Insert(LevelManager* level_mgr);
     bool Serach(LevelManager* level_mgr,int id);
@@ -260,8 +275,8 @@ private:
  */
 class DeBugStrategy : public LevelStrategy{
 public:
-    DeBugStrategy(size_t total_height)
-        :LevelStrategy(total_height){}
+    DeBugStrategy(size_t total_height,LWLock* lock)
+        :LevelStrategy(total_height,lock){}
     SMString Name() {return "DebugStrategy";}
     bool Insert(LevelManager* level_mgr){
         std::unique_lock<std::shared_mutex> lock(rw_mutex_);
@@ -302,55 +317,73 @@ private:
  */
 class LevelStrategyContext{
 public:
+    LevelStrategyContext(LWLock* shmem_lock)
+        :shmem_lock_(shmem_lock){}
     void SetStrategy(int l,int total_height){
         switch(l){
             case 0: {
+                LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
                 strategy_ = (DeBugStrategy*)ShmemAlloc(sizeof(DeBugStrategy));
+                LWLockRelease(shmem_lock_);
                 if (!strategy_)
                     elog(ERROR, "ShmemAlloc failed: not enough shared memory");
-                new (strategy_) DeBugStrategy(total_height);
+                new (strategy_) DeBugStrategy(total_height,shmem_lock_);
             }break;
             case 1 :{
+                LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
                 strategy_ = (LevelHashStrategy*)ShmemAlloc(sizeof(LevelHashStrategy));
+                LWLockRelease(shmem_lock_);
                 if (!strategy_)
                     elog(ERROR, "ShmemAlloc failed: not enough shared memory");
-                new (strategy_)LevelHashStrategy(total_height);
+                new (strategy_)LevelHashStrategy(total_height,shmem_lock_);
             }break;
             case 2 :{
+                LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
                 strategy_ = (LevelScalingStrategy*)ShmemAlloc(sizeof(LevelScalingStrategy));
+                LWLockRelease(shmem_lock_);
                 if (!strategy_)
                     elog(ERROR, "ShmemAlloc failed: not enough shared memory");
-                new (strategy_)LevelScalingStrategy(total_height);
+                new (strategy_)LevelScalingStrategy(total_height,shmem_lock_);
             }break;
             case 3 :{
+                LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
                 strategy_ = (LevelRangeStrategy*)ShmemAlloc(sizeof(LevelRangeStrategy));
+                LWLockRelease(shmem_lock_);
                 if (!strategy_)
                     elog(ERROR, "ShmemAlloc failed: not enough shared memory");
-                new (strategy_)LevelRangeStrategy(total_height);
+                new (strategy_)LevelRangeStrategy(total_height,shmem_lock_);
             }break;
             case 4 :{
+                LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
                 strategy_ = (LevelSortStrategy*)ShmemAlloc(sizeof(LevelSortStrategy));
+                LWLockRelease(shmem_lock_);
                 if (!strategy_)
                     elog(ERROR, "ShmemAlloc failed: not enough shared memory");
-                new (strategy_)LevelSortStrategy(total_height);
+                new (strategy_)LevelSortStrategy(total_height,shmem_lock_);
             }break;
             case 5 :{
+                LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
                 strategy_ = (LevelAggStrategy*)ShmemAlloc(sizeof(LevelAggStrategy));
+                LWLockRelease(shmem_lock_);
                 if (!strategy_)
                     elog(ERROR, "ShmemAlloc failed: not enough shared memory");                
-                new (strategy_)LevelAggStrategy(total_height);
+                new (strategy_)LevelAggStrategy(total_height,shmem_lock_);
             }break;
             case 6 :{
+                LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
                 strategy_ = (LevelResidualStrategy*)ShmemAlloc(sizeof(LevelResidualStrategy));
+                LWLockRelease(shmem_lock_);
                 if (!strategy_)
                     elog(ERROR, "ShmemAlloc failed: not enough shared memory");    
-                new (strategy_)LevelResidualStrategy(total_height);
+                new (strategy_)LevelResidualStrategy(total_height,shmem_lock_);
             }break;
             case 7: {
+                LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
                 strategy_ = (LeafStrategy*)ShmemAlloc(sizeof(LeafStrategy));
+                LWLockRelease(shmem_lock_);
                 if (!strategy_)
                     elog(ERROR, "ShmemAlloc failed: not enough shared memory");    
-                new (strategy_)LeafStrategy(total_height);
+                new (strategy_)LeafStrategy(total_height,shmem_lock_);
             }break;
             default :{
                 std::cerr<<"unknon level strategy"<<std::endl;
@@ -369,6 +402,7 @@ public:
 
 private:
     LevelStrategy* strategy_;
+    LWLock* shmem_lock_;
 };
 
 
