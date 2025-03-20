@@ -917,9 +917,7 @@ bool LevelRangeStrategy::Insert(NodeCollector* node_collector){
             return child->Insert(node_collector);
         }else{
             size_t next_level = FindNextInsertLevel(node_collector,3);
-            //LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
             HistoryQueryIndexNode* new_idx_node = (HistoryQueryIndexNode*)ShmemAlloc(sizeof(HistoryQueryIndexNode));
-            //LWLockRelease(shmem_lock_);
             if(!new_idx_node){
                 elog(ERROR, "ShmemAlloc failed: not enough shared memory");
                 exit(-1);
@@ -1076,72 +1074,36 @@ bool LeafStrategy::Serach(LevelManager* level_mgr,int id){
     /*check lpes from top to down*/
     int h = total_lpes_list.size() -1;
     int lpe_id = id;
-
-    /**
-     * lpe_id = -1, it indicates two conditions: 
-     * 1. history query no predicates,just stop search
-     * 2. comming query no predicates,just stop search
-     */
-    // if(lpe_id == -1){
-    //     if(total_lpes_list[h]->GetLpesList().size()){
-    //         assert(!level_mgr_->GetTotalEquivlences()[h]->GetLpesList().size());
-    //         return false;
-    //     }else{
-    //         return true;
-    //     }
-    // }
-    
-    // h = h-1;
-    // auto child_lpes_list = total_lpes_list[h]->GetChildLpesMap()[lpe_id];
-    // auto dst_lpes_list = level_mgr_->GetTotalEquivlences()[h];
-    // size_t i = 0;
-    // for(;i<child_lpes_list.size();++i){
-    //     auto child_id = child_lpes_list[i];
-    //     std::vector<size_t> match_idxs;
-    //     if(SerachRange(level_mgr,h,child_id,match_idxs)){
-    //         bool match = false;
-    //         for(const auto& mid : match_idxs){
-    //             SMLevelPredEquivlences *match_dst_lpes = dst_lpes_list->GetLpesList()[mid];
-    //             if(SearchAgg(level_mgr,h,child_id,match_dst_lpes)
-    //             && SearchSort(level_mgr,h,child_id,match_dst_lpes)
-    //             && SerachResidual(level_mgr,h,child_id,match_dst_lpes)){
-    //                 if(SearchInternal(level_mgr,h-1,child_id,mid)){
-    //                     return true;
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
-    // return false;
-
-    std::shared_lock<std::shared_mutex>lock(rw_mutex_);
-    while(h >= 1){
-        auto child_lpes_list = total_lpes_list[h]->GetChildLpesMap()[lpe_id];
-        if(child_lpes_list.empty()){
-            /*cur heighr no predicates*/
-            if( SerachAgg(level_mgr,h-1,0)&& SerachSort(level_mgr,h-1,0)&& SerachResidual(level_mgr,h-1,0)){
-                h--;
-                continue;
+    {
+        std::shared_lock<std::shared_mutex>lock(rw_mutex_);
+        while(h >= 1){
+            auto child_lpes_list = total_lpes_list[h]->GetChildLpesMap()[lpe_id];
+            if(child_lpes_list.empty()){
+                /*cur heighr no predicates*/
+                if( SerachAgg(level_mgr,h-1,0)&& SerachSort(level_mgr,h-1,0)&& SerachResidual(level_mgr,h-1,0)){
+                    h--;
+                    continue;
+                }
+            }
+            size_t i = 0;
+            for(;i<child_lpes_list.size();++i){
+                auto child_id = child_lpes_list[i];
+                std::vector<size_t> match_idxs;
+                auto ret = SerachRange(level_mgr,h-1,child_id,match_idxs)
+                    && SerachAgg(level_mgr,h-1,child_id)
+                    && SerachSort(level_mgr,h-1,child_id)
+                    && SerachResidual(level_mgr,h-1,child_id);
+                if(ret){
+                    h--;
+                    break;
+                }
+            }
+            if(i == child_lpes_list.size()){
+                return false;
             }
         }
-        size_t i = 0;
-        for(;i<child_lpes_list.size();++i){
-            auto child_id = child_lpes_list[i];
-            std::vector<size_t> match_idxs;
-            auto ret = SerachRange(level_mgr,h-1,child_id,match_idxs)
-                && SerachAgg(level_mgr,h-1,child_id)
-                && SerachSort(level_mgr,h-1,child_id)
-                && SerachResidual(level_mgr,h-1,child_id);
-            if(ret){
-                h--;
-                break;
-            }
-        }
-        if(i == child_lpes_list.size()){
-            return false;
-        }
+        return true;
     }
-    return true;
 }
 
 bool LeafStrategy::SearchInternal(LevelManager* src_mgr,int h,int id,int dst_id){

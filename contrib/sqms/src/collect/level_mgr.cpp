@@ -1145,8 +1145,16 @@ int PredEquivlenceRange::LimitCompare(const std::string& left_range,VarType left
 	};
 	
 	/*parser string to double*/
-	auto double_parser = [](const std::string& range)->double{
-		double var = 0;
+	auto double_parser = [](std::string range)->double{
+		double var = 0.00;
+		
+		while (!range.empty() && range.front() == '\'') {
+			range.erase(range.begin());
+		}
+		while (!range.empty() && range.back() == '\'') {
+			range.erase(range.end() - 1);
+		}
+
 		if(range == UPPER_LIMIT){
 			var = DBL_MAX;
 		}else if(range == LOWER_LIMIT){
@@ -1171,7 +1179,7 @@ int PredEquivlenceRange::LimitCompare(const std::string& left_range,VarType left
 	};
 	
 
-	switch(left_type){
+	switch(left_type){ 
 		case VarType::INT:{
 			int left_var = int_parser(left_range);
 			if(right_type == VarType::INT){
@@ -1201,9 +1209,11 @@ int PredEquivlenceRange::LimitCompare(const std::string& left_range,VarType left
 			}
 		}break;
 		case VarType::DOUBLE:{
-			double left_var = double_parser(right_range);
+			double left_var = double_parser(left_range);
+			//std::cout<<"left_double"<<left_var<<std::endl;
 			if(right_type == VarType::DOUBLE){
 				double right_var = double_parser(right_range);
+				//std::cout<<"right_double"<<right_var<<std::endl;
 				return left_var - right_var;
 			}else if(right_type == VarType::INT){
 				double right_var = int_parser(right_range);
@@ -1703,8 +1713,9 @@ VarType PredEquivlence::QualVarType(Quals* qual){
 			case INT2OID:
 			case INT4OID:
 			case INT8OID:
-			case NUMERICOID:
 				return VarType::INT;
+			case NUMERICOID:
+				return VarType::DOUBLE;
 			case INTERVALOID:
 				return VarType::UNKNOWN;
 			case TIMEOID:

@@ -42,7 +42,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt,bool slow
     history_slow_plan_stat__pack(&hsps_,buffer);
     pid_t pid = getpid();
 
-    std::thread t([msg_size,buffer,slow,pid,this,oldcxt,qd]() -> bool{
+    //std::thread t([msg_size,buffer,slow,pid,this,oldcxt,qd]() -> bool{
         std::cout<<"Thread: "<<ThreadPool::GetTid()<<" Begin Working..."<<std::endl;
         /**
          * Due to the use of thread separation to ensure the main thread flow, we need 
@@ -181,9 +181,9 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt,bool slow
         history_slow_plan_stat__free_unpacked(hsps,NULL);
         std::cout<<"Thread: "<<ThreadPool::GetTid()<<" Finish Working..."<<std::endl;
         return true;
-    });
-    t.detach();
-    return true;
+    //});
+    //t.detach();
+    //return true;
 }
 
 /**
@@ -233,18 +233,29 @@ void PlanStatFormat::LevelOrder(HistorySlowPlanStat* hsps,std::vector<HistorySlo
 }
 
 bool PlanStatFormat::CancelQuery(pid_t pid){
-    Datum arg;
-    arg = Int32GetDatum(pid);
-    FunctionCallInfoBaseData fcinfo;
-    InitFunctionCallInfoData(fcinfo, NULL, 1, InvalidOid, NULL, NULL);
-    fcinfo.args[0].value = arg;
-    fcinfo.args[0].isnull = false;
+    // Datum arg;
+    // arg = Int32GetDatum(pid);
+    // FunctionCallInfoBaseData fcinfo;
+    // InitFunctionCallInfoData(fcinfo, NULL, 1, InvalidOid, NULL, NULL);
+    // fcinfo.args[0].value = arg;
+    // fcinfo.args[0].isnull = false;
     
-    auto result = DatumGetBool(pg_cancel_backend(&fcinfo));
-    if(result){
+    // auto result = DatumGetBool(pg_cancel_backend(&fcinfo));
+    // if(result){
+    //     logger_->Logger("comming","cancel query success...");
+    //     return true;
+    // }else{
+    //     logger_->Logger("comming","cancel query failed or has been canceled...");
+    //     return false;
+    // }
+    
+    Datum arg = Int32GetDatum(pid);
+    Datum result = DirectFunctionCall1(pg_cancel_backend, arg);
+    bool success = DatumGetBool(result);
+    if(success){
         logger_->Logger("comming","cancel query success...");
         return true;
-    }else{
+    } else {
         logger_->Logger("comming","cancel query failed or has been canceled...");
         return false;
     }

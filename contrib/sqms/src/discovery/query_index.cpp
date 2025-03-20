@@ -11,41 +11,27 @@ HistoryQueryLevelTree::HistoryQueryLevelTree(int origin_height){
 }
 
 bool HistoryQueryLevelTree::Insert(LevelManager* level_mgr,int l){
-    //LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
-    auto ret = root_->Insert(level_mgr);
-    //LWLockRelease(shmem_lock_);
-    return ret;
+    return root_->Insert(level_mgr);
 }
 
 bool HistoryQueryLevelTree::Remove(LevelManager* level_mgr,int l){
-    //LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
-    auto ret =  root_->Remove(level_mgr);
-    //LWLockRelease(shmem_lock_);
-    return ret;
+    return  root_->Remove(level_mgr);
 }
 
 bool HistoryQueryLevelTree::Search(LevelManager* level_mgr,int l){
-    //LWLockAcquire(shmem_lock_, LW_SHARED);
-    auto ret =  root_->Search(level_mgr,-1);
-    //LWLockRelease(shmem_lock_);
-    return ret;
+    return  root_->Search(level_mgr,-1);
+
 }
 
 bool HistoryQueryLevelTree::Insert(NodeCollector* node_collector){
-    //LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
-    auto ret = root_->Insert(node_collector);
-    //LWLockRelease(shmem_lock_);
-    return ret;
+    return root_->Insert(node_collector);
 }
 bool HistoryQueryLevelTree::Remove(NodeCollector* node_collector){
-    //LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
-    auto ret = root_->Remove(node_collector);
-    //LWLockRelease(shmem_lock_);
-    return ret;
+    return root_->Remove(node_collector);
 }
 bool HistoryQueryLevelTree::Search(NodeCollector* node_collector){
-    auto ret = root_->Serach(node_collector);
-    return ret;
+    return root_->Serach(node_collector);
+    
 }
 
 /**
