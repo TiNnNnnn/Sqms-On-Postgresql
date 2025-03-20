@@ -65,7 +65,6 @@ extern "C" {
         ExecutorEnd_hook = prev_ExecutorEnd;       
 
 		shmem_startup_hook = prev_shmem_startup_hook;
-		//emit_log_hook = prev_log_hook;
     }
 };
 

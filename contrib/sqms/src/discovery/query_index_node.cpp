@@ -18,9 +18,7 @@ bool LevelHashStrategy::Insert(LevelManager* level_mgr){
     }else{
         /*create a new child node*/
         size_t next_level = FindNextInsertLevel(level_mgr,1);
-        //LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
         HistoryQueryIndexNode* new_idx_node = (HistoryQueryIndexNode*)ShmemAlloc(sizeof(HistoryQueryIndexNode));
-        //LWLockRelease(shmem_lock_);
         if(!new_idx_node){
             elog(ERROR, "ShmemAlloc failed: not enough shared memory");
             exit(-1);
@@ -69,9 +67,7 @@ bool LevelHashStrategy::Insert(NodeCollector* node_collector){
     }else{
         /*create a new child node*/
         size_t next_level = FindNextInsertLevel(node_collector,1);
-        //LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
         HistoryQueryIndexNode* new_idx_node = (HistoryQueryIndexNode*)ShmemAlloc(sizeof(HistoryQueryIndexNode));
-        //LWLockRelease(shmem_lock_);
         if(!new_idx_node){
             elog(ERROR, "ShmemAlloc failed: not enough shared memory");
             exit(-1);
@@ -106,9 +102,7 @@ bool LevelHashStrategy::Search(NodeCollector* node_collector){
 bool LevelScalingStrategy::Insert(LevelManager* level_mgr){
     assert(level_mgr);
     assert(level_mgr->GetJoinTypeList().size());
-    //LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
     auto new_scaling_info =  (ScalingInfo*) ShmemAlloc (sizeof(ScalingInfo));   
-    //LWLockRelease(shmem_lock_);
     assert(new_scaling_info);
     new (new_scaling_info) ScalingInfo(level_mgr->GetJoinTypeList());
 
@@ -132,9 +126,7 @@ bool LevelScalingStrategy::Insert(LevelManager* level_mgr){
         }else{
             /*create a new child node*/
             size_t next_level = FindNextInsertLevel(level_mgr,2);
-            //LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
             HistoryQueryIndexNode* new_idx_node = (HistoryQueryIndexNode*)ShmemAlloc(sizeof(HistoryQueryIndexNode));
-            //LWLockRelease(shmem_lock_);
             if(!new_idx_node){
                 elog(ERROR, "ShmemAlloc failed: not enough shared memory");
                 exit(-1);

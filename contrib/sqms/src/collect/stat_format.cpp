@@ -41,8 +41,8 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt,bool slow
     }
     history_slow_plan_stat__pack(&hsps_,buffer);
     pid_t pid = getpid();
-    
-    pool_->submit([msg_size,buffer,slow,pid,this,oldcxt,qd]() -> bool {
+
+    std::thread t([msg_size,buffer,slow,pid,this,oldcxt,qd]() -> bool{
         std::cout<<"Thread: "<<ThreadPool::GetTid()<<" Begin Working..."<<std::endl;
         /**
          * Due to the use of thread separation to ensure the main thread flow, we need 
@@ -142,7 +142,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt,bool slow
                     auto level_mgr = std::make_shared<LevelManager>(p,sps,logger_,"comming");
                     pf_context_1->SetStrategy(level_mgr);
                     pf_context_1->executeStrategy();
-                    //level_mgr->ShowTotalPredClass();
+                    level_mgr->ShowTotalPredClass();
 
                     if(debug){
                         auto node_collect_map = level_mgr->GetNodeCollector();
@@ -151,8 +151,10 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt,bool slow
 
                     if(shared_index->Search(level_mgr.get(),1)){
                         CancelQuery(pid);
+                        //elog(NOTICE, "query has been canceled!");
+                        logger_->Logger("comming","****************************");
+                        break;
                     }
-                    
                     logger_->Logger("comming","****************************");
                     //return true;
                 //});
@@ -180,6 +182,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt,bool slow
         std::cout<<"Thread: "<<ThreadPool::GetTid()<<" Finish Working..."<<std::endl;
         return true;
     });
+    t.detach();
     return true;
 }
 
@@ -232,7 +235,6 @@ void PlanStatFormat::LevelOrder(HistorySlowPlanStat* hsps,std::vector<HistorySlo
 bool PlanStatFormat::CancelQuery(pid_t pid){
     Datum arg;
     arg = Int32GetDatum(pid);
-    
     FunctionCallInfoBaseData fcinfo;
     InitFunctionCallInfoData(fcinfo, NULL, 1, InvalidOid, NULL, NULL);
     fcinfo.args[0].value = arg;
