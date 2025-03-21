@@ -43,6 +43,7 @@ enum class PType{
     /**/
     SUBLINK,
     SUBQUERY,
+    PARAM,
     UNKNOWN,
 };
 
@@ -215,9 +216,6 @@ public:
     void CalSortInfo(){
         //assert(ranges_.size());
 
-        /**
-         * TODO: fix range easy compare
-         */
         std::string lower_limit = UPPER_LIMIT;
         std::string upper_limit = LOWER_LIMIT;
         for(const auto& range: ranges_){
@@ -235,19 +233,11 @@ public:
                 lower_limit = range->LowerLimit();
             }
 
-            // if((lower_limit != UPPER_LIMIT && range->LowerLimit() < lower_limit)
-            //     || lower_limit == UPPER_LIMIT || lower_limit == LOWER_LIMIT){
-            //     lower_limit = range->LowerLimit();
-            // }
             ret = PredEquivlenceRange::LimitCompare(range->UpperLimit(),range->PredVarType(),upper_limit,range->PredVarType());
             if((upper_limit != LOWER_LIMIT && ret)
                 || upper_limit == LOWER_LIMIT || upper_limit == UPPER_LIMIT){
                 upper_limit = range->UpperLimit();
             }
-            // if((upper_limit != LOWER_LIMIT && range->UpperLimit() > upper_limit)
-            //     || upper_limit == LOWER_LIMIT || upper_limit == UPPER_LIMIT){
-            //     upper_limit = range->UpperLimit();
-            // }
         }
         lower_limit_ = lower_limit;
         upper_limit_ = upper_limit;
@@ -274,6 +264,7 @@ private:
             return "";
         }
     }
+    std::string extract_param_name(const std::string& subplan_name);
 private:
     std::set<std::string> set_;
     /* common attr ranges,here is no need to sort*/

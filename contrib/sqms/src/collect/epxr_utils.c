@@ -4671,8 +4671,10 @@ get_parameter(Param *param, deparse_context *context)
 
 	/*
 	 * Not PARAM_EXEC, or couldn't find referent: just print $N.
+	 * here always match initPlan, which just run one time 
 	 */
 	appendStringInfo(context->buf, "$%d", param->paramid);
+	/*here we fetch init plan name*/
 }
 
 /*

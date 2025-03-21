@@ -165,6 +165,8 @@ message Quals{
 
 	uint32 left_val_type_id = 11;
 	uint32 right_val_type_id = 12;
+
+	HistorySlowPlanStat root_hsps = 13;
 }
 
 

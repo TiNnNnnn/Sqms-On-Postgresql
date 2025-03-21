@@ -1458,7 +1458,7 @@ const ProtobufCMessageDescriptor pred_operator__descriptor =
   (ProtobufCMessageInit) pred_operator__init,
   NULL,NULL,NULL    /* reserved[123] */
 };
-static const ProtobufCFieldDescriptor quals__field_descriptors[12] =
+static const ProtobufCFieldDescriptor quals__field_descriptors[13] =
 {
   {
     "left",
@@ -1604,6 +1604,18 @@ static const ProtobufCFieldDescriptor quals__field_descriptors[12] =
     0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
+  {
+    "root_hsps",
+    13,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_MESSAGE,
+    0,   /* quantifier_offset */
+    offsetof(Quals, root_hsps),
+    &history_slow_plan_stat__descriptor,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
 };
 static const unsigned quals__field_indices_by_name[] = {
   5,   /* field[5] = format_type */
@@ -1616,13 +1628,14 @@ static const unsigned quals__field_indices_by_name[] = {
   4,   /* field[4] = r_type */
   1,   /* field[1] = right */
   11,   /* field[11] = right_val_type_id */
+  12,   /* field[12] = root_hsps */
   8,   /* field[8] = sub_plan_name */
   6,   /* field[6] = use_or */
 };
 static const ProtobufCIntRange quals__number_ranges[1 + 1] =
 {
   { 1, 0 },
-  { 0, 12 }
+  { 0, 13 }
 };
 const ProtobufCMessageDescriptor quals__descriptor =
 {
@@ -1632,7 +1645,7 @@ const ProtobufCMessageDescriptor quals__descriptor =
   "Quals",
   "",
   sizeof(Quals),
-  12,
+  13,
   quals__field_descriptors,
   quals__field_indices_by_name,
   1,  quals__number_ranges,

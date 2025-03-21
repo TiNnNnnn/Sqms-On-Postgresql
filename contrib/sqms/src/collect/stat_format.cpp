@@ -48,10 +48,12 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt,bool slow
          * Due to the use of thread separation to ensure the main thread flow, we need 
          * to deeply copy the proto structure to the child threads
          */
-        HistorySlowPlanStat *hsps = history_slow_plan_stat__unpack(NULL, msg_size, buffer);
-        if(!hsps){
-            std::cerr<<"history_slow_plan_stat__unpack failed in thered: "<<ThreadPool::GetTid()<<std::endl;
-        }
+        // HistorySlowPlanStat *hsps = history_slow_plan_stat__unpack(NULL, msg_size, buffer);
+        // if(!hsps){
+        //     std::cerr<<"history_slow_plan_stat__unpack failed in thered: "<<ThreadPool::GetTid()<<std::endl;
+        // }
+
+        auto hsps = &hsps_;
 
         bool found = true;
         auto shared_index = (HistoryQueryLevelTree*)ShmemInitStruct(shared_index_name, sizeof(HistoryQueryLevelTree), &found);
@@ -178,7 +180,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt,bool slow
 
             logger_->Logger("comming","finish process comming query...");
         }
-        history_slow_plan_stat__free_unpacked(hsps,NULL);
+        //history_slow_plan_stat__free_unpacked(hsps,NULL);
         std::cout<<"Thread: "<<ThreadPool::GetTid()<<" Finish Working..."<<std::endl;
         return true;
     //});
@@ -248,7 +250,7 @@ bool PlanStatFormat::CancelQuery(pid_t pid){
     //     logger_->Logger("comming","cancel query failed or has been canceled...");
     //     return false;
     // }
-    
+
     Datum arg = Int32GetDatum(pid);
     Datum result = DirectFunctionCall1(pg_cancel_backend, arg);
     bool success = DatumGetBool(result);

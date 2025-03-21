@@ -856,6 +856,7 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
         
 		auto qual = static_cast<QualsWarp*>(level_collector[0][0])->GetQual();
 		qual->hsps = cur_hsps_;
+		qual->root_hsps = hsps_;
 		PredEquivlence* pe = new PredEquivlence(qual);
 		LevelPredEquivlences * lpes = new LevelPredEquivlences();
 		lpes->Insert(pe);
@@ -878,6 +879,7 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
 										//LevelPredEquivlences * lpes = new LevelPredEquivlences();
 										auto qual = static_cast<QualsWarp*>(cur_op->Child(i))->GetQual();
 										qual->hsps = cur_hsps_;
+										qual->root_hsps = hsps_;
 										LevelPredEquivlences * lpes = new LevelPredEquivlences();
 										lpes->Insert(qual,false);
 										and_lpes_list->Insert(lpes,false);
@@ -929,6 +931,7 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
 									case AbstractPredNodeType::QUALS:{
 										auto qual = static_cast<QualsWarp*>(cur_op->Child(i))->GetQual();
 										qual->hsps = cur_hsps_;
+										qual->root_hsps = hsps_;
 										LevelPredEquivlences * lpes = new LevelPredEquivlences();
 										lpes->Insert(qual,false);
 										or_lpes_list->Insert(lpes,true);
@@ -1390,6 +1393,20 @@ std::string PredEquivlenceRange::PrintPredEquivlenceRange(int depth,std::string 
 	return output;
 }
 
+#include <iostream>
+#include <string>
+#include <regex>
+
+std::string PredEquivlence::extract_param_name(const std::string& subplan_name) {
+    std::regex pattern(R"(\(returns\s+(\$\d+)\))"); 
+    std::smatch match;
+    
+    if (std::regex_search(subplan_name, match, pattern)) {
+        return match[1]; 
+    }
+    return ""; 
+}
+
 PredEquivlence::PredEquivlence(Quals* qual){
 	assert(qual);
 	PType type = QualType(qual);
@@ -1488,7 +1505,10 @@ PredEquivlence::PredEquivlence(Quals* qual){
 			/*calualate pred equivlence here*/
 			for(size_t i = 0; i < qual->hsps->n_subplans; i++){
 				auto sub_plan_hsp = qual->hsps->subplans[i];
-	
+				assert(strlen(sub_plan_hsp->sub_plan_name));
+				if(strcmp(qual->sub_plan_name,sub_plan_hsp->sub_plan_name)){
+					continue;
+				}
 				PredEquivlenceRange* new_range = new PredEquivlenceRange();
 				range->SetPredVarType(var_type);
 				new_range->SetPredType(PType::SUBQUERY);
@@ -1522,6 +1542,10 @@ PredEquivlence::PredEquivlence(Quals* qual){
 			/*calualate pred equivlence here*/
 			for(size_t i = 0; i < qual->hsps->n_subplans; i++){
 				auto sub_plan_hsp = qual->hsps->subplans[i];
+				assert(strlen(sub_plan_hsp->sub_plan_name));
+				if(strcmp(qual->sub_plan_name,sub_plan_hsp->sub_plan_name)){
+					continue;
+				}
 				PredEquivlenceRange* new_range = new PredEquivlenceRange(); 
 				new_range->SetPredVarType(var_type);
 				new_range->SetPredType(PType::SUBLINK);
@@ -1533,6 +1557,60 @@ PredEquivlence::PredEquivlence(Quals* qual){
 				pf_context->executeStrategy();
 				sublink_level_pe_lists_[sub_plan_hsp->sub_plan_name] = sub_level_mgr; 
 			}
+		}break;
+		case PType::PARAM:{
+			assert(qual->hsps);
+			PlanFormatContext* pf_context = new PlanFormatContext();
+			
+			bool found = false;
+			auto logger = (SqmsLogger*)ShmemInitStruct("SqmsLogger", sizeof(SqmsLogger), &found);
+			assert(found);
+
+			/*qual has param may be just has a param without left var*/
+			/**
+			 * TODO: paser not totally correct
+			 */
+			if(!strlen(qual->left)){				
+			}else{
+				std::string l = extract_field(qual->left);
+				if(l.empty()){
+					set_.insert(qual->left);
+				}else{
+					set_.insert(l);
+				}				
+			}
+
+			/**
+			 * init plan will be put in the root node of physical plan, instead of be put
+			 * in the  opearotr where predicate at.
+			 */
+			for(size_t i =0; i< qual->root_hsps->n_subplans; i++){
+				auto sub_plan_hsp = qual->root_hsps->subplans[i];
+				/**
+				 * init plan name always formted as'InitPlan 1 (returns $0)', in predicate,
+				 * it just mark $0 as mmeber,insterad of init_plan name or otherwise.after
+				 * we process the qual ,we can regonize it as subquery.
+				 */
+				std::cout<<"subplan plan name:"<<sub_plan_hsp->sub_plan_name<<std::endl;
+				auto param_str = extract_param_name(sub_plan_hsp->sub_plan_name);
+				if(param_str != std::string(qual->right)){
+					continue;
+				}
+
+				PredEquivlenceRange* new_range = new PredEquivlenceRange(); 
+				new_range->SetPredVarType(var_type);
+				new_range->SetPredType(PType::SUBQUERY);
+				new_range->SetSubqueryName(sub_plan_hsp->sub_plan_name);
+				ranges_.insert(new_range);
+					
+				auto sub_level_mgr = std::make_shared<LevelManager>(sub_plan_hsp,nullptr,logger);
+				pf_context->SetStrategy(sub_level_mgr);
+				pf_context->executeStrategy();
+				sublink_level_pe_lists_[sub_plan_hsp->sub_plan_name] = sub_level_mgr; 
+			}	
+			/**
+			 * TODO: if pram isn't mapping to subquery,we need process in other way.
+			 */
 		}break;
 		default:{
 			std::cerr<<"unkonw type of qual while init pred equivlence"<<std::endl;
@@ -1609,6 +1687,9 @@ PType PredEquivlence::QualType(Quals* qual){
 					case T_SubPlan:{
 						return PType::SUBQUERY;
 					}break;
+					case T_Param:{
+						return PType::PARAM;
+					}
 					default:{
 						std::cerr<<"right is not variable,unsupport right value type :"<<right_type<<" of quals"<<std::endl;
 						return PType::UNKNOWN;
@@ -1753,7 +1834,8 @@ bool PredEquivlence::PredVariable(NodeTag node_tag){
 	switch(node_tag){
 		case T_Const:
 		case T_SubLink:
-		case T_SubPlan:{
+		case T_SubPlan:
+		case T_Param:{
 			return false;
 		}break;
 		default:{

@@ -279,10 +279,11 @@ struct  _Quals
   HistorySlowPlanStat *hsps;
   uint32_t left_val_type_id;
   uint32_t right_val_type_id;
+  HistorySlowPlanStat *root_hsps;
 };
 #define QUALS__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&quals__descriptor) \
-    , (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, 0, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, NULL, 0, 0 }
+    , (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, 0, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, NULL, 0, 0, NULL }
 
 
 /*
