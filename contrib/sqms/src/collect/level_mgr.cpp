@@ -107,6 +107,11 @@ void LevelManager::ComputeLevelClass(const std::vector<HistorySlowPlanStat*>& li
 
 		for(const auto& pe : *e){
 			pe->CalSortInfo();
+			// if(pe->NeedNegative()){
+			// 	if(pe->HasSubquery()){
+					
+			// 	}
+			// }
 		}
 	}
 
@@ -870,7 +875,6 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
 					auto cur_op = static_cast<PredOperatorWrap*>(expr);
 					switch(cur_op->GetOpType()){
 						case PRED_OPERATOR__PRED_OPERATOR_TYPE__AND:{
-							//LevelPredEquivlences * lpes = new LevelPredEquivlences();
 							LevelPredEquivlencesList* and_lpes_list = new LevelPredEquivlencesList();
 							for(size_t i=0;i<cur_op->ChildSize();i++){
 								auto type = cur_op->Child(i)->Type();
@@ -890,17 +894,17 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
 											case PRED_OPERATOR__PRED_OPERATOR_TYPE__AND:{
 												auto child_and_lpes_list = child_op->GetAndLpesList();
 												assert(child_and_lpes_list->Size());
-												and_lpes_list->Insert(child_and_lpes_list,false);
+												and_lpes_list->Insert(child_and_lpes_list,0);
 											}break;
 											case PRED_OPERATOR__PRED_OPERATOR_TYPE__OR:{
 												auto child_or_lpes_list = child_op->GetOrLpesList();
 												assert(child_or_lpes_list->Size());
-												and_lpes_list->Insert(child_or_lpes_list,false);
+												and_lpes_list->Insert(child_or_lpes_list,0);
 											}break;
 											case PRED_OPERATOR__PRED_OPERATOR_TYPE__NOT:{
-												/**
-												 * TODO: not implement yet
-												 */
+												auto child_not_lpes_list = child_op->GetNotLpesList();
+												assert(child_not_lpes_list->Size());
+												and_lpes_list->Insert(child_not_lpes_list,0);
 											}break;
 											default:{
 												std::cerr<<"unknown child operator type :"<< cur_op->GetOpType()<<std::endl;
@@ -942,17 +946,17 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
 											case PRED_OPERATOR__PRED_OPERATOR_TYPE__AND:{
 												auto child_and_lpes_list = child_op->GetAndLpesList();
 												assert(child_and_lpes_list->Size());
-												or_lpes_list->Insert(child_and_lpes_list,true);
+												or_lpes_list->Insert(child_and_lpes_list,1);
 											}break;
 											case PRED_OPERATOR__PRED_OPERATOR_TYPE__OR:{
 												auto child_or_lpes_list = child_op->GetOrLpesList();
 												assert(child_or_lpes_list->Size());
-												or_lpes_list->Insert(child_or_lpes_list,true);
+												or_lpes_list->Insert(child_or_lpes_list,1);
 											}break;
 											case PRED_OPERATOR__PRED_OPERATOR_TYPE__NOT:{
-												/**
-												 * TODO: not implement yet
-												 */
+												auto child_not_lpes_list = child_op->GetNotLpesList();
+												assert(child_not_lpes_list->Size());
+												or_lpes_list->Insert(child_not_lpes_list,1);
 											}break;
 											default:{
 												std::cerr<<"unknown child operator type :"<< cur_op->GetOpType()<<std::endl;
@@ -976,11 +980,56 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
 							}
 						}break;
 						case PRED_OPERATOR__PRED_OPERATOR_TYPE__NOT:{
-							/**
-							 * TODO: implement this 
-							 */
-							for(size_t i=0;i<cur_op->ChildSize();i++){
-
+							LevelPredEquivlencesList* not_lpes_list = new LevelPredEquivlencesList();
+							/*child size will be 1*/
+							assert(cur_op->ChildSize() == 1);
+							auto type = cur_op->Child(0)->Type();
+							switch (type){
+								case AbstractPredNodeType::QUALS:{
+									auto qual = static_cast<QualsWarp*>(cur_op->Child(0))->GetQual();
+									qual->hsps = cur_hsps_;
+									qual->root_hsps = hsps_;
+									LevelPredEquivlences * lpes = new LevelPredEquivlences();
+									lpes->Insert(qual,true);
+									not_lpes_list->Insert(lpes,false);
+								}break;
+								case AbstractPredNodeType::OPERATOR:{
+									std::cerr<<"not support complex expression which has not operator"<<std::endl;
+									exit(-1);
+									// auto child_op = static_cast<PredOperatorWrap*>(cur_op->Child(0));
+									// switch(child_op->GetOpType()){
+									// 	case PRED_OPERATOR__PRED_OPERATOR_TYPE__AND:{
+									// 		auto child_and_lpes_list = child_op->GetAndLpesList();
+									// 		assert(child_and_lpes_list->Size());
+									// 		not_lpes_list->Insert(child_and_lpes_list,2);
+									// 	}break;
+									// 	case PRED_OPERATOR__PRED_OPERATOR_TYPE__OR:{
+									// 		auto child_or_lpes_list = child_op->GetOrLpesList();
+									// 		assert(child_or_lpes_list->Size());
+									// 		not_lpes_list->Insert(child_or_lpes_list,2);
+									// 	}break;
+									// 	case PRED_OPERATOR__PRED_OPERATOR_TYPE__NOT:{
+									// 		auto child_not_lpes_list = child_op->GetNotLpesList();
+									// 		assert(child_not_lpes_list->Size());
+									// 		not_lpes_list->Insert(child_not_lpes_list,2);
+									// 	}break;
+									// 	default:{
+									// 		std::cerr<<"unknown child operator type :"<< cur_op->GetOpType()<<std::endl;
+									// 		exit(-1);
+									// 	}
+									// }
+								}break;
+								default:{
+									std::cerr<<"unknown child type:"<<std::endl;
+									exit(-1);
+								}
+							}
+							/* update tree structure,replace current opeator node into lpes node*/
+							auto parent = cur_op->GetParent();
+							if(!parent){
+								final_lpes_list = not_lpes_list;
+							}else{
+								cur_op->SetAndLpesList(not_lpes_list);
 							}
 						}break;
 						default:
@@ -1052,12 +1101,10 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
 	}
 
 	if(sub_final_lpes_list->Size()){
-		//final_lpes_list->Insert(sub_final_lpes_list,false);
 		total_equivlences_[cur_height_]->Insert(sub_final_lpes_list,false);
 	}
 		
 	/*update toal_equivlences*/
-	//total_equivlences_[cur_height_] = final_lpes_list;
 	nodes_collector_map_[cur_hsps_]->node_equivlences_ = node_final_lpes_list;
 }
 
@@ -1071,7 +1118,6 @@ bool PredEquivlenceRange::Serach(PredEquivlenceRange* range){
 		case PType::NOT_EQUAL:{
 			if(range->PredType() == PType::NOT_EQUAL){
 				return PredEquivlenceRange::LimitCompare(range->UpperLimit(),range->PredVarType(),UpperLimit(),var_type_) == 0;
-				//return range->UpperLimit() == UpperLimit();	
 			}else{
 				return false; 
 			}
@@ -1079,7 +1125,6 @@ bool PredEquivlenceRange::Serach(PredEquivlenceRange* range){
 		case PType::EQUAL:{
 			if(range->PredType() == PType::NOT_EQUAL){
 				return PredEquivlenceRange::LimitCompare(range->UpperLimit(),range->PredVarType(),UpperLimit(),var_type_) == 0;
-				//return range->UpperLimit() == UpperLimit();	
 			}else{
 				return false;
 			}
@@ -1089,8 +1134,6 @@ bool PredEquivlenceRange::Serach(PredEquivlenceRange* range){
 				bool left_no_intersected = false;
 				if(range->LowerLimit() != LOWER_LIMIT){
 					if(upper_limit_ != UPPER_LIMIT){
-						// left_no_intersected = (std::stoi(range->LowerLimit()) > std::stoi(upper_limit_)) 
-						// 	|| (range->LowerLimit() == upper_limit_ && (!range->GetLowerBoundaryConstraint()&GetUpperBoundaryConstraint()));
 						auto ret = PredEquivlenceRange::LimitCompare(range->LowerLimit(),range->PredVarType(),upper_limit_,var_type_);
 						left_no_intersected = (ret > 0 || (!ret && (!range->GetLowerBoundaryConstraint()&GetUpperBoundaryConstraint())));
 					}else{
@@ -1103,8 +1146,6 @@ bool PredEquivlenceRange::Serach(PredEquivlenceRange* range){
 				bool right_no_intersected = false;
 				if(range->UpperLimit() !=  UPPER_LIMIT){
 					if(lower_limit_ != LOWER_LIMIT){
-						// right_no_intersected = (std::stoi(range->UpperLimit()) < std::stoi(lower_limit_))
-						// 	|| (range->UpperLimit() == lower_limit_ && (!range->GetUpperBoundaryConstraint()&GetLowerBoundaryConstraint()));
 						auto ret = PredEquivlenceRange::LimitCompare(range->UpperLimit(),range->PredVarType(),lower_limit_,var_type_);
 						right_no_intersected = (ret < 0 || (!ret && (!range->GetUpperBoundaryConstraint()&GetLowerBoundaryConstraint())));						
 					}else{
@@ -1407,7 +1448,7 @@ std::string PredEquivlence::extract_param_name(const std::string& subplan_name) 
     return ""; 
 }
 
-PredEquivlence::PredEquivlence(Quals* qual){
+PredEquivlence::PredEquivlence(Quals* qual,bool is_not){
 	assert(qual);
 	PType type = QualType(qual);
 	auto var_type = QualVarType(qual);
@@ -1494,7 +1535,7 @@ PredEquivlence::PredEquivlence(Quals* qual){
 			assert(found);
 
 			if(!strlen(qual->left)){
-				/*subquery not must have left val*/
+				/*subquery not must have left val,may be we should find left var in subquery output cols*/
 			}else{
 				std::string l = extract_field(qual->left);
 				if(l.empty()){
@@ -1511,16 +1552,31 @@ PredEquivlence::PredEquivlence(Quals* qual){
 				if(strcmp(qual->sub_plan_name,sub_plan_hsp->sub_plan_name)){
 					continue;
 				}
+
+				if(!strlen(qual->left)){
+					if(sub_plan_hsp->n_output == 1){
+						auto sub_ouput = sub_plan_hsp->output[0];
+						set_.insert(sub_ouput);
+					}
+				}
+
 				PredEquivlenceRange* new_range = new PredEquivlenceRange();
-				range->SetPredVarType(var_type);
+				new_range->SetPredVarType(var_type);
 				new_range->SetPredType(PType::SUBQUERY);
-				new_range->SetSubqueryName(sub_plan_hsp->sub_plan_name);
+				
+				std::string sub_plan_name;
+				if(is_not){
+					sub_plan_name = "NOT " + std::string(sub_plan_hsp->sub_plan_name);
+				}else{
+					sub_plan_name = std::string(sub_plan_hsp->sub_plan_name);
+				}
+				new_range->SetSubqueryName(sub_plan_name);
 				ranges_.insert(new_range);
 					
 				auto sub_level_mgr = std::make_shared<LevelManager>(sub_plan_hsp,nullptr,logger);
 				pf_context->SetStrategy(sub_level_mgr);
 				pf_context->executeStrategy();
-				sublink_level_pe_lists_[sub_plan_hsp->sub_plan_name] = sub_level_mgr; 
+				sublink_level_pe_lists_[sub_plan_name] = sub_level_mgr; 
 			}
 		}break;
 		case PType::SUBLINK:{
@@ -1548,16 +1604,32 @@ PredEquivlence::PredEquivlence(Quals* qual){
 				if(strcmp(qual->sub_plan_name,sub_plan_hsp->sub_plan_name)){
 					continue;
 				}
+
+				if(!strlen(qual->left)){
+					if(sub_plan_hsp->n_output == 1){
+						auto sub_ouput = sub_plan_hsp->output[0];
+						set_.insert(sub_ouput);
+					}
+				}
+
 				PredEquivlenceRange* new_range = new PredEquivlenceRange(); 
 				new_range->SetPredVarType(var_type);
 				new_range->SetPredType(PType::SUBLINK);
-				new_range->SetSubqueryName(sub_plan_hsp->sub_plan_name);
+
+				std::string sub_plan_name;
+				if(is_not){
+					sub_plan_name = "NOT " + std::string(sub_plan_hsp->sub_plan_name);
+				}else{
+					sub_plan_name = std::string(sub_plan_hsp->sub_plan_name);
+				}
+
+				new_range->SetSubqueryName(sub_plan_name);
 				ranges_.insert(new_range);
 
 				auto sub_level_mgr = std::make_shared<LevelManager>(sub_plan_hsp,nullptr,logger);
 				pf_context->SetStrategy(sub_level_mgr);
 				pf_context->executeStrategy();
-				sublink_level_pe_lists_[sub_plan_hsp->sub_plan_name] = sub_level_mgr; 
+				sublink_level_pe_lists_[sub_plan_name] = sub_level_mgr; 
 			}
 		}break;
 		case PType::PARAM:{
@@ -1593,22 +1665,36 @@ PredEquivlence::PredEquivlence(Quals* qual){
 				 * it just mark $0 as mmeber,insterad of init_plan name or otherwise.after
 				 * we process the qual ,we can regonize it as subquery.
 				 */
-				std::cout<<"subplan plan name:"<<sub_plan_hsp->sub_plan_name<<std::endl;
 				auto param_str = extract_param_name(sub_plan_hsp->sub_plan_name);
 				if(param_str != std::string(qual->right)){
 					continue;
 				}
 
+				if(!strlen(qual->left)){
+					if(sub_plan_hsp->n_output == 1){
+						auto sub_ouput = sub_plan_hsp->output[0];
+						set_.insert(sub_ouput);
+					}
+				}
+
 				PredEquivlenceRange* new_range = new PredEquivlenceRange(); 
 				new_range->SetPredVarType(var_type);
 				new_range->SetPredType(PType::SUBQUERY);
-				new_range->SetSubqueryName(sub_plan_hsp->sub_plan_name);
+
+				std::string sub_plan_name;
+				if(is_not){
+					sub_plan_name = "NOT " + std::string(sub_plan_hsp->sub_plan_name);
+				}else{
+					sub_plan_name = std::string(sub_plan_hsp->sub_plan_name);
+				}
+
+				new_range->SetSubqueryName(sub_plan_name);
 				ranges_.insert(new_range);
 					
 				auto sub_level_mgr = std::make_shared<LevelManager>(sub_plan_hsp,nullptr,logger);
 				pf_context->SetStrategy(sub_level_mgr);
 				pf_context->executeStrategy();
-				sublink_level_pe_lists_[sub_plan_hsp->sub_plan_name] = sub_level_mgr; 
+				sublink_level_pe_lists_[sub_plan_name] = sub_level_mgr; 
 			}	
 			/**
 			 * TODO: if pram isn't mapping to subquery,we need process in other way.
@@ -1978,8 +2064,6 @@ bool PredEquivlence::MergePredEquivlenceRanges(const std::vector<PredEquivlenceR
 					if(new_range->LowerLimit() != LOWER_LIMIT){
 						ret = PredEquivlenceRange::LimitCompare(before_range->LowerLimit(),before_range->PredVarType(),new_range->LowerLimit(),new_range->PredVarType());
 						range_decrease = (ret < 0) || (!ret && before_range->GetLowerBoundaryConstraint() && !new_range->GetLowerBoundaryConstraint());
-						// range_decrease = (before_range->LowerLimit() < new_range->LowerLimit()) 
-						// 			|| (before_range->LowerLimit() == new_range->LowerLimit() && before_range->GetLowerBoundaryConstraint() && !new_range->GetLowerBoundaryConstraint());
 					}else{
 						range_decrease = false;
 					}
@@ -2000,8 +2084,6 @@ bool PredEquivlence::MergePredEquivlenceRanges(const std::vector<PredEquivlenceR
 					if(new_range->UpperLimit() != UPPER_LIMIT){
 						ret = PredEquivlenceRange::LimitCompare(before_range->UpperLimit(),before_range->PredVarType(),new_range->UpperLimit(),new_range->PredVarType());
 						range_decrease = (ret > 0) || (!ret && before_range->GetUpperBoundaryConstraint() && !new_range->GetUpperBoundaryConstraint());
-						// range_decrease = (before_range->UpperLimit() > new_range->UpperLimit())
-						// 			|| (before_range->UpperLimit() == new_range->UpperLimit() && before_range->GetUpperBoundaryConstraint() && !new_range->GetUpperBoundaryConstraint());
 					}else{
 						range_decrease = false;
 					}
@@ -2080,8 +2162,6 @@ bool PredEquivlence::MergePredEquivlenceRanges(const std::vector<PredEquivlenceR
 		if(new_range->LowerLimit() != LOWER_LIMIT){
 			auto ret = PredEquivlenceRange::LimitCompare(old_range->LowerLimit(),old_range->PredVarType(),new_range->LowerLimit(),new_range->PredVarType());
 			range_decrease = (ret < 0) || (!ret && old_range->GetLowerBoundaryConstraint() && !new_range->GetLowerBoundaryConstraint());
-			// range_decrease = (old_range->LowerLimit() < new_range->LowerLimit()) 
-			// 			|| (old_range->LowerLimit() == new_range->LowerLimit() && old_range->GetLowerBoundaryConstraint() && !new_range->GetLowerBoundaryConstraint());
 		}else{
 			range_decrease = false;
 		}
@@ -2102,8 +2182,6 @@ bool PredEquivlence::MergePredEquivlenceRanges(const std::vector<PredEquivlenceR
 		if(new_range->UpperLimit() != UPPER_LIMIT){
 			auto ret = PredEquivlenceRange::LimitCompare(old_range->UpperLimit(),old_range->PredVarType(),new_range->UpperLimit(),new_range->PredVarType());
 			range_decrease = (ret > 0) || (!ret && old_range->GetUpperBoundaryConstraint() && !new_range->GetUpperBoundaryConstraint());
-			// range_decrease = (old_range->UpperLimit() > new_range->UpperLimit())
-			// 			|| (old_range->UpperLimit() == new_range->UpperLimit() && old_range->GetUpperBoundaryConstraint() && !new_range->GetUpperBoundaryConstraint());
 		}else{
 			range_decrease = false;
 		}
@@ -2258,7 +2336,7 @@ bool PredEquivlence::Copy(PredEquivlence* pe){
 	}
 	pe->SetSubLinkLevelPeLists(sublink_level_pe_lists_);
 	pe->SetEarlyStop(early_stop_);
-	//pe->SetChild(std::shared_ptr<PredEquivlence>(this));
+	pe->SetNeedNegative(need_negative_);
 	return true;
 }
 
@@ -2393,15 +2471,16 @@ std::string PredEquivlence::GetSerialization() const{
 /**
  * LevelPredEquivlences::Insert
  */
-bool LevelPredEquivlences::Insert(Quals* quals,bool is_or){
+bool LevelPredEquivlences::Insert(Quals* quals,bool is_not){
 	assert(quals);
+
 	std::vector<PredEquivlence*>merge_pe_list;
 	if(Serach(quals,merge_pe_list)){
 		if(!MergePredEquivlences(merge_pe_list)){
 			return false;
 		}
 	}else{
-		PredEquivlence* pe = new PredEquivlence(quals);
+		PredEquivlence* pe = new PredEquivlence(quals,is_not);
 		level_pe_sets_.insert(pe);
 	}
 
@@ -2639,19 +2718,19 @@ bool LevelPredEquivlencesList::Insert(LevelPredEquivlences* pe,bool is_or){
  *              	src: {[B.b,C.c]}
  * 					--> dst': {[A.a,B.b,C.c]},{[A.a,B.c],[B.b,C.c],[D.d]}
  */
-bool LevelPredEquivlencesList::Insert(LevelPredEquivlencesList* lpes_list,bool is_or,bool pre_merge,bool early_check){
+bool LevelPredEquivlencesList::Insert(LevelPredEquivlencesList* lpes_list,int model,bool pre_merge,bool early_check){
 	assert(lpes_list);
 	if(!lpes_list->Size()){
 		return true;
 	}	
-	if(is_or){ /*or_model*/
+	if(model == 1){ /*or_model*/
 		size_t src_idx = 0;
 		for(const auto& lpes: *lpes_list){
 			if(pre_merge)
 				child_lpes_map_[lpes_list_.size()].push_back(src_idx++);
 			Insert(lpes,true);
 		}
-	}else{ /*and_model*/
+	}else if(!model){ /*and_model*/
 		if(lpes_list_.empty()){
 			/*current level don't has any predicates,we just copy the pre level*/
 			size_t src_idx = 0;
@@ -2693,11 +2772,20 @@ bool LevelPredEquivlencesList::Insert(LevelPredEquivlencesList* lpes_list,bool i
 					++i;
 				}
 			}
-
 			/**
 			 * TODO: merge, best metod isn't merge lpes here, instead, we wish merge before each Insert 
 			 */
 		}
+	}else if(model == 2){
+		// for(auto& lpes: lpes_list_){
+		// 	/*here we just mark pe should be negatived*/
+		// 	for(const auto& pe : *lpes){
+		// 		pe->SetNeedNegative(true);
+		// 	}
+		// }
+	}else{
+		std::cerr<<"error model:"<<model<<std::endl;
+		exit(-1);
 	}
 	return true;
 }

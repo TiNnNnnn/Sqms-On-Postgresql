@@ -121,6 +121,9 @@ public:
     void SetPredVarType(VarType type){var_type_ = type;}
     VarType PredVarType(){return var_type_;}
 
+    void SetNegation(bool neg){negation_ = neg;}
+    bool GetNegation(){return negation_;}
+
     void Copy(PredEquivlenceRange* new_range);
     bool Serach(PredEquivlenceRange* range);
 
@@ -141,6 +144,7 @@ private:
     VarType var_type_;
     /*type == SUBQRUEY or SUBLINK*/
     std::string subquery_name_;
+    bool negation_ = false;
     std::string lower_limit_ = LOWER_LIMIT;
     std::string upper_limit_ = UPPER_LIMIT;
     std::pair<bool,bool> boundary_constraint_ = std::make_pair(true,true);
@@ -165,7 +169,7 @@ class PredEquivlence {
     // };
 public:
     PredEquivlence(){}
-    PredEquivlence(Quals* qual);
+    PredEquivlence(Quals* qual,bool is_not = false);
 
     static bool IsOnlyLeft(Quals* qual);
 
@@ -253,6 +257,9 @@ public:
     std::set<std::string>& SubqueryNames(){return subquery_names_;}
     int RangeCnt(){return range_cnt_;}
     std::string GetSerialization() const;
+
+    void SetNeedNegative(bool nn){need_negative_ = nn;}
+    bool NeedNegative(){return need_negative_;}
 private:
     std::string extract_field(const std::string& expression) {
         size_t start_pos = expression.find('(');  
@@ -290,6 +297,7 @@ private:
     std::string upper_limit_;
 
     std::string serialization_;
+    bool need_negative_ = false;
 };
 
 class LevelPredEquivlences{
@@ -365,7 +373,7 @@ private:
 class LevelPredEquivlencesList{
 public:
     bool Insert(LevelPredEquivlences* lpes,bool is_or);
-    bool Insert(LevelPredEquivlencesList* lpes_list,bool is_or,bool pre_merge = false,bool early_check = false);
+    bool Insert(LevelPredEquivlencesList* lpes_list,int model,bool pre_merge = false,bool early_check = false);
 
     void Copy(LevelPredEquivlencesList* new_lpes_list);
     size_t Size(){return lpes_list_.size();}
@@ -778,6 +786,7 @@ public:
         or_lpes_list->Copy(or_lpes_list_);
     }
     LevelPredEquivlencesList* GetOrLpesList(){return or_lpes_list_;}
+
     void SetAndLpesList(LevelPredEquivlencesList* and_lpes_list){
         if(!and_lpes_list_){
             and_lpes_list_ = new LevelPredEquivlencesList();
@@ -785,6 +794,14 @@ public:
         and_lpes_list->Copy(and_lpes_list_);
     }
     LevelPredEquivlencesList* GetAndLpesList(){return and_lpes_list_;}
+
+    void SetNotLpesList(LevelPredEquivlencesList* not_lpes_list){
+        if(!not_lpes_list_){
+            not_lpes_list_ = new LevelPredEquivlencesList();
+        }
+        not_lpes_list->Copy(not_lpes_list_);
+    }
+    LevelPredEquivlencesList* GetNotLpesList(){return not_lpes_list_;}
     
 private:
     PredOperator__PredOperatorType op_type_;
@@ -793,6 +810,7 @@ private:
 
     LevelPredEquivlencesList* or_lpes_list_ = nullptr;
     LevelPredEquivlencesList* and_lpes_list_ = nullptr;
+    LevelPredEquivlencesList* not_lpes_list_ = nullptr;
 };
 
 class QualsWarp: public AbstractPredNode {

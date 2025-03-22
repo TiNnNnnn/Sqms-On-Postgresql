@@ -3917,10 +3917,16 @@ get_variable(Var *var, int levelsup, bool istoplevel, deparse_context *context)
 	if (refname && (context->varprefix || attname == NULL))
 	{
 		/**
-		 * here we want to get true relation name 
+		 * here we want to get true relation name ,but for view, it
+		 * doesn't has 
 		 */
 		//appendStringInfoString(buf, quote_identifier(refname));
-		appendStringInfoString(buf,quote_identifier(objectname));
+		if(objectname){
+			appendStringInfoString(buf,quote_identifier(objectname));
+		}else{
+			appendStringInfoString(buf,quote_identifier(refname));
+		}
+	
 		appendStringInfoChar(buf, '.');
 	}
 
@@ -5375,7 +5381,6 @@ get_rule_expr(Node *node, deparse_context *context,
 						if (!PRETTY_PAREN(context))
 							appendStringInfoChar(buf, ')');
 					}break;
-
 					case OR_EXPR:{
 						PredOperator * expr_op = (PredOperator*)malloc(sizeof(PredOperator));
 						pred_operator__init(expr_op);
@@ -5389,7 +5394,6 @@ get_rule_expr(Node *node, deparse_context *context,
 						expr_node->expr_case = PRED_EXPRESSION__EXPR_OP;
 						
 						if(stack_is_empty(context->expr_stack) && root_expr){
-							//context->hsp->expr_root = expr_node;
 							set_expr_tree_root(context->hsp,expr_node);
 						}
 						stack_push(context->expr_stack,expr_node);
@@ -5422,7 +5426,6 @@ get_rule_expr(Node *node, deparse_context *context,
 						if (!PRETTY_PAREN(context))
 							appendStringInfoChar(buf, ')');
 					}break;
-
 					case NOT_EXPR: {
 						PredOperator * expr_op = (PredOperator*)malloc(sizeof(PredOperator));
 						pred_operator__init(expr_op);
@@ -5457,10 +5460,9 @@ get_rule_expr(Node *node, deparse_context *context,
 						if (!PRETTY_PAREN(context))
 							appendStringInfoChar(buf, ')');
 					}break;
-
-					default:
-						elog(ERROR, "unrecognized boolop: %d",
-							 (int) expr->boolop);
+					default:{
+						elog(ERROR, "unrecognized boolop: %d",(int) expr->boolop);
+					}
 				}
 			}
 			break;
@@ -5487,6 +5489,7 @@ get_rule_expr(Node *node, deparse_context *context,
 				}
 				quals__init(trace_qual);
 				trace_qual->sub_plan_name = malloc(strlen(subplan->plan_name)+1);
+				trace_qual->left_val_type_id = subplan->firstColType;
 				strcpy(trace_qual->sub_plan_name,subplan->plan_name);
 				
 				if (subplan->useHashTable){
@@ -5500,10 +5503,12 @@ get_rule_expr(Node *node, deparse_context *context,
 				pred_expression__init(expr_node);
 				expr_node->qual = trace_qual;
 				expr_node->expr_case =PRED_EXPRESSION__EXPR_QUAL;
-				if(stack_is_empty(context->expr_stack)){
+				if(stack_is_empty(context->expr_stack) && root_expr){
 					set_expr_tree_root(context->hsp,expr_node);
 				}
-				// stack_push(context->expr_stack,expr_node);
+				if(!root_expr){
+					stack_push(context->expr_stack,expr_node);
+				}
 		}break;
 		case T_AlternativeSubPlan:
 			{

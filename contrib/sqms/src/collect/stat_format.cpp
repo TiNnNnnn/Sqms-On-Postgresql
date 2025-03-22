@@ -413,9 +413,6 @@ void PlanStatFormat::ShowPredTree(PredExpression* p_expr, int depth) {
                 break;
             case PRED_OPERATOR__PRED_OPERATOR_TYPE__NOT:
                 std::cout << "NOT";
-                /*not implement*/
-                std::cerr<<"not implement"<<std::endl;
-                exit(-1);
                 break;
             default:
                 std::cout << "UNKNOWN";
