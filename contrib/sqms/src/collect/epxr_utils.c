@@ -5374,7 +5374,6 @@ get_rule_expr(Node *node, deparse_context *context,
 
 						if (!PRETTY_PAREN(context))
 							appendStringInfoChar(buf, ')');
-
 					}break;
 
 					case OR_EXPR:{
@@ -6503,7 +6502,7 @@ looks_like_function(Node *node)
 static bool is_compare_expr(char* op){
 	if(!strcmp(op,">") || !strcmp(op,"!=") || !strcmp(op,">=") 
 		|| !strcmp(op,"<=") || !strcmp(op,"=")
-		|| !strcmp(op,"<") || !strcmp(op,"!~")
+		|| !strcmp(op,"<") || !strcmp(op,"!~~") || !strcmp(op,"~~")
 		|| !strcmp(op,"<>"))
 		return true;
 	return false;

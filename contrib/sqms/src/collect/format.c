@@ -1744,8 +1744,8 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	if(debug){
 		//elog(stat_log_level,es->str->data);
 		//elog(stat_log_level,ces->str->data);
+		printf("%s",es->str->data);
 	}
-	//elog(stat_log_level,"finish a node format");
 
 	/*here we can't free es, hsp still use its data*/
 	/*FreeFormatState(es);*/

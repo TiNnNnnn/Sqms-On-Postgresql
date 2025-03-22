@@ -1440,9 +1440,11 @@ PredEquivlence::PredEquivlence(Quals* qual){
 				range->SetPredVarType(var_type);
 				range->SetLowerLimit(qual->right);
 				range->SetUpperLimit(qual->right);
-			}else if(!strcmp(op,"!~")){
+			}else if(!strcmp(op,"!~~")){
 				range->SetPredType(PType::NOT_EQUAL);
 				range->SetPredVarType(var_type);
+				range->SetLowerLimit(qual->right);
+				range->SetUpperLimit(qual->right);
 				/**
 				 * TODO: not implement: regular expression check
 				*/
@@ -1658,8 +1660,10 @@ PType PredEquivlence::QualType(Quals* qual){
 				}else if(!strcmp(op,"!=") or !strcmp(op,"<>")){
 					/*not support*/
 					return PType::UNKNOWN;
-				}else if(!strcmp(op,"!~")){
-					/*not support*/
+				}else if(!strcmp(op,"~~") || !strcmp(op,"!~~")){
+					std::cerr<<"like or not like is impossibale in curret predicate!"<<std::endl;
+					exit(-1);
+				}else{
 					return PType::UNKNOWN;
 				}
 			}else if(PredVariable(left_type) && !PredVariable(right_type)){
@@ -1677,8 +1681,12 @@ PType PredEquivlence::QualType(Quals* qual){
 							return PType::RANGE;
 						}else if(!strcmp(op,"!=") or !strcmp(op,"<>")){
 							return PType::NOT_EQUAL;
-						}else if(!strcmp(op,"!~")){
+						}else if(!strcmp(op,"!~~")){
 							return PType::NOT_EQUAL;
+						}else if(!strcmp(op,"~~")){
+							return PType::EQUAL;
+						}else{
+							return PType::UNKNOWN;
 						}
 					}break;
 					case T_SubLink:{
@@ -1718,8 +1726,8 @@ PType PredEquivlence::QualType(Quals* qual){
 							return PType::RANGE;
 						}else if(!strcmp(op,"!=") or !strcmp(op,"<>")){
 							return PType::NOT_EQUAL;
-						}else if(!strcmp(op,"!~")){
-							std::cerr<<"impossible left & right for !~ operator ! "<<std::endl;
+						}else if(!strcmp(op,"!~~") || !strcmp(op,"~~") ){
+							std::cerr<<"impossible left & right for !~~  or ~~ operator ! "<<std::endl;
 							exit(-1);
 						}
 					}break;
@@ -1756,6 +1764,9 @@ PType PredEquivlence::QualType(Quals* qual){
 							exit(-1);
 						}
 						return PType::SUBQUERY;
+					}break;
+					case T_Param: {
+						return PType::PARAM;
 					}break;
 					default:{
 						std::cerr<<"right is variable,unsupport right value type :"<<right_type<<" of quals."<<std::endl;

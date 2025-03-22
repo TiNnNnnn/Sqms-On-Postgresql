@@ -39,6 +39,8 @@ enum class PType{
     EQUAL,
     RANGE,
     /**/
+    LIKE,
+    NOT_LIKE,
     LIST,
     /**/
     SUBLINK,
