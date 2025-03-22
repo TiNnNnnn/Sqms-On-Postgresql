@@ -1453,6 +1453,12 @@ PredEquivlence::PredEquivlence(Quals* qual,bool is_not){
 	PType type = QualType(qual);
 	auto var_type = QualVarType(qual);
 	PredEquivlenceRange* range = new PredEquivlenceRange(); 
+
+	auto get_pure_var = [this](std::string s) -> std::string{
+		std::string ps = extract_field(s);
+		return  ps.empty()?s:ps;		
+	};
+
 	switch(type){
 		case PType::JOIN_EQUAL:{
 			range->SetPredType(PType::RANGE);
@@ -1461,15 +1467,15 @@ PredEquivlence::PredEquivlence(Quals* qual,bool is_not){
 			range->SetBoundaryConstraint(std::make_pair(true,true));
 			range->SetPredVarType(var_type);
 			ranges_.insert(range);
-			set_.insert(qual->left);
-			set_.insert(qual->right);
+			set_.insert(get_pure_var(qual->left));
+			set_.insert(get_pure_var(qual->right));
 		}break;
 		case PType::EQUAL:{
 			set_.insert(qual->left);
 			range->SetPredType(PType::RANGE);
 			range->SetPredVarType(var_type);
-			range->SetLowerLimit(qual->right);
-			range->SetUpperLimit(qual->right);
+			range->SetLowerLimit(get_pure_var(qual->right));
+			range->SetUpperLimit(get_pure_var(qual->right));
 			range->SetBoundaryConstraint(std::make_pair(true,true));
 			ranges_.insert(range);
 		}break;
@@ -1479,13 +1485,13 @@ PredEquivlence::PredEquivlence(Quals* qual,bool is_not){
 			if(!strcmp(op,"!=") or !strcmp(op,"<>")){
 				range->SetPredType(PType::NOT_EQUAL);
 				range->SetPredVarType(var_type);
-				range->SetLowerLimit(qual->right);
-				range->SetUpperLimit(qual->right);
+				range->SetLowerLimit(get_pure_var(qual->right));
+				range->SetUpperLimit(get_pure_var(qual->right));
 			}else if(!strcmp(op,"!~~")){
 				range->SetPredType(PType::NOT_EQUAL);
 				range->SetPredVarType(var_type);
-				range->SetLowerLimit(qual->right);
-				range->SetUpperLimit(qual->right);
+				range->SetLowerLimit(get_pure_var(qual->right));
+				range->SetUpperLimit(get_pure_var(qual->right));
 				/**
 				 * TODO: not implement: regular expression check
 				*/
@@ -1493,7 +1499,7 @@ PredEquivlence::PredEquivlence(Quals* qual,bool is_not){
 			ranges_.insert(range);
 		}break;
 		case PType::RANGE:{
-			set_.insert(qual->left);
+			set_.insert(get_pure_var(qual->left));
 			range->SetPredVarType(var_type);
 			auto op = qual->op;
 			if(!strcmp(op,">")){
@@ -1520,7 +1526,7 @@ PredEquivlence::PredEquivlence(Quals* qual,bool is_not){
 		}break;
 		case PType::LIST:{
 			range->SetPredVarType(var_type);
-			set_.insert(qual->left);
+			set_.insert(get_pure_var(qual->left));
 			/**
 			 * TODO: not implement yet: we should convert str_list into true list
 			 */
@@ -1537,12 +1543,7 @@ PredEquivlence::PredEquivlence(Quals* qual,bool is_not){
 			if(!strlen(qual->left)){
 				/*subquery not must have left val,may be we should find left var in subquery output cols*/
 			}else{
-				std::string l = extract_field(qual->left);
-				if(l.empty()){
-					set_.insert(qual->left);
-				}else{
-					set_.insert(l);
-				}
+				set_.insert(get_pure_var(qual->left));
 			}
 
 			/*calualate pred equivlence here*/
@@ -1589,12 +1590,7 @@ PredEquivlence::PredEquivlence(Quals* qual,bool is_not){
 
 			if(!strlen(qual->left)){				
 			}else{
-				std::string l = extract_field(qual->left);
-				if(l.empty()){
-					set_.insert(qual->left);
-				}else{
-					set_.insert(l);
-				}				
+				set_.insert(get_pure_var(qual->left));		
 			}
 			
 			/*calualate pred equivlence here*/
@@ -1646,12 +1642,7 @@ PredEquivlence::PredEquivlence(Quals* qual,bool is_not){
 			 */
 			if(!strlen(qual->left)){				
 			}else{
-				std::string l = extract_field(qual->left);
-				if(l.empty()){
-					set_.insert(qual->left);
-				}else{
-					set_.insert(l);
-				}				
+				set_.insert(get_pure_var(qual->left));		
 			}
 
 			/**
