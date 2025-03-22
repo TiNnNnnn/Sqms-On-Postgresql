@@ -132,6 +132,9 @@ typedef struct
 	Quals* current_trace_qual;
 	int current_qual_pos;
 
+	/*if current expr is root*/
+	bool root_expr_;
+
 } deparse_context;
 
 /*
@@ -533,6 +536,7 @@ deparse_expression_pretty(Node *expr, List *dpcontext,
 	context.hsp = dpns->hsp;
 	context.current_qual_pos = 0;
 	context.current_trace_qual = NULL;
+	context.root_expr_ = true;
 
 	context.expr_stack = stack_init();
 
@@ -5046,9 +5050,11 @@ static void set_expr_tree_root(HistorySlowPlanStat* hsp,PredExpression* node){
 		case PRED_TYPE_TAG__TID_COND:
 			hsp->tid_cond_expr_tree = node;
 			break;
-		default:
+		default:{
 			printf("unknow expr tag type\n");
-			exit(-1);
+		}
+			
+
 	}
 }
 
@@ -5077,6 +5083,12 @@ get_rule_expr(Node *node, deparse_context *context,
 	/* Guard against excessively long or deeply-nested queries */
 	CHECK_FOR_INTERRUPTS();
 	check_stack_depth();
+
+	bool root_expr = false;
+	if(context->root_expr_){
+		root_expr = true;
+		context->root_expr_ = false;
+	}
 
 	/*
 	 * Each level of get_rule_expr must emit an indivisible term
@@ -5330,7 +5342,7 @@ get_rule_expr(Node *node, deparse_context *context,
 						expr_node->op = expr_op;
 						expr_node->expr_case = PRED_EXPRESSION__EXPR_OP;
 						
-						if(stack_is_empty(context->expr_stack)){
+						if(stack_is_empty(context->expr_stack) && root_expr){
 							set_expr_tree_root(context->hsp,expr_node);
 						}
 						stack_push(context->expr_stack,expr_node);
@@ -5377,7 +5389,7 @@ get_rule_expr(Node *node, deparse_context *context,
 						expr_node->op = expr_op;
 						expr_node->expr_case = PRED_EXPRESSION__EXPR_OP;
 						
-						if(stack_is_empty(context->expr_stack)){
+						if(stack_is_empty(context->expr_stack) && root_expr){
 							//context->hsp->expr_root = expr_node;
 							set_expr_tree_root(context->hsp,expr_node);
 						}
@@ -5427,7 +5439,7 @@ get_rule_expr(Node *node, deparse_context *context,
 						expr_node->op = expr_op;
 						expr_node->expr_case = PRED_EXPRESSION__EXPR_OP;
 
-						if(stack_is_empty(context->expr_stack)){
+						if(stack_is_empty(context->expr_stack) && root_expr){
 							set_expr_tree_root(context->hsp,expr_node);
 						}
 						stack_push(context->expr_stack,expr_node);
