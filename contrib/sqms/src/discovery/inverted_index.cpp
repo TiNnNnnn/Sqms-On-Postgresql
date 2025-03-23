@@ -168,7 +168,6 @@ bool RangePostingList::SuperSetInternal(SMPredEquivlence* dst_pe, SMPredEquivlen
                 }
             }
         }else if(r->PredType() == PType::SUBQUERY || r->PredType() == PType::SUBLINK){
-            /*not support yet*/
             match = true;
         }else{
             match = false;

@@ -1471,7 +1471,7 @@ PredEquivlence::PredEquivlence(Quals* qual,bool is_not){
 			set_.insert(get_pure_var(qual->right));
 		}break;
 		case PType::EQUAL:{
-			set_.insert(qual->left);
+			set_.insert(get_pure_var(qual->left));
 			range->SetPredType(PType::RANGE);
 			range->SetPredVarType(var_type);
 			range->SetLowerLimit(get_pure_var(qual->right));
@@ -1480,7 +1480,7 @@ PredEquivlence::PredEquivlence(Quals* qual,bool is_not){
 			ranges_.insert(range);
 		}break;
 		case PType::NOT_EQUAL:{
-			set_.insert(qual->left);
+			set_.insert(get_pure_var(qual->left));
 			auto op = qual->op;
 			if(!strcmp(op,"!=") or !strcmp(op,"<>")){
 				range->SetPredType(PType::NOT_EQUAL);
@@ -1546,11 +1546,12 @@ PredEquivlence::PredEquivlence(Quals* qual,bool is_not){
 				set_.insert(get_pure_var(qual->left));
 			}
 
+			std::cout<<"qual sub_plan name: "<<qual->sub_plan_name<<std::endl;
 			/*calualate pred equivlence here*/
 			for(size_t i = 0; i < qual->hsps->n_subplans; i++){
 				auto sub_plan_hsp = qual->hsps->subplans[i];
-				assert(strlen(sub_plan_hsp->sub_plan_name));
-				if(strcmp(qual->sub_plan_name,sub_plan_hsp->sub_plan_name)){
+				std::cout<<"sub_plan_hsp name: "<<sub_plan_hsp->sub_plan_name<<std::endl;
+				if(strcmp(qual->sub_plan_name,sub_plan_hsp->sub_plan_name)){	
 					continue;
 				}
 
@@ -1801,7 +1802,7 @@ PType PredEquivlence::QualType(Quals* qual){
 						}else if(!strcmp(op,"<=")){
 							strcpy(op,">=");
 							return PType::RANGE;
-						}else if(!strcmp(op,"!=") or !strcmp(op,"<>")){
+						}else if(!strcmp(op,"!=") || !strcmp(op,"<>")){
 							return PType::NOT_EQUAL;
 						}else if(!strcmp(op,"!~~") || !strcmp(op,"~~") ){
 							std::cerr<<"impossible left & right for !~~  or ~~ operator ! "<<std::endl;
@@ -1818,8 +1819,8 @@ PType PredEquivlence::QualType(Quals* qual){
 							strcpy(op,">");
 						}else if(!strcmp(op,"<=")){
 							strcpy(op,">=");
-						}else if(!strcmp(op,"!=") or !strcmp(op,"<>")){
-						}else if(!strcmp(op,"!~")){
+						}else if(!strcmp(op,"!=") || !strcmp(op,"<>")){
+						}else if(!strcmp(op,"!~~") || !strcmp(op, "~~")){
 							std::cerr<<"impossible left & right for !~ operator ! "<<std::endl;
 							exit(-1);
 						}
@@ -1835,8 +1836,8 @@ PType PredEquivlence::QualType(Quals* qual){
 							strcpy(op,">");
 						}else if(!strcmp(op,"<=")){
 							strcpy(op,">=");
-						}else if(!strcmp(op,"!=") or !strcmp(op,"<>")){
-						}else if(!strcmp(op,"!~")){
+						}else if(!strcmp(op,"!=") || !strcmp(op,"<>")){
+						}else if(!strcmp(op,"!~~") || !strcmp(op,"~~")){
 							std::cerr<<"impossible left & right for !~ operator ! "<<std::endl;
 							exit(-1);
 						}

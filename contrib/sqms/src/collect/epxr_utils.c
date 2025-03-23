@@ -5503,11 +5503,18 @@ get_rule_expr(Node *node, deparse_context *context,
 				pred_expression__init(expr_node);
 				expr_node->qual = trace_qual;
 				expr_node->expr_case =PRED_EXPRESSION__EXPR_QUAL;
+				/*for bool_expr*/
 				if(stack_is_empty(context->expr_stack) && root_expr){
 					set_expr_tree_root(context->hsp,expr_node);
 				}
 				if(!root_expr){
 					stack_push(context->expr_stack,expr_node);
+				}
+				/*for op_expr*/
+				if(context->current_trace_qual){
+					context->current_trace_qual->sub_plan_name = malloc(strlen(subplan->plan_name)+1);
+					strcpy(context->current_trace_qual->sub_plan_name,subplan->plan_name);
+					context->current_trace_qual->hash_sub_plan = trace_qual->hash_sub_plan;
 				}
 		}break;
 		case T_AlternativeSubPlan:
@@ -6557,7 +6564,7 @@ get_oper_expr(OpExpr *expr, deparse_context *context)
 			trace_qual->left = malloc(current_offset-pre_offset+1);
 			strncpy(trace_qual->left,context->buf->data+pre_offset,current_offset-pre_offset);
 			trace_qual->left[current_offset - pre_offset] = '\0';
-
+			
 			trace_qual->op = malloc(sizeof(op)+1);
 			if(context->actual_var_type != arg1->type  && context->actual_var_type != T_Invalid){
 				trace_qual->l_type = context->actual_var_type;

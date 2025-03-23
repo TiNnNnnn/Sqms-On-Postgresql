@@ -168,9 +168,7 @@ bool LevelScalingStrategy::Remove(LevelManager* level_mgr){
 bool LevelScalingStrategy::Insert(NodeCollector* node_collector){
     assert(node_collector);
     assert(node_collector->join_type_list.size());
-    //LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
     auto new_scaling_info =  (ScalingInfo*) ShmemAlloc (sizeof(ScalingInfo));   
-    //LWLockRelease(shmem_lock_);
     assert(new_scaling_info);
     new (new_scaling_info) ScalingInfo(node_collector->join_type_list);
 
@@ -194,9 +192,7 @@ bool LevelScalingStrategy::Insert(NodeCollector* node_collector){
         }else{
             /*create a new child node*/
             size_t next_level = FindNextInsertLevel(node_collector,2);
-            //LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
             HistoryQueryIndexNode* new_idx_node = (HistoryQueryIndexNode*)ShmemAlloc(sizeof(HistoryQueryIndexNode));
-            //LWLockRelease(shmem_lock_);
             if(!new_idx_node){
                 elog(ERROR, "ShmemAlloc failed: not enough shared memory");
                 exit(-1);
@@ -267,10 +263,7 @@ bool LevelAggStrategy::Insert(LevelManager* level_mgr){
             return child->Insert(level_mgr);
         }else{
             size_t next_level = FindNextInsertLevel(level_mgr,5);
-            //auto new_idx_node = std::make_shared<HistoryQueryIndexNode>(next_level,total_height_);
-            //LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
             HistoryQueryIndexNode* new_idx_node = (HistoryQueryIndexNode*)ShmemAlloc(sizeof(HistoryQueryIndexNode));
-            //LWLockRelease(shmem_lock_);
             if(!new_idx_node){
                 elog(ERROR, "ShmemAlloc failed: not enough shared memory");
                 exit(-1);
@@ -449,54 +442,6 @@ bool LevelAggStrategy::Search(NodeCollector* node_collector){
         }
     }
     return false;
-
-    // assert(node_collector);
-    // assert(node_collector->node_aggs_);
-    // auto top_aggs = node_collector->node_aggs_;
-    
-    // LevelAggAndSortEquivlences * la_eq = nullptr;
-    // if(node_collector->pe_idx == -1){
-    //     assert(top_aggs->Size() == 1);
-    //     la_eq = top_aggs->GetLevelAggList()[0];
-    // }else{
-    //     assert(top_aggs->Size() > 1);
-    //     la_eq = top_aggs->GetLevelAggList()[node_collector->pe_idx];
-    // }
-    
-    // SMVector<SMVector<int>> agg_vec_id_list;
-    // for(const auto& agg : la_eq->GetLevelAggSets()){
-    //     auto agg_extends = agg->GetExtends();
-    //     SET agg_vec;
-    //     for(const auto& expr : agg_extends){
-    //         agg_vec.push_back(SMString(expr));
-    //     }
-    //     std::sort(agg_vec.begin(),agg_vec.end());
-
-    //     SMVector<int>match_set_id_list;
-    //     auto match_set = inverted_idx_->SuperSets(agg_vec);
-    //     for(const auto& m_set : match_set){
-    //         int set_id = inverted_idx_->GetSetIdBySet(m_set);
-    //         assert(set_id != -1);
-    //         match_set_id_list.push_back(set_id);
-    //     }
-    //     std::sort(match_set_id_list.begin(),match_set_id_list.end());
-    //     agg_vec_id_list.push_back(match_set_id_list);
-    // }
-    // SMVector<SMVector<int>> combination;
-    // SMVector<int> currentCombination(agg_vec_id_list.size());
-    // generateCombinations(agg_vec_id_list, currentCombination, 0, combination);
-
-    // for(const auto& c_id_list : combination){
-    //     auto hash_value = hash_array(c_id_list);
-    //     SMConcurrentHashMap<uint32_t,HistoryQueryIndexNode*>::const_accessor acc;
-    //     if(child_map_.find(acc,hash_value)){
-    //         auto child = acc->second;
-    //         if(child->Serach(node_collector)){
-    //             return true;
-    //         }
-    //     }
-    // }
-    // return false;
 }
 
 
@@ -534,10 +479,7 @@ bool LevelSortStrategy::Insert(LevelManager* level_mgr){
             return child->Insert(level_mgr);
         }else{
             size_t next_level = FindNextInsertLevel(level_mgr,4);
-            //auto new_idx_node = std::make_shared<HistoryQueryIndexNode>(next_level,total_height_);
-            //LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
             HistoryQueryIndexNode* new_idx_node = (HistoryQueryIndexNode*)ShmemAlloc(sizeof(HistoryQueryIndexNode));
-            //LWLockRelease(shmem_lock_);
             if(!new_idx_node){
                 elog(ERROR, "ShmemAlloc failed: not enough shared memory");
                 exit(-1);
@@ -639,10 +581,7 @@ bool LevelSortStrategy::Insert(NodeCollector* node_collector){
             return child->Insert(node_collector);
         }else{
             size_t next_level = FindNextInsertLevel(node_collector,4);
-            //auto new_idx_node = std::make_shared<HistoryQueryIndexNode>(next_level,total_height_);
-            //LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
             HistoryQueryIndexNode* new_idx_node = (HistoryQueryIndexNode*)ShmemAlloc(sizeof(HistoryQueryIndexNode));
-            //LWLockRelease(shmem_lock_);
             if(!new_idx_node){
                 elog(ERROR, "ShmemAlloc failed: not enough shared memory");
                 exit(-1);
@@ -709,53 +648,6 @@ bool LevelSortStrategy::Search(NodeCollector* node_collector){
         }
     }
     return false;
-    // assert(node_collector);
-    // assert(node_collector->node_sorts_);
-    // auto top_sorts = node_collector->node_sorts_;
-
-    // LevelAggAndSortEquivlences * la_eq = nullptr;
-    // if(node_collector->pe_idx == -1){
-    //     assert(top_sorts->Size() == 1);
-    //     la_eq = top_sorts->GetLevelAggList()[0];
-    // }else{
-    //     assert(top_sorts->Size() > 1);
-    //     la_eq = top_sorts->GetLevelAggList()[node_collector->pe_idx];
-    // }
-    
-    // SMVector<SMVector<int>> sort_vec_id_list;
-    // for(const auto& sort : la_eq->GetLevelAggSets()){
-    //     auto sort_extends = sort->GetExtends();
-    //     SET sort_vec;
-    //     for(const auto& expr : sort_extends){
-    //         sort_vec.push_back(SMString(expr));
-    //     }
-    //     std::sort(sort_vec.begin(),sort_vec.end());
-
-    //    SMVector<int>match_set_id_list;
-    //     auto match_set = inverted_idx_->SuperSets(sort_vec);
-    //     for(const auto& m_set : match_set){
-    //         int set_id = inverted_idx_->GetSetIdBySet(m_set);
-    //         assert(set_id != -1);
-    //         match_set_id_list.push_back(set_id);
-    //     }
-    //     std::sort(match_set_id_list.begin(),match_set_id_list.end());
-    //     sort_vec_id_list.push_back(match_set_id_list);
-    // }
-    // SMVector<SMVector<int>> combination;
-    // SMVector<int> currentCombination(sort_vec_id_list.size());
-    // generateCombinations(sort_vec_id_list, currentCombination, 0, combination);
-
-    // for(const auto& c_id_list : combination){
-    //     auto hash_value = hash_array(c_id_list);
-    //     SMConcurrentHashMap<uint32_t,HistoryQueryIndexNode*>::const_accessor acc;
-    //     if(child_map_.find(acc,hash_value)){
-    //         auto child = acc->second;
-    //         if(child->Serach(node_collector)){
-    //             return true;
-    //         }
-    //     }
-    // }
-    // return false;
 }
 
 /**
@@ -780,9 +672,7 @@ bool LevelRangeStrategy::Insert(LevelManager* level_mgr){
             return child->Insert(level_mgr);
         }else{
             size_t next_level = FindNextInsertLevel(level_mgr,3);
-            //LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
             HistoryQueryIndexNode* new_idx_node = (HistoryQueryIndexNode*)ShmemAlloc(sizeof(HistoryQueryIndexNode));
-            //LWLockRelease(shmem_lock_);
             if(!new_idx_node){
                 elog(ERROR, "ShmemAlloc failed: not enough shared memory");
                 exit(-1);
@@ -830,9 +720,7 @@ bool LevelRangeStrategy::Insert(LevelManager* level_mgr){
                 continue;
             }
             size_t next_level = FindNextInsertLevel(level_mgr,3);
-            //LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
             HistoryQueryIndexNode* new_idx_node = (HistoryQueryIndexNode*)ShmemAlloc(sizeof(HistoryQueryIndexNode));
-            //LWLockRelease(shmem_lock_);
             if(!new_idx_node){
                 elog(ERROR, "ShmemAlloc failed: not enough shared memory");
                 exit(-1);
@@ -1057,13 +945,11 @@ bool LeafStrategy::Insert(LevelManager* level_mgr){
     if(level_mgr_){
         historys_.insert(historys_.begin(),level_mgr_);
     }
-    //LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
     auto new_level_mgr = (SMLevelManager*)ShmemAlloc(sizeof(SMLevelManager));
     assert(new_level_mgr);
     /*new sm level manager need shmemalloc*/
     new (new_level_mgr) SMLevelManager();
     new_level_mgr->Copy(level_mgr);
-    //LWLockRelease(shmem_lock_);
 
     level_mgr_ = new_level_mgr;
     return true;
