@@ -14,7 +14,10 @@ void SMPredEquivlenceRange::Copy(PredEquivlenceRange* per){
 		list_.push_back(SMString(item));
 	}
 	SMString list_use_or_ = SMString(per->ListUseOr());
-    serialization_ = Serialization();
+    for(const auto& item : per->GetRightSets()){
+		right_sets_.insert(SMString(item));
+	}
+	serialization_ = Serialization();
 }
 
 int SMPredEquivlenceRange::LimitCompare(const SMString& left_range,VarType left_type,const SMString& right_range,VarType right_type){

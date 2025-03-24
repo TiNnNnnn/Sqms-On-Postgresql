@@ -36,7 +36,8 @@ public:
     PType ListOpType(){return list_op_type_;}
     SMString ListUseOr(){return list_use_or_;}
 
-    private:
+    const SMSet<SMString>& GetRightSets(){return right_sets_;}
+private:
     PType type_;
     VarType var_type_;
     SMString subquery_name_;
@@ -46,6 +47,7 @@ public:
     SMVector<SMString> list_;
     PType list_op_type_;
 	SMString list_use_or_;
+    SMSet<SMString> right_sets_;
     SMString serialization_;
 };
 

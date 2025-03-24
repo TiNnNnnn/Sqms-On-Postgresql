@@ -109,32 +109,40 @@ void LevelManager::ComputeLevelClass(const std::vector<HistorySlowPlanStat*>& li
 		std::map<int,PredEquivlence*>join_range_idx;
 		for(const auto& pe : *e){
 			pe->CalSortInfo();
-			if(pe->JoinRange()){
-				/*build pe for join_range predicate specially*/
-				join_range_idx[pe_idx] = pe;
+			for(const auto& r : pe->GetRanges()){
+				if(r->PredType() == PType::JOIN_RANGE){
+					join_range_idx[pe_idx] = pe;
+					break;
+				}
 			}
 			++pe_idx;
 		}
 
-		// for(const auto& pe : join_range_idx){
-		// 	pe_idx = 0;
-		// 	auto src_pe = pe.second;
-		// 	auto left_set = src_pe->GetPredSet();
-		// 	for(const auto& dst_pe : *e){
-		// 		if(pe_idx == pe.first){
-		// 			continue;
-		// 		}
-		// 		/*find left var pe*/
-		// 		auto dst_set = dst_pe->GetPredSet();
-		// 		if(dst_set.find(*left_set.begin()) != dst_set.end()){
-		// 			src_pe->SetPredSet(dst_set);
-		// 		}
-		// 		/*find right var pe*/
-
-		// 	}
-		// 	++pe_idx;
-		// }
-
+		for(const auto& pe : join_range_idx){
+			pe_idx = 0;
+			auto src_pe = pe.second;
+			for(const auto& src_range : src_pe->GetRanges()){
+				if(src_range->PredType() == PType::JOIN_RANGE){
+					auto right_var = src_range->LowerLimit() != LOWER_LIMIT ? src_range->LowerLimit() : src_range->UpperLimit();
+					for(const auto& dst_pe : *e){
+						if(pe_idx == pe.first){
+							continue;
+						}
+						/*find right var pe*/
+						auto dst_set = dst_pe->GetPredSet();
+						if(dst_set.find(right_var) != dst_set.end()){
+							src_range->SetRightSets(dst_set);
+						}
+					}
+					if(!src_range->GetRightSets().size()){
+						std::set<std::string>new_set;
+						new_set.insert(right_var);
+						src_range->SetRightSets(new_set);
+					}
+				}
+			}
+			++pe_idx;
+		}
 	}
 
 	/*calulate other attrs based on equivlences*/
@@ -1363,6 +1371,7 @@ void PredEquivlenceRange::Copy(PredEquivlenceRange* new_range){
 	new_range->SetPredVarType(var_type_);
 	new_range->SetListOpType(list_op_type_);
 	new_range->SetListUseOr(list_use_or_);
+	new_range->SetRightSets(right_sets_);
 }
 
 void PredEquivlenceRange::PrintPredEquivlenceRange(int depth){

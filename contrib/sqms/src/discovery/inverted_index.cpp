@@ -74,11 +74,9 @@ SMVector<int> RangePostingList::SubSet(SMPredEquivlence* range){
 void RangePostingList::Insert(PredEquivlence* pe,int id){
     assert(pe);
     /*copy a pe in shared_memory*/
-    //LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
     SMPredEquivlence* sm_pe = (SMPredEquivlence*)ShmemAlloc(sizeof(SMPredEquivlence));
     new (sm_pe) SMPredEquivlence();
     sm_pe->Copy(pe);
-    //LWLockRelease(shmem_lock_);
     assert(sm_pe);
 
     sets_.insert(sm_pe);
@@ -194,7 +192,16 @@ bool RangePostingList::SuperSetInternal(SMPredEquivlence* dst_pe, SMPredEquivlen
         }else if(r->PredType() == PType::JOIN_RANGE){
             for(const auto& src_r : ranges){
                 if(src_r->PredType()== PType::JOIN_RANGE){
-                    return true;
+                    /*check src right was in dst right equal set*/
+                    for(const auto& src_var : src_r->GetRightSets()){
+                        if(r->GetRightSets().find(src_var) != r->GetRightSets().end()){
+                            match = true;
+                            break;
+                        }
+                    }
+                }
+                if(match){
+                    break;
                 }
             }
         }else{
@@ -414,11 +421,9 @@ SMSet<int> RangeInvertedIndex::SuperSets(LevelPredEquivlences* lpes){
     /**
      * MARK: can we escape shmemalloc while just seraching
      */
-    //LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
     SMLevelPredEquivlences* sm_lpes = (SMLevelPredEquivlences*)ShmemAlloc(sizeof(SMLevelPredEquivlences));
     new (sm_lpes) SMLevelPredEquivlences();
     sm_lpes->Copy(lpes);
-    //LWLockRelease(shmem_lock_);
     assert(sm_lpes);
     
     std::shared_lock<std::shared_mutex> lock(rw_mutex_);
