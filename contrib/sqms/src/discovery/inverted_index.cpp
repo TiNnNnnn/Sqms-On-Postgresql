@@ -191,6 +191,12 @@ bool RangePostingList::SuperSetInternal(SMPredEquivlence* dst_pe, SMPredEquivlen
                     match = true;
                 }
             }
+        }else if(r->PredType() == PType::JOIN_RANGE){
+            for(const auto& src_r : ranges){
+                if(src_r->PredType()== PType::JOIN_RANGE){
+                    return true;
+                }
+            }
         }else{
             match = false;
         }

@@ -34,6 +34,7 @@ typedef enum class AbstractPredNodeType{
 enum class PType{
     /**/
     JOIN_EQUAL = 0,
+    JOIN_RANGE,
     /**/
     NOT_EQUAL,
     EQUAL,
@@ -135,6 +136,9 @@ public:
 
     void PrintPredEquivlenceRange(int depth = 0);
     std::string PrintPredEquivlenceRange(int depth,std::string tag,SqmsLogger* logger);
+
+    std::set<std::string> GetRightSets(){return right_sets_;}
+    void SetRightSets(const std::set<std::string>& set){right_sets_ = set;}
     
     std::string Serialization(){
         std::string str;
@@ -159,6 +163,8 @@ private:
     PType list_op_type_;
     /*ANY or ALL*/
     std::string list_use_or_;
+    /*range join*/
+    std::set<std::string> right_sets_;
 };
 
 /**
@@ -230,14 +236,14 @@ public:
     std::string GetPredSetStr();
     std::string Serialization() const;
     void CalSortInfo(){
-        //assert(ranges_.size());
-
         std::string lower_limit = UPPER_LIMIT;
         std::string upper_limit = LOWER_LIMIT;
         for(const auto& range: ranges_){
             if(range->PredType() == PType::SUBQUERY){
                 has_subquery_ = true;
                 subquery_names_.insert(range->GetSubqueryName());
+                continue;
+            }else if(range->PredType() == PType::JOIN_RANGE){
                 continue;
             }
             range_cnt_ ++;
@@ -264,6 +270,7 @@ public:
     std::string UpperLimit(){return upper_limit_;}
     bool HasSubquery(){return has_subquery_;}
     bool HasRange(){return has_range_;}
+    bool JoinRange(){return join_range_;}
     std::set<std::string>& SubqueryNames(){return subquery_names_;}
     int RangeCnt(){return range_cnt_;}
     std::string GetSerialization() const;
@@ -301,6 +308,7 @@ private:
     /*for pe sort*/
     bool has_subquery_ = false;
     bool has_range_ = false;
+    bool join_range_ = false;
     std::set<std::string> subquery_names_;
     int range_cnt_ = 0;
     std::string lower_limit_;
@@ -756,13 +764,12 @@ private:
     std::vector<std::string> join_type_list_;
 
     std::vector<LevelPredEquivlencesList*> total_residual_equivlences_;
+    std::vector<PredEquivlence*>residual_predicates_;
 
     std::unordered_map <int,std::vector<LevelManager*>> pred_subquery_map_;
 
     SqmsLogger* logger_;
-
     std::string log_tag_;
-
     std::string serialization_;
 };
 
@@ -812,6 +819,30 @@ public:
         not_lpes_list->Copy(not_lpes_list_);
     }
     LevelPredEquivlencesList* GetNotLpesList(){return not_lpes_list_;}
+
+    void SetResidualOrLpesList(LevelPredEquivlencesList* residual_or_lpes_list){
+        if(!residual_or_lpes_list_){
+            residual_or_lpes_list_ = new LevelPredEquivlencesList();
+        }
+        residual_or_lpes_list->Copy(residual_or_lpes_list_);
+    }
+    LevelPredEquivlencesList* GetrResidualOrLpesList(){return residual_or_lpes_list_;}
+
+    void SetResidualAndLpesList(LevelPredEquivlencesList* residual_and_lpes_list){
+        if(!residual_and_lpes_list_){
+            residual_and_lpes_list_ = new LevelPredEquivlencesList();
+        }
+        residual_and_lpes_list->Copy(residual_and_lpes_list_);
+    }
+    LevelPredEquivlencesList* GetResidualAndLpesList(){return residual_and_lpes_list_;}
+
+    void SetResidualNotLpesList(LevelPredEquivlencesList* residual_not_lpes_list){
+        if(!residual_not_lpes_list_){
+            residual_not_lpes_list_ = new LevelPredEquivlencesList();
+        }
+        residual_not_lpes_list->Copy(not_lpes_list_);
+    }
+    LevelPredEquivlencesList* GetResidualNotLpesList(){return residual_not_lpes_list_;}
     
 private:
     PredOperator__PredOperatorType op_type_;
@@ -821,6 +852,10 @@ private:
     LevelPredEquivlencesList* or_lpes_list_ = nullptr;
     LevelPredEquivlencesList* and_lpes_list_ = nullptr;
     LevelPredEquivlencesList* not_lpes_list_ = nullptr;
+
+    LevelPredEquivlencesList* residual_or_lpes_list_ = nullptr;
+    LevelPredEquivlencesList* residual_and_lpes_list_ = nullptr;
+    LevelPredEquivlencesList* residual_not_lpes_list_ = nullptr;
 };
 
 class QualsWarp: public AbstractPredNode {
