@@ -5264,6 +5264,10 @@ get_rule_expr(Node *node, deparse_context *context,
 					appendStringInfoChar(buf, '(');
 
 				int	pre_offset = context->buf->len;
+
+				context->current_trace_qual = trace_qual;
+				context->current_qual_pos = 0;
+
 				get_rule_expr_paren(arg1, context, true, node,expr->location);
 
 				int current_offset = context->buf->len;
@@ -5278,12 +5282,15 @@ get_rule_expr(Node *node, deparse_context *context,
 				
 				trace_qual->op = malloc(sizeof(op)+1);
 				strcpy(trace_qual->op,op);
+
 				trace_qual->use_or = malloc(sizeof(use_or)+1);
 				strcpy(trace_qual->use_or,use_or);
 
 				appendStringInfo(buf, " %s %s (",op, use_or);
 				
 				pre_offset = context->buf->len;
+				context->current_qual_pos = 1;
+
 				get_rule_expr_paren(arg2, context, true, node,expr->location);
 				current_offset = context->buf->len;
 				
@@ -5291,6 +5298,8 @@ get_rule_expr(Node *node, deparse_context *context,
 				strncpy(trace_qual->right,context->buf->data+pre_offset,current_offset-pre_offset);
 				trace_qual->right[current_offset - pre_offset] = '\0';	
 				
+				context->current_trace_qual = NULL;
+				context->current_qual_pos = 0;
 				/*
 				 * There's inherent ambiguity in "x op ANY/ALL (y)" when y is
 				 * a bare sub-SELECT.  Since we're here, the sub-SELECT must

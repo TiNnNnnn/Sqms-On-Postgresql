@@ -16,9 +16,12 @@ public:
     VarType PredVarType(){return var_type_;}
     SMString Serialization(){
         SMString str;
-        str += SMString(std::to_string(int(type_)));    
-        str += subquery_name_ + lower_limit_ + upper_limit_;
+        str += SMString(std::to_string(int(type_))) + SMString(std::to_string(int(list_op_type_)));    
+        str += subquery_name_ + lower_limit_ + upper_limit_ + list_use_or_;
         str += boundary_constraint_.first ? "1":"0" + boundary_constraint_.second ? "1":"0";
+        for(const auto& item : list_){
+            str += item;
+        }
         return str;
     } 
     SMString GetSerialization(){
@@ -29,7 +32,11 @@ public:
     }
     void Copy(PredEquivlenceRange* per);
     static int LimitCompare(const SMString& left_range,VarType left_type,const SMString& right_range,VarType right_type);
-private:
+    
+    PType ListOpType(){return list_op_type_;}
+    SMString ListUseOr(){return list_use_or_;}
+
+    private:
     PType type_;
     VarType var_type_;
     SMString subquery_name_;
@@ -37,6 +44,8 @@ private:
     SMString upper_limit_ = UPPER_LIMIT;
     std::pair<bool,bool> boundary_constraint_ = std::make_pair(true,true);
     SMVector<SMString> list_;
+    PType list_op_type_;
+	SMString list_use_or_;
     SMString serialization_;
 };
 

@@ -118,6 +118,12 @@ public:
     void SetPredType(PType type){type_ = type;}
     PType PredType(){return type_;}
 
+    void SetListOpType(PType type){list_op_type_ = type;}
+    PType ListOpType(){return list_op_type_;}
+
+    void SetListUseOr(const std::string& use){list_use_or_ = use;}
+    std::string ListUseOr(){return list_use_or_;}
+
     void SetPredVarType(VarType type){var_type_ = type;}
     VarType PredVarType(){return var_type_;}
 
@@ -148,7 +154,11 @@ private:
     std::string lower_limit_ = LOWER_LIMIT;
     std::string upper_limit_ = UPPER_LIMIT;
     std::pair<bool,bool> boundary_constraint_ = std::make_pair(true,true);
+
     std::vector<std::string> list_;
+    PType list_op_type_;
+    /*ANY or ALL*/
+    std::string list_use_or_;
 };
 
 /**

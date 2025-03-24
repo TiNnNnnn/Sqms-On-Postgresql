@@ -159,16 +159,38 @@ bool RangePostingList::SuperSetInternal(SMPredEquivlence* dst_pe, SMPredEquivlen
                         }			
                     }
     
-                    if(super){
+                    if(super){ 
                         match = true;
                         break;
                     }
-                }else{
-                    match = false;
                 }
             }
         }else if(r->PredType() == PType::SUBQUERY || r->PredType() == PType::SUBLINK){
             match = true;
+        }else if(r->PredType() == PType::LIST){
+            for(const auto& src_r : ranges){
+                if(src_r->PredType()== PType::LIST){
+                    /*check if src_r's list is superset of r's list*/
+                    if(r->ListUseOr() != src_r->ListUseOr()){
+                        continue;
+                    }
+                    SMUnorderedSet<SMString,SMStringHash> list_set;
+                    for(const auto& item : src_r->List()){
+                        list_set.insert(item);
+                    }
+                    bool all_found = true;
+                    for(const auto& item : r->List()){
+                        if(list_set.find(item) == list_set.end()){
+                            all_found = false;
+                            break;
+                        }
+                    }
+                    if(!all_found){
+                        continue;
+                    }
+                    match = true;
+                }
+            }
         }else{
             match = false;
         }

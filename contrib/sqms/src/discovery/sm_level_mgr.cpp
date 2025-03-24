@@ -9,6 +9,11 @@ void SMPredEquivlenceRange::Copy(PredEquivlenceRange* per){
     lower_limit_ = SMString(per->LowerLimit());
     upper_limit_ = SMString(per->UpperLimit());
     boundary_constraint_ = per->GetBoundaryConstraint();
+	list_op_type_ = per->ListOpType();
+	for(const auto& item : per->List()){
+		list_.push_back(SMString(item));
+	}
+	SMString list_use_or_ = SMString(per->ListUseOr());
     serialization_ = Serialization();
 }
 
@@ -150,15 +155,6 @@ void SMPredEquivlence::Copy(PredEquivlence* pe){
         sublink_level_pe_lists_[SMString(item.first)] = sm_level_mgr;
     }
     early_stop_ = pe->EarlyStop();
-
-    //SMPredEquivlence* sm_child_pe = nullptr;
-    // if(pe->Child().get()){
-    //     sm_child_pe = (SMPredEquivlence*)ShmemAlloc(sizeof(SMPredEquivlence));
-    //     assert(sm_child_pe);
-    //     new (sm_child_pe) SMPredEquivlence();
-    //     sm_child_pe->Copy(pe->Child().get());
-    // }
-    //child_ = sm_child_pe;
 
     serialization_ = Serialization();
     has_subquery_ = pe->HasSubquery();

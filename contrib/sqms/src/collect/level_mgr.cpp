@@ -1311,6 +1311,8 @@ void PredEquivlenceRange::Copy(PredEquivlenceRange* new_range){
 	new_range->SetSubqueryName(subquery_name_);
 	new_range->SetList(list_);
 	new_range->SetPredVarType(var_type_);
+	new_range->SetListOpType(list_op_type_);
+	new_range->SetListUseOr(list_use_or_);
 }
 
 void PredEquivlenceRange::PrintPredEquivlenceRange(int depth){
@@ -1416,6 +1418,7 @@ std::string PredEquivlenceRange::PrintPredEquivlenceRange(int depth,std::string 
 			}
 		}break;
 		case PType::LIST:{
+			output += "<"+list_use_or_+">";
 			output+="[";
 			for(size_t i=0;i<list_.size();i++){
 				output += list_[i];
@@ -1457,6 +1460,27 @@ PredEquivlence::PredEquivlence(Quals* qual,bool is_not){
 	auto get_pure_var = [this](std::string s) -> std::string{
 		std::string ps = extract_field(s);
 		return  ps.empty()?s:ps;		
+	};
+
+	auto parse_list = [](const std::string& input) -> std::vector<std::string> {
+		std::vector<std::string> result;
+		if (input.size() < 4 || input.front() != '\'' || input.back() != '\'') {
+			return result;
+		}
+		std::string trimmed = input.substr(1, input.size() - 2);
+	
+		if (trimmed.front() != '{' || trimmed.back() != '}') {
+			return result;
+		}
+	
+		std::string content = trimmed.substr(1, trimmed.size() - 2);
+		std::stringstream ss(content);
+		std::string item;
+		while (std::getline(ss, item, ',')) {
+			result.push_back(item);
+		}
+	
+		return result;
 	};
 
 	switch(type){
@@ -1525,11 +1549,12 @@ PredEquivlence::PredEquivlence(Quals* qual,bool is_not){
 			ranges_.insert(range);
 		}break;
 		case PType::LIST:{
-			range->SetPredVarType(var_type);
 			set_.insert(get_pure_var(qual->left));
-			/**
-			 * TODO: not implement yet: we should convert str_list into true list
-			 */
+			range->SetPredType(PType::LIST);
+			range->SetListOpType(PType::EQUAL);
+			range->SetListUseOr(qual->use_or);
+			range->SetPredVarType(var_type);
+			range->SetList(parse_list(get_pure_var(qual->right)));
 			ranges_.insert(range);
 		}break;
 		case PType::SUBQUERY:{
@@ -2258,10 +2283,6 @@ bool PredEquivlence::SuperSet(PredEquivlence* pe){
 							super = false;
 							continue;							
 						}
-						// if(r->LowerLimit() < src_r->LowerLimit()){
-						// 	super = false;
-						// 	continue;
-						// }
 					}			
 				}
 
@@ -2278,10 +2299,6 @@ bool PredEquivlence::SuperSet(PredEquivlence* pe){
 							super = false;
 							continue;							
 						}
-						// if(r->UpperLimit() > src_r->UpperLimit()){
-						// 	super = false;
-						// 	continue;
-						// }
 					}			
 				}
 				if(super){
@@ -2308,9 +2325,6 @@ bool PredEquivlence::SuperSet(PredEquivlence* pe){
 			if(r->GetSubqueryName() != subquery_names[sub_src_idx]){
 				return false;
 			}
-			/**
-			 * TODO: here we check the true subquery
-			 */
 			++sub_src_idx;
 		}
 	}
