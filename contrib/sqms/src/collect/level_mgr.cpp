@@ -2235,6 +2235,7 @@ bool PredEquivlence::MergePredEquivlenceRanges(const std::vector<PredEquivlenceR
 		return early_stop_;
 	}
 
+	idx = 0;
 	for(const auto& r : merge_range_list){
 		if(r->PredType() != PType::RANGE){
 			std::cerr<<"only support range type merge currently"<<std::endl;
@@ -2260,7 +2261,7 @@ bool PredEquivlence::MergePredEquivlenceRanges(const std::vector<PredEquivlenceR
 
 			ret = PredEquivlenceRange::LimitCompare(r->LowerLimit(),r->PredVarType(),lower_bound,cur_type);
 			if((ret > 0 && r->LowerLimit() != LOWER_LIMIT &&  lower_bound != LOWER_LIMIT)
-				|| (lower_bound == UPPER_LIMIT)
+				|| (lower_bound == LOWER_LIMIT)
 				|| (!ret && r->GetLowerBoundaryConstraint() && !left)
 			){
 				cur_type = r->PredVarType();
@@ -2280,7 +2281,6 @@ bool PredEquivlence::MergePredEquivlenceRanges(const std::vector<PredEquivlenceR
 	new_range->SetUpperBoundaryConstraint(right);
 	ranges_.insert(new_range);
 	
-	//std::cout<<"MERGE: "<<pre_merge<<" "<<early_check<<std::endl;
 	/*if not merge range is not from pre level, not need check if early_stop*/
 	if((!pre_merge) && (!early_check)){
 		return true;
