@@ -1602,13 +1602,13 @@ PredEquivlence::PredEquivlence(Quals* qual,bool is_not){
 			}else if(!strcmp(op,"<=")){
 				range->SetUpperLimit(qual->right);
 				range->SetBoundaryConstraint(std::make_pair(true,true));
-			}else if(!strcmp(op,"!=")){
+			}else if(!strcmp(op,"!=") || !strcmp(op,"<>")){
 				range->SetLowerLimit(qual->right);
 				range->SetUpperLimit(qual->right);
 				range->SetBoundaryConstraint(std::make_pair(true,true));
 			}else{
 				std::cerr<<"unkonw op type of range qual while init pred equivlence"<<std::endl;
-				exit(-1);
+				exit(-1);  
 			}
 			ranges_.insert(range);
 			join_range_ = true;

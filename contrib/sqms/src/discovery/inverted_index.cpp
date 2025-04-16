@@ -150,7 +150,7 @@ bool RangePostingList::SuperSetInternal(SMPredEquivlence* dst_pe, SMPredEquivlen
                     }else{
                         if(src_r->UpperLimit() != UPPER_LIMIT){
                             int ret = SMPredEquivlenceRange::LimitCompare(r->UpperLimit(),r->PredVarType(),src_r->UpperLimit(),src_r->PredVarType());
-                            if(ret > 0 || (!ret && !r->GetLowerBoundaryConstraint() && src_r->GetLowerBoundaryConstraint())){
+                            if(ret > 0 || (!ret && !r->GetUpperBoundaryConstraint() && src_r->GetUpperBoundaryConstraint())){
                                 super = false;
                                 continue;        
                             }
