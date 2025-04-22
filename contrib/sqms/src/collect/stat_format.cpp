@@ -85,26 +85,26 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt,bool slow
                     logger_->Logger("slow",ShowAllNodeCollect(hsps,node_collect_map,"slow").c_str());
                 }
 
-                // /*format strategt 2*/
+                /*format strategt 2*/
                 PlanFormatContext* pf_context_2 = new PlanFormatContext();
                 auto node_manager = std::make_shared<NodeManager>(p,level_mgr,pid);
                 pf_context_2->SetStrategy(node_manager);
                 pf_context_2->executeStrategy();
                 
-                if(!shared_index->Insert(level_mgr.get(),1)){
-                    logger_->Logger("slow","shared_index insert error in strategy 1");
-                    exit(-1);
-                }else{
-                    logger_->Logger("slow","shared_index insert level_mgr success");
-                }
-                
-                // for(const auto& node_collector : node_manager->GetNodeCollectorList()){
-                //     std::cout<<"NODE time: "<<node_collector->time<<",output:"<<node_collector->output<<std::endl;
-                //     if(!shared_index->Insert(node_collector)){
-                //         logger_->Logger("slow","shared_index insert error in strategy 2");
-                //         exit(-1);
-                //     }
+                // if(!shared_index->Insert(level_mgr.get(),1)){
+                //     logger_->Logger("slow","shared_index insert error in strategy 1");
+                //     exit(-1);
+                // }else{
+                //     logger_->Logger("slow","shared_index insert level_mgr success");
                 // }
+                /*node strategy*/
+                for(const auto& node_collector : node_manager->GetNodeCollectorList()){
+                    //std::cout<<"NODE time: "<<node_collector->time<<",output:"<<node_collector->output<<std::endl;
+                    if(!shared_index->Insert(node_collector)){
+                        logger_->Logger("slow","shared_index insert error in strategy 2");
+                        exit(-1);
+                    }
+                }
             }
             /**
              * TODO: 11-23 storage the slow sub query
@@ -146,37 +146,37 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt,bool slow
                     pf_context_1->executeStrategy();
                     level_mgr->ShowTotalPredClass();
 
-                    if(debug){
-                        auto node_collect_map = level_mgr->GetNodeCollector();
-                        logger_->Logger("comming",ShowAllNodeCollect(p,node_collect_map,"comming").c_str());
-                    }
+                    // if(debug){
+                    //     auto node_collect_map = level_mgr->GetNodeCollector();
+                    //     logger_->Logger("comming",ShowAllNodeCollect(p,node_collect_map,"comming").c_str());
+                    // }
 
-                    if(shared_index->Search(level_mgr.get(),1)){
-                        CancelQuery(pid);
-                        //elog(NOTICE, "query has been canceled!");
-                        logger_->Logger("comming","****************************");
-                        break;
-                    }
-                    logger_->Logger("comming","****************************");
+                    // if(shared_index->Search(level_mgr.get(),1)){
+                    //     CancelQuery(pid);
+                    //     //elog(NOTICE, "query has been canceled!");
+                    //     logger_->Logger("comming","****************************");
+                    //     break;
+                    // }
+                    // logger_->Logger("comming","****************************");
                     //return true;
                 //});
                 ++sub_idx;
             }
 
-            // /*node strategy*/
-            // auto top_p = sub_list[0];
-            // SlowPlanStat *sps= new SlowPlanStat();
-            // PlanFormatContext* pf_context_1 = new PlanFormatContext();
-            // auto level_mgr = std::make_shared<LevelManager>(top_p,sps,logger_,"comming");
-            // pf_context_1->SetStrategy(level_mgr);
-            // pf_context_1->executeStrategy();
-            // //level_mgr->ShowTotalPredClass();
+            /*node strategy*/
+            auto top_p = sub_list[0];
+            SlowPlanStat *sps= new SlowPlanStat();
+            PlanFormatContext* pf_context_1 = new PlanFormatContext();
+            auto level_mgr = std::make_shared<LevelManager>(top_p,sps,logger_,"comming");
+            pf_context_1->SetStrategy(level_mgr);
+            pf_context_1->executeStrategy();
+            //level_mgr->ShowTotalPredClass();
 
-            // //PlanFormatContext* pf_context_2 = new PlanFormatContext();
-            // auto node_mgr = std::make_shared<NodeManager>(top_p,level_mgr,pid);
-            // //pf_context_2->SetStrategy(node_mgr);
-            // //pf_context_2->executeStrategy();
-            // node_mgr->Search();
+            PlanFormatContext* pf_context_2 = new PlanFormatContext();
+            auto node_mgr = std::make_shared<NodeManager>(top_p,level_mgr,pid);
+            pf_context_2->SetStrategy(node_mgr);
+            pf_context_2->executeStrategy();
+            node_mgr->Search();
 
             logger_->Logger("comming","finish process comming query...");
         }
@@ -235,22 +235,6 @@ void PlanStatFormat::LevelOrder(HistorySlowPlanStat* hsps,std::vector<HistorySlo
 }
 
 bool PlanStatFormat::CancelQuery(pid_t pid){
-    // Datum arg;
-    // arg = Int32GetDatum(pid);
-    // FunctionCallInfoBaseData fcinfo;
-    // InitFunctionCallInfoData(fcinfo, NULL, 1, InvalidOid, NULL, NULL);
-    // fcinfo.args[0].value = arg;
-    // fcinfo.args[0].isnull = false;
-    
-    // auto result = DatumGetBool(pg_cancel_backend(&fcinfo));
-    // if(result){
-    //     logger_->Logger("comming","cancel query success...");
-    //     return true;
-    // }else{
-    //     logger_->Logger("comming","cancel query failed or has been canceled...");
-    //     return false;
-    // }
-
     Datum arg = Int32GetDatum(pid);
     Datum result = DirectFunctionCall1(pg_cancel_backend, arg);
     bool success = DatumGetBool(result);

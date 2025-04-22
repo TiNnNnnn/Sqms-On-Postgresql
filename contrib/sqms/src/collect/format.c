@@ -893,10 +893,16 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	*ces = *total_es;
 	ces->str = makeStringInfo();
 
+	ExplainState* cn_es = NewFormatState();
+	*cn_es = *total_es;
+	cn_es->str = makeStringInfo();
+
 	FormatOpenGroup("Plan","Plan",true, es);
 	FormatOpenGroup("Plan","Plan",true, ces);
+	FormatOpenGroup("Plan","Plan",true, cn_es);
 
 	/*just note physical node type for ces*/
+	FormatPropertyText("Node Type",sname,cn_es);
 	FormatPropertyText("Node Type",sname,ces);
 	FormatPropertyText("Node Type",sname,es);
 
@@ -906,36 +912,43 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	if (strategy){
 		FormatPropertyText("Strategy", strategy, es);
 		FormatPropertyText("Strategy", strategy, ces);
+		FormatPropertyText("Strategy", strategy, cn_es);
 		hsp.strategy = strategy;
 	}
 	if (partialmode){
 		FormatPropertyText("Partial Mode", partialmode, es);
 		FormatPropertyText("Partial Mode", partialmode, ces);
+		FormatPropertyText("Partial Mode", partialmode, cn_es);
 		hsp.partial_mode = partialmode;
 	}
 	if (operation){
 		FormatPropertyText("Operation", operation, es);
 		FormatPropertyText("Operation", operation, ces);
+		FormatPropertyText("Operation", operation, cn_es);
 		hsp.operation = operation;
 	}
 	if (relationship){
 		FormatPropertyText("Parent Relationship", relationship, es);
 		FormatPropertyText("Parent Relationship", relationship, ces);
+		FormatPropertyText("Parent Relationship", relationship, cn_es);
 		hsp.relationship = relationship;
 	}
 	if (plan_name){
 		FormatPropertyText("Subplan Name", plan_name, es);
 		FormatPropertyText("Subplan Name", plan_name, ces);
+		FormatPropertyText("Subplan Name", plan_name, cn_es);
 		hsp.sub_plan_name = plan_name;
 	}
 
 	if (custom_name){
 		FormatPropertyText("Custom Plan Provider", custom_name, es);
 		FormatPropertyText("Custom Plan Provider", custom_name, ces);
+		FormatPropertyText("Custom Plan Provider", custom_name, cn_es);
 	}
 
 	FormatPropertyBool("Parallel Aware", plan->parallel_aware, es);
 	FormatPropertyBool("Parallel Aware", plan->parallel_aware, ces);
+	FormatPropertyBool("Parallel Aware", plan->parallel_aware, cn_es);
 
 	switch (nodeTag(plan))
 	{
@@ -952,12 +965,14 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		case T_WorkTableScan:
 			ExplainScanTarget((Scan *) plan, es, &hsp);
 			ExplainScanTarget((Scan *) plan, ces, &hsp);
+			ExplainScanTarget((Scan *) plan, cn_es, &hsp);
 			break;
 		case T_ForeignScan:
 		case T_CustomScan:
 			if (((Scan *) plan)->scanrelid > 0)
 				ExplainScanTarget((Scan *) plan, es,&hsp);
 				ExplainScanTarget((Scan *) plan, ces,&hsp);
+				ExplainScanTarget((Scan *) plan, cn_es, &hsp);
 			break;
 		case T_IndexScan:
 			{
@@ -968,10 +983,14 @@ ExplainNode(PlanState *planstate, List *ancestors,
 										es,&hsp);
 				ExplainIndexScanDetails(indexscan->indexid,
 										indexscan->indexorderdir,
-										ces,&hsp);				
+										ces,&hsp);	
+				ExplainIndexScanDetails(indexscan->indexid,
+										indexscan->indexorderdir,
+										cn_es,&hsp);				
 
 				ExplainScanTarget((Scan *) indexscan, es,&hsp);
 				ExplainScanTarget((Scan *) indexscan, ces,&hsp);
+				ExplainScanTarget((Scan *) indexscan, cn_es,&hsp);
 			}
 			break;
 		case T_IndexOnlyScan:
@@ -984,9 +1003,13 @@ ExplainNode(PlanState *planstate, List *ancestors,
 				ExplainIndexScanDetails(indexonlyscan->indexid,
 										indexonlyscan->indexorderdir,
 										ces,&hsp);
+				ExplainIndexScanDetails(indexonlyscan->indexid,
+										indexonlyscan->indexorderdir,
+										cn_es,&hsp);
 
 				ExplainScanTarget((Scan *) indexonlyscan, es, &hsp);
 				ExplainScanTarget((Scan *) indexonlyscan, ces, &hsp);
+				ExplainScanTarget((Scan *) indexonlyscan, cn_es, &hsp);
 			}
 			break;
 		case T_BitmapIndexScan:
@@ -1589,6 +1612,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	{
 		FormatOpenGroup("Plans", "Plans", false, es);
 		FormatOpenGroup("Plans", "Plans", false, ces);
+		FormatOpenGroup("Plans", "Plans", false, cn_es);
 		/* Pass current Plan as head of ancestors list for children */
 		ancestors = lcons(plan, ancestors);
 		/**
@@ -1629,6 +1653,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		cumulate_cost += ret.cost_;
 		appendStringInfoString(es->str,ret.detail_str_->data);
 		appendStringInfoString(ces->str,ret.canonical_str_->data);
+		appendStringInfoString(cn_es->str,ret.canonical_str_->data);
 		push_node_type_set(rs.node_type_set_,ret.node_type_set_);
     }
 	/* lefttree */
@@ -1659,8 +1684,9 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		*child = ret.hps_;
 		hsp.childs[hsp.child_idx++] = child;
     }
+
 	/**
-	 * TODO: we need update here
+	 * TODO: we need update here, cn_es not note these node info. 
 	 */
 	/* special child plans */
 	switch (nodeTag(plan))
@@ -1714,6 +1740,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		cumulate_cost += ret.cost_;
 		appendStringInfoString(es->str,ret.detail_str_->data);
 		appendStringInfoString(ces->str,ret.canonical_str_->data);
+		appendStringInfoString(cn_es->str,ret.canonical_str_->data);
 		push_node_type_set(rs.node_type_set_,ret.node_type_set_);
 	}
 
@@ -1722,6 +1749,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		ancestors = list_delete_first(ancestors);
 		FormatCloseGroup("Plans", "Plans", false, es);
 		FormatCloseGroup("Plans", "Plans", false, ces);
+		FormatCloseGroup("Plans", "Plans", false, cn_es);
 	}
 
 	/**
@@ -1730,10 +1758,12 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	 */
 	hsp.json_plan = es->str->data;
 	hsp.canonical_json_plan = ces->str->data;
+	hsp.canonical_node_json_plan = cn_es->str->data;
 	hsp.sub_cost = cumulate_cost;
 	/*mark the recurestat for parent to use,we need a deep copy for infostring*/
 	FormatCloseGroup("Plan",relationship ? NULL : "Plan",true, es);
 	FormatCloseGroup("Plan",relationship ? NULL : "Plan",true, ces);
+	FormatCloseGroup("Plan",relationship ? NULL : "Plan",true, cn_es);
 	//ExplainEndOutput(es);
 	
 	rs.cost_ = cumulate_cost;
@@ -1742,9 +1772,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	rs.hps_ = hsp;
 
 	if(debug){
-		//elog(stat_log_level,es->str->data);
 		elog(stat_log_level,ces->str->data);
-		//printf("%s",es->str->data);
 	}
 
 	/*here we can't free es, hsp still use its data*/

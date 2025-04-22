@@ -175,10 +175,11 @@ struct  _HistorySlowPlanStat
    */
   size_t n_subplans;
   HistorySlowPlanStat **subplans;
+  char *canonical_node_json_plan;
 };
 #define HISTORY_SLOW_PLAN_STAT__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&history_slow_plan_stat__descriptor) \
-    , 0, 0, 0, 0, 0, 0, 0,NULL, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, 0,NULL, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0,NULL, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, 0,NULL, (char *)protobuf_c_empty_string, 0,NULL, 0, NULL, PRED_TYPE_TAG__NONE, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0,NULL }
+    , 0, 0, 0, 0, 0, 0, 0,NULL, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, 0,NULL, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0,NULL, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0, 0,NULL, (char *)protobuf_c_empty_string, 0,NULL, 0, NULL, PRED_TYPE_TAG__NONE, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0,NULL, (char *)protobuf_c_empty_string }
 
 
 struct  _GroupSortKey

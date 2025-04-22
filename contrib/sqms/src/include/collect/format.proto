@@ -84,6 +84,7 @@ message HistorySlowPlanStat{
 	int32 subplan_idx = 54;
 	/*we storage subplan divide from sommon childs*/
 	repeated HistorySlowPlanStat subplans = 55;
+	string canonical_node_json_plan = 56;
 }
 
 enum PredTypeTag{
