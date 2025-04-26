@@ -160,7 +160,7 @@ void StatCollecter::StmtExecutorEndWrapper(QueryDesc *queryDesc)
 		InstrEndLoop(queryDesc->totaltime);
 		
 		//std::cout<<"sleep: 2s ..."<<std::endl;
-		sleep(2);
+		//sleep(2);
 		
 		/*stoage plan stats*/
 		msec = queryDesc->totaltime->total * 1000.0;

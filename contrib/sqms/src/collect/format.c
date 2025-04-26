@@ -1772,7 +1772,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	rs.hps_ = hsp;
 
 	if(debug){
-		elog(stat_log_level,ces->str->data);
+		//elog(stat_log_level,es->str->data);
 	}
 
 	/*here we can't free es, hsp still use its data*/

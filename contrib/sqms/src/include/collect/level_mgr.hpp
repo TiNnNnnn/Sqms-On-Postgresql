@@ -671,7 +671,7 @@ public:
     std::vector<std::string> join_type_list;
 
     std::vector<NodeCollector*>childs_;
-    NodeCollector* parent_;
+    NodeCollector* parent_ = nullptr;
 
     std::vector<int> inputs;
     int output;

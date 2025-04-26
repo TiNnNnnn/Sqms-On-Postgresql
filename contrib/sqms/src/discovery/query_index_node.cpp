@@ -20,7 +20,7 @@ bool LevelHashStrategy::Insert(LevelManager* level_mgr){
         size_t next_level = FindNextInsertLevel(level_mgr,1);
         HistoryQueryIndexNode* new_idx_node = (HistoryQueryIndexNode*)ShmemAlloc(sizeof(HistoryQueryIndexNode));
         if(!new_idx_node){
-            elog(ERROR, "ShmemAlloc failed: not enough shared memory");
+            //elog(ERROR, "ShmemAlloc failed: not enough shared memory");
             exit(-1);
         }
         new (new_idx_node) HistoryQueryIndexNode(next_level,total_height_);
@@ -44,6 +44,7 @@ bool LevelHashStrategy::Serach(LevelManager* level_mgr,int id){
         auto child = acc->second;
         return child->Search(level_mgr,-1);
     }else{
+        
         return false;
     }
     return false;
@@ -94,6 +95,7 @@ bool LevelHashStrategy::Search(NodeCollector* node_collector){
         auto child = acc->second;
         return child->Serach(node_collector);
     }else{
+        //elog(INFO, "search failed in hash steategy");
         return false;
     }
     return false;
@@ -203,6 +205,7 @@ bool LevelScalingStrategy::Insert(NodeCollector* node_collector){
                 return false;
             }
             child_map_.insert({new_scaling_info->UniqueId(),{new_scaling_info,new_idx_node}});
+            return true;
         }
     } 
     return true;
@@ -210,9 +213,10 @@ bool LevelScalingStrategy::Insert(NodeCollector* node_collector){
 bool LevelScalingStrategy::Remove(NodeCollector* node_collector){
     return true;
 }
+
 bool LevelScalingStrategy::Search(NodeCollector* node_collector){
     assert(node_collector);
-    assert(node_collector->join_type_list.size());
+    assert(node_collector->join_type_list.size() == 1);
 
     auto new_scaling_info = std::make_shared<ScalingInfo>(node_collector->join_type_list);
     {
@@ -226,6 +230,7 @@ bool LevelScalingStrategy::Search(NodeCollector* node_collector){
                 }
             }
         }
+        //elog(INFO, "search failed in scaling steategy");
         return false;
     }
 }
@@ -369,10 +374,7 @@ bool LevelAggStrategy::Insert(NodeCollector* node_collector){
             return child->Insert(node_collector);
         }else{
             size_t next_level = FindNextInsertLevel(node_collector,5);
-            // assert(next_level == total_height_);
-            //LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
             HistoryQueryIndexNode* new_idx_node = (HistoryQueryIndexNode*)ShmemAlloc(sizeof(HistoryQueryIndexNode));
-            //LWLockRelease(shmem_lock_);
             if(!new_idx_node){
                 elog(ERROR, "ShmemAlloc failed: not enough shared memory");
                 exit(-1);
@@ -441,9 +443,9 @@ bool LevelAggStrategy::Search(NodeCollector* node_collector){
             }
         }
     }
+    //elog(INFO, "search failed in agg steategy");
     return false;
 }
-
 
 /**
  * LevelSortStrategy::Insert
@@ -647,6 +649,7 @@ bool LevelSortStrategy::Search(NodeCollector* node_collector){
             }
         }
     }
+    //elog(INFO, "search failed in sort steategy");
     return false;
 }
 
@@ -853,9 +856,7 @@ bool LevelRangeStrategy::Insert(NodeCollector* node_collector){
                 continue;
             }
             size_t next_level = FindNextInsertLevel(node_collector,3);
-            //LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
             HistoryQueryIndexNode* new_idx_node = (HistoryQueryIndexNode*)ShmemAlloc(sizeof(HistoryQueryIndexNode));
-            //LWLockRelease(shmem_lock_);
             if(!new_idx_node){
                 elog(ERROR, "ShmemAlloc failed: not enough shared memory");
                 exit(-1);
@@ -1022,12 +1023,15 @@ bool LeafStrategy::Remove(LevelManager* level_mgr){
 bool LeafStrategy::Insert(NodeCollector* node_collector){
     assert(node_collector);
     inputs_.clear();
+    std::string input_str;
     for(const auto& in : node_collector->inputs){
         inputs_.push_back(in);
+        input_str += std::to_string(in)+",";
     }
     output_ = node_collector->output;
     time_ = node_collector->time;
-    std::cout<<"insert node_collector: time:"<<node_collector->time<<std::endl;
+    std::cout<<"insert node: output: "+std::to_string(output_)+", inputs: "<<input_str<<std::endl;
+
     return true;
 }
 
@@ -1039,6 +1043,7 @@ bool LeafStrategy::Search(NodeCollector* node_collector){
     assert(node_collector);
     for(size_t i = 0;i<node_collector->inputs.size();++i){
         if(node_collector->inputs[i] < inputs_[i]){
+            //elog(INFO, ("search failed in leaf steategy: history input: "+std::to_string(inputs_[i])+", current input: "+std::to_string(node_collector->inputs[i])).c_str());
             return false;
         }
     }

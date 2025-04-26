@@ -26,7 +26,7 @@ class ScalingInfo{
         }    
         ScalingInfo(std::vector<std::string> join_type_list){
             for(const auto& type : join_type_list){
-                join_type_list_.push_back(SMString(type.c_str()));
+                join_type_list_.push_back(SMString(type));
             }
             join_type_score_ = CalJoinTypeScore(join_type_list_,unique_id_);
         }

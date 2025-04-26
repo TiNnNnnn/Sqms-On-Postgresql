@@ -53,6 +53,7 @@ public:
 private:
     void ComputeTotalNodes(HistorySlowPlanStat* hsps);
     void PlanPartition(HistorySlowPlanStat* hsps);
+    void PlanInit(HistorySlowPlanStat* hsps);
     bool CancelQuery(pid_t pid);
 private:
     int branch_num_;
@@ -60,6 +61,7 @@ private:
     std::shared_ptr<LevelManager> level_mgr_ = nullptr;
 
     std::vector<NodeCollector*> node_collector_list_;
+    std::vector<std::vector<NodeCollector *>> level_collector_;
     std::vector<std::vector<NodeCollector*>>partition_list;
     std::unordered_map<NodeCollector*,int>dependencies_;
     std::shared_ptr<ThreadPool> pool_;
@@ -69,4 +71,6 @@ private:
     HistoryQueryLevelTree *shared_index_;
     pid_t pid_;
     int node_num_ = 0;
+
+    
 };

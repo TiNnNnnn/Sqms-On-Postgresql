@@ -1,4 +1,4 @@
--- using 1745049466 as a seed to the RNG
+-- using 1745679353 as a seed to the RNG
 
 
 select
@@ -10,7 +10,7 @@ from
 where
 	p_partkey = l_partkey
 	and agg_partkey = l_partkey
-	and p_brand = 'Brand#44'
-	and p_container = 'WRAP JAR'
+	and p_brand = 'Brand#41'
+	and p_container = 'WRAP PKG'
 	and l_quantity < avg_quantity
 LIMIT 1;
