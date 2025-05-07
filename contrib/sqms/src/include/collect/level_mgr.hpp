@@ -652,6 +652,14 @@ private:
     std::string serialization_;
 };
 
+
+class LeafNodeInfo{
+public:
+    int output_ = 0;
+    SMVector<int>inputs_;
+    double time_ = 0;
+};
+
 /**
  * NodeCollector: supplementary information for hsps node
  */
@@ -673,9 +681,19 @@ public:
     std::vector<NodeCollector*>childs_;
     NodeCollector* parent_ = nullptr;
 
+    std::vector<LeafNodeInfo*> leaf_info_; 
+
     std::vector<int> inputs;
     int output;
     double time;
+
+    std::string type_name;
+
+    int match_cnt = 0;
+    size_t child_idx = -1;
+
+    std::vector<int>output_list_;
+    std::vector<int>time_list_;
 
     int pe_idx = -1;
 };

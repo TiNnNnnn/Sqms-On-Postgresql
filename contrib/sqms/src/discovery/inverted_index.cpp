@@ -123,7 +123,7 @@ bool RangePostingList::SuperSetInternal(SMPredEquivlence* dst_pe, SMPredEquivlen
         bool match = false;
         if(r->PredType() == PType::EQUAL || r->PredType() == PType::NOT_EQUAL || r->PredType() == PType::RANGE){
             for(const auto& src_r : ranges){
-                if(r->PredType() == PType::EQUAL || r->PredType() == PType::NOT_EQUAL || r->PredType() == PType::RANGE){
+                if(src_r->PredType() == PType::EQUAL || src_r->PredType() == PType::NOT_EQUAL || src_r->PredType() == PType::RANGE){
                     bool super = true;
                     /* check lowlimit */
                     if(r->LowerLimit() == LOWER_LIMIT){
@@ -192,13 +192,17 @@ bool RangePostingList::SuperSetInternal(SMPredEquivlence* dst_pe, SMPredEquivlen
         }else if(r->PredType() == PType::JOIN_RANGE){
             for(const auto& src_r : ranges){
                 if(src_r->PredType()== PType::JOIN_RANGE){
-                    /*check src right was in dst right equal set*/
-                    for(const auto& src_var : src_r->GetRightSets()){
-                        if(r->GetRightSets().find(src_var) != r->GetRightSets().end()){
-                            match = true;
-                            break;
-                        }
+                    if(src_r->LowerLimit() == r->LowerLimit() && src_r->UpperLimit() == r->UpperLimit()){
+                        match = true;
+                        break;
                     }
+                    /*check src right was in dst right equal set*/
+                    // for(const auto& src_var : src_r->GetRightSets()){
+                    //     if(r->GetRightSets().find(src_var) != r->GetRightSets().end()){
+                    //         match = true;
+                    //         break;
+                    //     }
+                    // }
                 }
                 if(match){
                     break;

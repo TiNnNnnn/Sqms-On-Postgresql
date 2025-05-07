@@ -20,7 +20,7 @@ bool LevelHashStrategy::Insert(LevelManager* level_mgr){
         size_t next_level = FindNextInsertLevel(level_mgr,1);
         HistoryQueryIndexNode* new_idx_node = (HistoryQueryIndexNode*)ShmemAlloc(sizeof(HistoryQueryIndexNode));
         if(!new_idx_node){
-            //elog(ERROR, "ShmemAlloc failed: not enough shared memory");
+            elog(ERROR, "ShmemAlloc failed: not enough shared memory");
             exit(-1);
         }
         new (new_idx_node) HistoryQueryIndexNode(next_level,total_height_);
@@ -63,9 +63,15 @@ bool LevelHashStrategy::Insert(NodeCollector* node_collector){
 
     SMConcurrentHashMap<SMString,HistoryQueryIndexNode*>::const_accessor acc;
     if(set_map_.find(acc ,json_sub_plan)){
+        if(node_collector->type_name == "Hash"){
+            std::cout << "haha" << std::endl;
+        }
         auto child = acc->second;
         return child->Insert(node_collector);
     }else{
+        if(node_collector->type_name == "Hash"){
+            std::cout << "hehe" << std::endl;
+        }
         /*create a new child node*/
         size_t next_level = FindNextInsertLevel(node_collector,1);
         HistoryQueryIndexNode* new_idx_node = (HistoryQueryIndexNode*)ShmemAlloc(sizeof(HistoryQueryIndexNode));
@@ -95,7 +101,7 @@ bool LevelHashStrategy::Search(NodeCollector* node_collector){
         auto child = acc->second;
         return child->Serach(node_collector);
     }else{
-        //elog(INFO, "search failed in hash steategy");
+        elog(INFO, "search failed in hash steategy");
         return false;
     }
     return false;
@@ -229,8 +235,9 @@ bool LevelScalingStrategy::Search(NodeCollector* node_collector){
                     return child_map_[id].second->Serach(node_collector);
                 }
             }
+        }else{
+            elog(INFO, "search failed in scaling steategy");
         }
-        //elog(INFO, "search failed in scaling steategy");
         return false;
     }
 }
@@ -396,9 +403,10 @@ bool LevelAggStrategy::Remove(NodeCollector* node_collector){
 }
 
 bool LevelAggStrategy::Search(NodeCollector* node_collector){
-
     assert(node_collector);
-    assert(node_collector->node_aggs_);
+    if(!node_collector->node_aggs_){
+        return false;
+    }
     auto top_aggs = node_collector->node_aggs_;
     
     int id = node_collector->pe_idx;
@@ -443,7 +451,9 @@ bool LevelAggStrategy::Search(NodeCollector* node_collector){
             }
         }
     }
-    //elog(INFO, "search failed in agg steategy");
+    if(combination.empty()){
+        elog(INFO, "search failed in agg steategy");
+    }
     return false;
 }
 
@@ -603,7 +613,9 @@ bool LevelSortStrategy::Remove(NodeCollector* node_collector){
 }
 bool LevelSortStrategy::Search(NodeCollector* node_collector){
     assert(node_collector);
-    assert(node_collector->node_sorts_);
+    if(!node_collector->node_sorts_){
+        return false;
+    }
     auto top_sorts = node_collector->node_sorts_;
 
     LevelAggAndSortEquivlences* la_eq = nullptr;
@@ -649,7 +661,11 @@ bool LevelSortStrategy::Search(NodeCollector* node_collector){
             }
         }
     }
-    //elog(INFO, "search failed in sort steategy");
+
+    if(combination.empty()){
+        elog(INFO, "search failed in sort steategy");
+    }
+
     return false;
 }
 
@@ -799,7 +815,8 @@ bool LevelRangeStrategy::Insert(NodeCollector* node_collector){
     auto top_eqs = node_collector->node_equivlences_;
 
     /*top_eqs has no pes,we just insert a empty SET into child_map*/
-    if(!top_eqs->Size()){
+    if(!top_eqs->Size() || (top_eqs->GetLpesList().size() == 0)){
+        std::cout<<"siuuuuu"<<std::endl;
         SET empty_id_vecs;
         SMConcurrentHashMap<SET,HistoryQueryIndexNode*,SetHasher>::const_accessor acc;
         bool found = child_map_.find(acc,empty_id_vecs);
@@ -884,7 +901,7 @@ bool LevelRangeStrategy::Search(NodeCollector* node_collector){
     auto top_eqs = node_collector->node_equivlences_;
 
     /*if top_eqs, it means it can match all set in current node*/
-    if(!top_eqs->Size()){
+    if(!top_eqs->Size() || (top_eqs->GetLpesList().size() == 0)){
         for(const auto& iter : child_map_){
             if(iter.second->Serach(node_collector)){
                 return true;
@@ -1022,16 +1039,35 @@ bool LeafStrategy::Remove(LevelManager* level_mgr){
 
 bool LeafStrategy::Insert(NodeCollector* node_collector){
     assert(node_collector);
-    inputs_.clear();
+    std::unique_lock<std::shared_mutex> lock(rw_mutex_);
     std::string input_str;
+
+    std::pair<int,int> input_pair = {0,0};
+    if(!node_collector->inputs.size()){
+    }else if(node_collector->inputs.size() == 1){
+        input_pair = {node_collector->inputs[0],0}; 
+    }else if(node_collector->inputs.size() == 2){
+        input_pair = {node_collector->inputs[0],node_collector->inputs[1]};
+    }else{
+        elog(ERROR, "LeafStrategy::Insert: input size is not 0,1 or 2");
+        return false;
+    }
+    history_map_[input_pair] = {node_collector->output,node_collector->time};
+
+    inputs_.resize(0);
     for(const auto& in : node_collector->inputs){
         inputs_.push_back(in);
         input_str += std::to_string(in)+",";
     }
+    
     output_ = node_collector->output;
     time_ = node_collector->time;
-    std::cout<<"insert node: output: "+std::to_string(output_)+", inputs: "<<input_str<<std::endl;
-
+    
+    std::cout<<"<"<<node_collector->type_name<<"> insert node: output: "+std::to_string(output_)+", inputs: "<<input_str<<std::endl;
+    std::cout<<"<"<<node_collector->type_name<<">: \n"<<node_collector->json_sub_plan<<std::endl;
+    
+    insert_cnt_++;
+    std::cout<<"insert cnt: "<<insert_cnt_<<","<<this<<std::endl;
     return true;
 }
 
@@ -1041,14 +1077,56 @@ bool LeafStrategy::Remove(NodeCollector* node_collector){
 
 bool LeafStrategy::Search(NodeCollector* node_collector){
     assert(node_collector);
-    for(size_t i = 0;i<node_collector->inputs.size();++i){
-        if(node_collector->inputs[i] < inputs_[i]){
-            //elog(INFO, ("search failed in leaf steategy: history input: "+std::to_string(inputs_[i])+", current input: "+std::to_string(node_collector->inputs[i])).c_str());
-            return false;
+    std::shared_lock<std::shared_mutex>lock(rw_mutex_);
+
+    bool found = false;
+    node_collector->output = 0;
+    for(const auto& his : history_map_){
+        if(node_collector->inputs.size() == 0){
+
+        }else if(node_collector->inputs.size() == 1){
+            if(node_collector->inputs[0] < his.first.first){
+                continue;
+            }
+        }else if(node_collector->inputs.size() == 2){
+            if(node_collector->inputs[0] < his.first.first || node_collector->inputs[1] < his.first.second){
+                continue;
+            }
+        }
+        found = true;
+        if(node_collector->output < his.second.first){
+            node_collector->output = his.second.first;
+            node_collector->time = his.second.second;
         }
     }
-    node_collector->output = output_;
-    node_collector->time = time_;
+
+    if(!found){
+        return false;
+    }
+
+    // for(size_t i = 0;i<node_collector->inputs.size();++i){
+    //     if(node_collector->inputs[i] < inputs_[i]){
+    //         elog(INFO, ("Node type <" + node_collector->type_name + "> search failed in leaf steategy: history input: "+std::to_string(inputs_[i])+", current input: "+std::to_string(node_collector->inputs[i])).c_str());
+    //         return false;
+    //     }
+    // }
+    // node_collector->output = output_;
+    // node_collector->time = time_;
+
+    // std::string input_str;
+    // for(const auto& in : node_collector->inputs){
+    //     input_str += std::to_string(in)+",";
+    // }
+    // std::cout<<"<"<<node_collector->type_name<<"> search node: output: "+std::to_string(output_)+", inputs: "<<input_str<<std::endl;
+
+    node_collector->match_cnt++;
+    if(node_collector->match_cnt < 3){
+        //node_collector->output_list_.push_back(output_);
+        //node_collector->time_list_.push_back(time_);
+        node_collector->output_list_.push_back(node_collector->output);
+        node_collector->time_list_.push_back(node_collector->time);
+        return false;
+    }
     return true;
 }
 
@@ -1410,16 +1488,13 @@ size_t LevelStrategy::FindNextInsertLevel(NodeCollector* node_collector, size_t 
                 return h;
             }
         }else if(h == 3){
-            // if(node_collector->node_equivlences_){
-            //     return h;
-            // }
             return h;
         }else if(h == 4){
-            if(node_collector->node_sorts_){
+            if(node_collector->type_name == "Sort" && node_collector->node_sorts_ && node_collector->node_sorts_->Size()){
                 return h;
             }
         }else if(h == 5){
-            if(node_collector->node_aggs_){
+            if(node_collector->type_name == "Aggregate" && node_collector->node_aggs_ && node_collector->node_aggs_->Size()){
                 return h;
             }
         }else if(h == 6){

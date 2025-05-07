@@ -42,6 +42,7 @@ private:
 /**
  * NodeManager
  */
+class LevelOrderIterator;
 class NodeManager : public AbstractFormatStrategy{
 public:
     NodeManager(HistorySlowPlanStat* hsps,std::shared_ptr<LevelManager> level_mgr,pid_t pid);
@@ -55,6 +56,7 @@ private:
     void PlanPartition(HistorySlowPlanStat* hsps);
     void PlanInit(HistorySlowPlanStat* hsps);
     bool CancelQuery(pid_t pid);
+    bool SearchInternal(NodeCollector *node,double total_time,int finish_node_num,LevelOrderIterator* iter);
 private:
     int branch_num_;
     HistorySlowPlanStat* hsps_ = nullptr;
@@ -71,6 +73,67 @@ private:
     HistoryQueryLevelTree *shared_index_;
     pid_t pid_;
     int node_num_ = 0;
-
-    
 };
+
+class LevelOrderIterator {
+    public:
+        using NodePtr = NodeCollector*;
+    
+        LevelOrderIterator(const std::vector<std::vector<NodePtr>>& levels)
+            : levels_(levels), level_idx_(0), node_idx_(0) {
+            moveToNextValid(); 
+        }
+    
+        bool hasNext() const {
+            return level_idx_ < levels_.size();
+        }
+    
+        bool hasPrev() const {
+            return !(level_idx_ == 0 && node_idx_ == 0);
+        }
+    
+        NodePtr next() {
+            if (!hasNext()) return nullptr;
+    
+            NodePtr result = levels_[level_idx_][node_idx_++];
+            moveToNextValid();
+            return result;
+        }
+    
+        NodePtr prev() {
+            if (!hasPrev()) return nullptr;
+            if (node_idx_ > 0) {
+                --node_idx_;
+            } else {
+                do {
+                    if (level_idx_ == 0) return nullptr;
+                    --level_idx_;
+                } while (level_idx_ > 0 && levels_[level_idx_].empty());
+    
+                node_idx_ = levels_[level_idx_].size() - 1;
+            }
+    
+            return levels_[level_idx_][node_idx_];
+        }
+
+        void begin() {
+            level_idx_ = 0;
+            node_idx_ = 0;
+            moveToNextValid();
+        }
+    
+    private:
+        const std::vector<std::vector<NodePtr>>& levels_;
+        size_t level_idx_;
+        size_t node_idx_;
+    
+        void moveToNextValid() {
+            while (level_idx_ < levels_.size() &&
+                   node_idx_ >= levels_[level_idx_].size()) {
+                ++level_idx_;
+                node_idx_ = 0;
+            }
+        }
+    };
+    
+    

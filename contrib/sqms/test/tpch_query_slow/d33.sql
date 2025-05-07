@@ -1,4 +1,4 @@
--- using 1745679353 as a seed to the RNG
+-- using 1746620641 as a seed to the RNG
 
 
 select
@@ -20,11 +20,10 @@ from
 	lineitem
 where
 	o_orderkey = l_orderkey
-	and l_shipmode in ('MAIL', 'RAIL', 'RAIL')
-	and l_commitdate < l_receiptdate
-	and l_shipdate < l_commitdate
-	and l_receiptdate >= date '1994-01-01'
-	and l_receiptdate < date '1994-01-01' + interval '2' year
+	and l_shipmode in ('MAIL', 'AIR')
+	and l_shipdate = l_receiptdate
+	and l_receiptdate >= date '1993-01-01'
+	and l_receiptdate < date '1993-01-01' + interval '2' year
 group by
 	l_shipmode
 order by

@@ -572,18 +572,18 @@ void LevelManager::GroupKeyDecompase(HistorySlowPlanStat* hsps){
 	LevelAggAndSortList* node_final_la_list = nullptr;
 
 	if(strcmp(hsps->group_sort_qlabel,"Group Key")){
-		node_final_la_list = new LevelAggAndSortList(nodes_collector_map_[cur_hsps_]->node_equivlences_);
-		if(cur_height_ >= 1){
-			for(size_t i=0;i<cur_hsps_->n_childs;i++){
-				auto child_aggs = nodes_collector_map_[cur_hsps_->childs[i]]->node_aggs_;
-				if(!child_aggs)
-					continue;
-				node_final_la_list->Insert(child_aggs);
-			}
-		}
-		if(node_final_la_list->Size() && !nodes_collector_map_[cur_hsps_]->node_aggs_){
-			nodes_collector_map_[cur_hsps_]->node_aggs_ = node_final_la_list;
-		}
+		//node_final_la_list = new LevelAggAndSortList(nodes_collector_map_[cur_hsps_]->node_equivlences_);
+		// if(cur_height_ >= 1){
+		// 	for(size_t i=0;i<cur_hsps_->n_childs;i++){
+		// 		auto child_aggs = nodes_collector_map_[cur_hsps_->childs[i]]->node_aggs_;
+		// 		if(!child_aggs)
+		// 			continue;
+		// 		node_final_la_list->Insert(child_aggs);
+		// 	}
+		// }
+		// if(node_final_la_list->Size() && !nodes_collector_map_[cur_hsps_]->node_aggs_){
+		// 	nodes_collector_map_[cur_hsps_]->node_aggs_ = node_final_la_list;
+		// }
 
 		if(same_level_need_merged){
 			return;
@@ -611,12 +611,12 @@ void LevelManager::GroupKeyDecompase(HistorySlowPlanStat* hsps){
 				SetPreProcessed(PreProcessLabel::AGG,true);
 			}
 
-			for(size_t i=0;i<cur_hsps_->n_childs;i++){
-				auto child_aggs = nodes_collector_map_[cur_hsps_->childs[i]]->node_aggs_;
-				if(!child_aggs)
-					continue;
-				node_final_la_list->Insert(child_aggs);
-			}
+			// for(size_t i=0;i<cur_hsps_->n_childs;i++){
+			// 	auto child_aggs = nodes_collector_map_[cur_hsps_->childs[i]]->node_aggs_;
+			// 	if(!child_aggs)
+			// 		continue;
+			// 	node_final_la_list->Insert(child_aggs);
+			// }
 		}
 
 		nodes_collector_map_[cur_hsps_]->node_aggs_ = node_final_la_list;
@@ -869,12 +869,12 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
 		if(first_pred_check_){
 			node_final_lpes_list = new LevelPredEquivlencesList();
 			 //residual_node_final_lpes_list = new LevelPredEquivlencesList();
-			if(cur_height_ >= 1){
-				for(size_t i = 0;i<cur_hsps_->n_childs; ++i){
-					auto child_eq = nodes_collector_map_[cur_hsps_->childs[i]]->node_equivlences_;
-					node_final_lpes_list->Insert(child_eq,false);
-				}
-			}
+			// if(cur_height_ >= 1){
+			// 	for(size_t i = 0;i<cur_hsps_->n_childs; ++i){
+			// 		auto child_eq = nodes_collector_map_[cur_hsps_->childs[i]]->node_equivlences_;
+			// 		node_final_lpes_list->Insert(child_eq,false);
+			// 	}
+			// }
 			nodes_collector_map_[cur_hsps_]->node_equivlences_ = node_final_lpes_list;
 			first_pred_check_ = false;
 		}
@@ -1113,15 +1113,15 @@ void LevelManager::PredEquivalenceClassesDecompase(PredExpression* root){
 
 	if(nodes_collector_map_[cur_hsps_]->node_equivlences_ && nodes_collector_map_[cur_hsps_]->node_equivlences_->Size())
 		node_final_lpes_list->Insert(nodes_collector_map_[cur_hsps_]->node_equivlences_,false);
-	if(cur_height_ >= 1){
-		if(first_pred_check_){
-			for(size_t i = 0;i<cur_hsps_->n_childs; ++i){
-				auto child_eq = nodes_collector_map_[cur_hsps_->childs[i]]->node_equivlences_;
-				node_final_lpes_list->Insert(child_eq,false);
-			}
-			first_pred_check_ = false;
-		}
-	}
+	// if(cur_height_ >= 1){
+	// 	if(first_pred_check_){
+	// 		for(size_t i = 0;i<cur_hsps_->n_childs; ++i){
+	// 			auto child_eq = nodes_collector_map_[cur_hsps_->childs[i]]->node_equivlences_;
+	// 			node_final_lpes_list->Insert(child_eq,false);
+	// 		}
+	// 		first_pred_check_ = false;
+	// 	}
+	// }
 	/**
 	 * here we try to extract the equivalence class from subquery 
 	*/

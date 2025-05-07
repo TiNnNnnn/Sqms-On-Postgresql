@@ -216,11 +216,16 @@ private:
     size_t s_level_;
 };
 
-/**
- * Leaf Strategy: 
- * - node stat
- * - level stat
- */
+struct PairCompare {
+    bool operator()(const std::pair<int,int>& lhs, const std::pair<int,int>& rhs) const{
+        if(lhs.first == rhs.first){
+            return lhs.second > rhs.second;
+        }else{
+            return lhs.first > rhs.first;
+        }
+    }
+}; 
+
 class SMLevelPredEquivlences;
 class SMPredEquivlence;
 class SMLevelManager;
@@ -258,13 +263,15 @@ private:
     SMLevelManager* level_mgr_;
 
     /*for node level matching*/
-    int output_;
+    int output_ = 0;
     SMVector<int>inputs_;
     double time_;
 
     SMVector<SMLevelManager*>historys_;
+    SMMap<std::pair<int,int>,std::pair<int,double>,PairCompare> history_map_;
 
     std::shared_mutex rw_mutex_;
+    int insert_cnt_ = 0;
 };
 
 /**

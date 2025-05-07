@@ -25,41 +25,131 @@ bool NodeManager::PrintPredEquivlences(){
     return true;
 }
 
+bool NodeManager::SearchInternal(NodeCollector *node,double total_time,int finish_node_num,LevelOrderIterator* iter){
+    assert(node);
+
+   std::string type_str;
+   std::string input_str;
+   for(const auto& ctype: node->childs_){
+        type_str += ctype->type_name + ",";
+        input_str += std::to_string(ctype->output) + ",";
+   }
+   logger_->Logger("comming",("node type: "+node->type_name + ", child_types: "+type_str).c_str());
+   logger_->Logger("comming",("node type: "+node->type_name + ", child ouputs: "+ input_str).c_str());
+
+
+   if(shared_index_->Search(node) || node->match_cnt){
+        logger_->Logger("comming","match success for node");
+        for(size_t i = 0; i < node->output_list_.size();++i){    
+            total_time += node->time_list_[i];
+            finish_node_num++;
+            if(node->parent_){
+                node->parent_->inputs[node->child_idx] = node->output_list_[i];
+            }
+
+            logger_->Logger("comming","-----------------------------------------------");
+            logger_->Logger("comming",("finish_node_num:"+std::to_string(finish_node_num)+",node_num: "+std::to_string(node_num_)).c_str());
+            for(const auto& info : node->leaf_info_){
+                std::string input_str;
+                for(const auto& in : info->inputs_){
+                    input_str += std::to_string(in)+",";
+                }
+                logger_->Logger("comming",("current node [" +std::to_string(finish_node_num-1)+"] output: "+std::to_string(info->output_)+", inputs: "+input_str).c_str());
+            }
+            logger_->Logger("comming","-----------------------------------------------");
+            
+            if(total_time >= query_min_duration && finish_node_num >= node_num_/2){
+                CancelQuery(pid_);
+                return true;
+            }else{
+                if(!iter->hasNext()){
+                    return false;
+                }
+                auto cur = iter->next();
+                int ret = SearchInternal(cur, total_time, finish_node_num,iter);
+                iter->prev();
+                total_time -= node->time_list_[i];
+                finish_node_num--;
+                if(ret){
+                    return true;
+                }
+            }
+        }
+        return false;
+    }else{ 
+        logger_->Logger("comming","match failed for node");
+        return false;
+    }    
+
+   return false;
+}
+
 bool NodeManager::Search(){
+    PlanPartition(hsps_);
     PlanInit(hsps_);
     double total_time(0);
-    int finish_node_num = 0; 
-    for(const auto& level : level_collector_){
-        for(const auto& node : level){
-           if(!node->childs_.size()){
-                /*leaf node ,nothing to do*/
-           }else{
-                /*fill input from childs*/
-                if(node->childs_.size() == 1){
-                    node->inputs[0] = node->childs_[0]->output;
-                }else if(node->childs_.size() == 2){
-                    node->inputs[0] = node->childs_[0]->output;
-                    node->inputs[1] = node->childs_[1]->output;
-                }else{
-                    logger_->Logger("comming",("error node_collector's child num: " + std::to_string(node->childs_.size())).c_str());
-                    exit(-1);
-                }
-           }
-           if(shared_index_->Search(node)){
-                logger_->Logger("comming","match success for node");
-                logger_->Logger("comming",("total_time:"+std::to_string(total_time)+",duration: "+std::to_string(query_min_duration)).c_str());
-                logger_->Logger("comming",("finish_node_num:"+std::to_string(finish_node_num)+",node_num: "+std::to_string(node_num_)).c_str());
-                if(total_time >= query_min_duration && finish_node_num == node_num_){
-                    CancelQuery(pid_);
-                }
-           }else{
-                logger_->Logger("comming","match success for node");
-                return false;
-           }    
-        }
-    }
-    return true;
+    int finish_node_num = 0;
+    LevelOrderIterator iter(level_collector_);
+    return SearchInternal(iter.next(), total_time, finish_node_num,&iter);
 }
+
+// bool NodeManager::Search(){
+//     PlanPartition(hsps_);
+//     PlanInit(hsps_);
+//     double total_time(0);
+//     int finish_node_num = 0; 
+//     for(const auto& level : level_collector_){
+//         for(const auto& node : level){
+//            if(!node->childs_.size()){
+//                 /*leaf node ,nothing to do*/
+//            }else{
+//                 /*fill input from childs*/
+//                 if(node->childs_.size() == 1){
+//                     node->inputs[0] = node->childs_[0]->output;
+//                 }else if(node->childs_.size() == 2){
+//                     node->inputs[0] = node->childs_[0]->output;
+//                     node->inputs[1] = node->childs_[1]->output;
+//                 }else{
+//                     logger_->Logger("comming",("error node_collector's child num: " + std::to_string(node->childs_.size())).c_str());
+//                     exit(-1);
+//                 }
+//            }
+
+//            std::string type_str;
+//            std::string input_str;
+//            for(const auto& ctype: node->childs_){
+//                 type_str += ctype->type_name + ",";
+//                 input_str += std::to_string(ctype->output) + ",";
+//            }
+//            logger_->Logger("comming",("node type: "+node->type_name + ", child_types: "+type_str).c_str());
+//            logger_->Logger("comming",("node type: "+node->type_name + ", child ouputs: "+ input_str).c_str());
+           
+//             if(shared_index_->Search(node) || node->match_cnt){
+//                     logger_->Logger("comming","match success for node");
+//                     total_time += node->time;
+//                     finish_node_num++;
+//                     logger_->Logger("comming","-----------------------------------------------");
+//                     logger_->Logger("comming",("finish_node_num:"+std::to_string(finish_node_num)+",node_num: "+std::to_string(node_num_)).c_str());
+//                     for(const auto& info : node->leaf_info_){
+//                         std::string input_str;
+//                         for(const auto& in : info->inputs_){
+//                             input_str += std::to_string(in)+",";
+//                         }
+//                         logger_->Logger("comming",("current node [" +std::to_string(finish_node_num-1)+"] output: "+std::to_string(info->output_)+", inputs: "+input_str).c_str());
+//                     }
+//                     logger_->Logger("comming","-----------------------------------------------");
+//                     if(total_time >= query_min_duration && finish_node_num == node_num_){
+//                         CancelQuery(pid_);
+//                         return true;
+//                     }
+//             }else{ 
+//                     logger_->Logger("comming","match failed for node");
+//                     return false;
+//             } 
+//         }
+//     }
+//     return true;
+// }
 
 // bool NodeManager::Search(){
 //     PlanPartition(hsps_);
@@ -210,6 +300,7 @@ void NodeManager::ComputeTotalNodes(HistorySlowPlanStat* hsps){
     node_collector->time = hsps->actual_total;
     node_collector->output = hsps->actual_rows;
     node_collector->inputs.resize(0);
+    node_collector->type_name = std::string(hsps->node_type);
 
     if(NodeTag(hsps->node_tag) == T_NestLoop 
 		|| NodeTag(hsps->node_tag) == T_MergeJoin 
@@ -223,6 +314,7 @@ void NodeManager::ComputeTotalNodes(HistorySlowPlanStat* hsps){
         auto child_hsps = hsps->childs[i];
         auto child_node_collector = level_mgr_->GetNodeCollector()[child_hsps];
         child_node_collector->parent_ = node_collector;
+        child_node_collector->child_idx = i;
         node_collector->inputs.push_back(child_hsps->actual_rows);
         node_collector->childs_.push_back(child_node_collector);
         ComputeTotalNodes(child_hsps);

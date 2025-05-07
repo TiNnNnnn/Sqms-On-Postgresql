@@ -1,4 +1,4 @@
--- using 1745679353 as a seed to the RNG
+-- using 1746620641 as a seed to the RNG
 
 
 select
@@ -10,7 +10,7 @@ from
 where
 	p_partkey = l_partkey
 	and agg_partkey = l_partkey
-	and p_brand = 'Brand#41'
-	and p_container = 'WRAP PKG'
+	and p_brand = 'Brand#54'
+	and p_container = 'JUMBO PKG'
 	and l_quantity < avg_quantity
 LIMIT 1;
