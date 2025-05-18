@@ -33,13 +33,13 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt,bool slow
         return -1;
     }
  
-    size_t msg_size = history_slow_plan_stat__get_packed_size(&hsps_);
-    uint8_t *buffer = (uint8_t*)malloc(msg_size);
-    if (buffer == NULL) {
-        perror("Failed to allocate memory");
-        return 1;
-    }
-    history_slow_plan_stat__pack(&hsps_,buffer);
+    // size_t msg_size = history_slow_plan_stat__get_packed_size(&hsps_);
+    // uint8_t *buffer = (uint8_t*)malloc(msg_size);
+    // if (buffer == NULL) {
+    //     perror("Failed to allocate memory");
+    //     return 1;
+    // }
+    // history_slow_plan_stat__pack(&hsps_,buffer);
     pid_t pid = getpid();
 
     //std::thread t([msg_size,buffer,slow,pid,this,oldcxt,qd]() -> bool{
@@ -63,13 +63,14 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt,bool slow
         }
 
         if(slow){
-            logger_->Logger("slow","begin process comming query...");
+            //logger_->Logger("slow","begin process comming query...");
+            std::cout<<"begin process slow query"<<std::endl;
             ExcavateContext *context = new ExcavateContext();
             /*execute core slow query execavate strategy*/
             context->setStrategy(std::make_shared<NoProcessedExcavateStrategy>(hsps));
             std::vector<HistorySlowPlanStat*> list;
             context->executeStrategy(list);
-            
+            std::cout<<"[slow] finish execute strategy"<<std::endl;
             for(const auto& p : list){
                 /*format strategy 1*/
                 SlowPlanStat *sps= new SlowPlanStat();
@@ -78,12 +79,12 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt,bool slow
                 PlanFormatContext* pf_context_1 = new PlanFormatContext();
                 pf_context_1->SetStrategy(level_mgr);
                 pf_context_1->executeStrategy();
-                level_mgr->ShowTotalPredClass();
+                //level_mgr->ShowTotalPredClass();
 
-                if(debug){
-                    auto node_collect_map = level_mgr->GetNodeCollector();
-                    logger_->Logger("slow",ShowAllNodeCollect(hsps,node_collect_map,"slow").c_str());
-                }
+                // if(debug){
+                //     auto node_collect_map = level_mgr->GetNodeCollector();
+                //     logger_->Logger("slow",ShowAllNodeCollect(hsps,node_collect_map,"slow").c_str());
+                // }
 
                 /*format strategt 2*/
                 PlanFormatContext* pf_context_2 = new PlanFormatContext();
@@ -98,6 +99,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt,bool slow
                 //     logger_->Logger("slow","shared_index insert level_mgr success");
                 // }
                 /*node strategy*/
+
                 for(const auto& node_collector : node_manager->GetNodeCollectorList()){
                     //std::cout<<"NODE time: "<<node_collector->time<<",output:"<<node_collector->output<<std::endl;
                     if(!shared_index->Insert(node_collector)){
@@ -113,55 +115,58 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt,bool slow
             //     std::string hash_val = HashCanonicalPlan(q->json_plan);
             //     storage_->PutStat(hash_val,hsps);
             // }
-            logger_->Logger("slow","finish process slow query...");
+            //logger_->Logger("slow","finish process slow query...");
+            std::cout<<"[slow]finish process slow query..."<<std::endl;
         }else{
-            logger_->Logger("comming","begin process comming query...");
+            std::cout<<"begin process comming query"<<std::endl;
+            //logger_->Logger("comming","begin process comming query...");
             // /*check all subuqueries in plan*/
             std::vector<HistorySlowPlanStat*>sub_list;
             LevelOrder(hsps,sub_list);
-            logger_->Logger("comming",("subplan size: "+std::to_string(sub_list.size())).c_str());
+            std::cout<<"[comming] finish level ordering"<<std::endl;
+            //logger_->Logger("comming",("subplan size: "+std::to_string(sub_list.size())).c_str());
             size_t sub_idx = 0;
-            for(const auto& p : sub_list){
-                /**
-                 * MARK: to make test more easy,here move muti-thread while testing
-                 */
+            // for(const auto& p : sub_list){
+            //     /**
+            //      * MARK: to make test more easy,here move muti-thread while testing
+            //      */
 
-                // size_t msg_size = history_slow_plan_stat__get_packed_size(p);
-                // uint8_t *buffer = (uint8_t*)malloc(msg_size);
-                // if (buffer == NULL) {
-                //     perror("Failed to allocate memory");
-                //     exit(-1);
-                // }
-                // history_slow_plan_stat__pack(p,buffer);
-                //pool_->submit([shared_index,msg_size,buffer,pid,this]()->bool{
-                    //HistorySlowPlanStat *p = history_slow_plan_stat__unpack(NULL, msg_size, buffer);
-                    // if(!p){
-                    //     std::cerr<<"history_slow_plan_stat__unpack failed in thered: "<<ThreadPool::GetTid()<<std::endl;
-                    // }
-                    logger_->Logger("comming",("**********sub_query ["+std::to_string(sub_idx)+"]***************").c_str());
-                    SlowPlanStat *sps= new SlowPlanStat();
-                    PlanFormatContext* pf_context_1 = new PlanFormatContext();
-                    auto level_mgr = std::make_shared<LevelManager>(p,sps,logger_,"comming");
-                    pf_context_1->SetStrategy(level_mgr);
-                    pf_context_1->executeStrategy();
-                    level_mgr->ShowTotalPredClass();
+            //     // size_t msg_size = history_slow_plan_stat__get_packed_size(p);
+            //     // uint8_t *buffer = (uint8_t*)malloc(msg_size);
+            //     // if (buffer == NULL) {
+            //     //     perror("Failed to allocate memory");
+            //     //     exit(-1);
+            //     // }
+            //     // history_slow_plan_stat__pack(p,buffer);
+            //     //pool_->submit([shared_index,msg_size,buffer,pid,this]()->bool{
+            //         //HistorySlowPlanStat *p = history_slow_plan_stat__unpack(NULL, msg_size, buffer);
+            //         // if(!p){
+            //         //     std::cerr<<"history_slow_plan_stat__unpack failed in thered: "<<ThreadPool::GetTid()<<std::endl;
+            //         // }
+            //         //logger_->Logger("comming",("**********sub_query ["+std::to_string(sub_idx)+"]***************").c_str());
+            //         SlowPlanStat *sps= new SlowPlanStat();
+            //         PlanFormatContext* pf_context_1 = new PlanFormatContext();
+            //         auto level_mgr = std::make_shared<LevelManager>(p,sps,logger_,"comming");
+            //         pf_context_1->SetStrategy(level_mgr);
+            //         pf_context_1->executeStrategy();
+            //         //level_mgr->ShowTotalPredClass();
 
-                    // if(debug){
-                    //     auto node_collect_map = level_mgr->GetNodeCollector();
-                    //     logger_->Logger("comming",ShowAllNodeCollect(p,node_collect_map,"comming").c_str());
-                    // }
+            //         // if(debug){
+            //         //     auto node_collect_map = level_mgr->GetNodeCollector();
+            //         //     logger_->Logger("comming",ShowAllNodeCollect(p,node_collect_map,"comming").c_str());
+            //         // }
 
-                    // if(shared_index->Search(level_mgr.get(),1)){
-                    //     CancelQuery(pid);
-                    //     //elog(NOTICE, "query has been canceled!");
-                    //     logger_->Logger("comming","****************************");
-                    //     break;
-                    // }
-                    // logger_->Logger("comming","****************************");
-                    //return true;
-                //});
-                ++sub_idx;
-            }
+            //         // if(shared_index->Search(level_mgr.get(),1)){
+            //         //     CancelQuery(pid);
+            //         //     //elog(NOTICE, "query has been canceled!");
+            //         //     logger_->Logger("comming","****************************");
+            //         //     break;
+            //         // }
+            //         // logger_->Logger("comming","****************************");
+            //         //return true;
+            //     //});
+            //     ++sub_idx;
+            // }
 
             /*node strategy*/
             auto top_p = sub_list[0];
@@ -171,14 +176,15 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt,bool slow
             pf_context_1->SetStrategy(level_mgr);
             pf_context_1->executeStrategy();
             //level_mgr->ShowTotalPredClass();
+            std::cout<<"finish execute strategy1"<<std::endl;
 
             PlanFormatContext* pf_context_2 = new PlanFormatContext();
             auto node_mgr = std::make_shared<NodeManager>(top_p,level_mgr,pid);
             pf_context_2->SetStrategy(node_mgr);
             pf_context_2->executeStrategy();
             node_mgr->Search();
-
-            logger_->Logger("comming","finish process comming query...");
+            std::cout<<"finish process comming query"<<std::endl;
+            //logger_->Logger("comming","finish process comming query...");
         }
         //history_slow_plan_stat__free_unpacked(hsps,NULL);
         std::cout<<"Thread: "<<ThreadPool::GetTid()<<" Finish Working..."<<std::endl;

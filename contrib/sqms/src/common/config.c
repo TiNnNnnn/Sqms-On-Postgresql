@@ -25,7 +25,7 @@ long defaultTTLSeconds = INT_MAX;
 
 bool debug = true;
 const char* queue_name = "query_index";
-const int shared_mem_size = 1024* 1024* 1024;
+const size_t shared_mem_size = 1024* 1024* 1024 * 10;
 const char* shared_index_name = "HISTORY_QUERY_TREE_INDEX";
 const int max_msg_size = 1024; 
 // const struct config_enum_entry format_options[] = {

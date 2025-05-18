@@ -14,8 +14,8 @@ bool LevelManager::Format(){
  * LevelManager::PrintPredEquivlences
  */
 bool LevelManager::PrintPredEquivlences(){
-	if(debug)
-	 	ShowTotalPredClass();
+	//if(debug)
+	 	//ShowTotalPredClass();
 }
 /**
  * LevelManager::GetSubQueries
@@ -28,7 +28,7 @@ void LevelManager::GetSubQueries(){
  * each level for plan
  */
 void LevelManager::ComputeTotalClass(){
-    
+    std::cout<<"begin compute total class"<<std::endl;
     std::vector<HistorySlowPlanStat*>levels;
     std::vector<HistorySlowPlanStat*>tmp_levels;
     std::vector<std::vector<HistorySlowPlanStat*>> level_collector;
@@ -58,9 +58,13 @@ void LevelManager::ComputeTotalClass(){
 	
 	total_height_ = level_collector.size();
 
+	std::cout<<"finish comput level_collector"<<std::endl;
+
     for(auto &lc : level_collector){
         ComputeLevelClass(lc);
     }
+
+	std::cout<<"finish compute total class"<<std::endl;
 }
 
 void LevelManager::ComputeLevelClass(const std::vector<HistorySlowPlanStat*>& list){

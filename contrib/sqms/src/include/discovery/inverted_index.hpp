@@ -258,6 +258,8 @@ private:
 
 class RangeInvertedIndex{
 public:
+    RangeInvertedIndex();
+    ~RangeInvertedIndex();
     /*insert a set into inverted index*/
     void Insert(LevelPredEquivlences* lpes);
     /*erase a set from inverted index*/
@@ -281,5 +283,6 @@ private:
     std::atomic<long long> set_cnt_{-1}; 
     std::atomic<int>items_cnt_{0};
     std::shared_mutex rw_mutex_;
+    dsa_area *area_;
 };
 

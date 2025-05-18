@@ -816,7 +816,7 @@ bool LevelRangeStrategy::Insert(NodeCollector* node_collector){
 
     /*top_eqs has no pes,we just insert a empty SET into child_map*/
     if(!top_eqs->Size() || (top_eqs->GetLpesList().size() == 0)){
-        std::cout<<"siuuuuu"<<std::endl;
+        //std::cout<<"siuuuuu"<<std::endl;
         SET empty_id_vecs;
         SMConcurrentHashMap<SET,HistoryQueryIndexNode*,SetHasher>::const_accessor acc;
         bool found = child_map_.find(acc,empty_id_vecs);
@@ -1104,25 +1104,8 @@ bool LeafStrategy::Search(NodeCollector* node_collector){
         return false;
     }
 
-    // for(size_t i = 0;i<node_collector->inputs.size();++i){
-    //     if(node_collector->inputs[i] < inputs_[i]){
-    //         elog(INFO, ("Node type <" + node_collector->type_name + "> search failed in leaf steategy: history input: "+std::to_string(inputs_[i])+", current input: "+std::to_string(node_collector->inputs[i])).c_str());
-    //         return false;
-    //     }
-    // }
-    // node_collector->output = output_;
-    // node_collector->time = time_;
-
-    // std::string input_str;
-    // for(const auto& in : node_collector->inputs){
-    //     input_str += std::to_string(in)+",";
-    // }
-    // std::cout<<"<"<<node_collector->type_name<<"> search node: output: "+std::to_string(output_)+", inputs: "<<input_str<<std::endl;
-
     node_collector->match_cnt++;
-    if(node_collector->match_cnt < 3){
-        //node_collector->output_list_.push_back(output_);
-        //node_collector->time_list_.push_back(time_);
+    if(node_collector->match_cnt < 5){
         node_collector->output_list_.push_back(node_collector->output);
         node_collector->time_list_.push_back(node_collector->time);
         return false;

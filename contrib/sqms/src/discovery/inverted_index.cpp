@@ -366,6 +366,17 @@ bool RangePostingList::Match(SMLevelPredEquivlences* dst_lpes, SMLevelPredEquivl
     return true;
 }
 
+RangeInvertedIndex::RangeInvertedIndex(){
+    // LWLockRegisterTranche(100, "my_dsa_tranche");
+	// area_ = dsa_create(100);
+    // elog(LOG, "DSA created successfully in range inverted index");
+}
+
+RangeInvertedIndex::~RangeInvertedIndex(){
+//    assert(area_);
+//    dsa_detach(area_);
+//    elog(LOG, "DSA detach successfully in range inverted index");
+}
 
 void RangeInvertedIndex::Insert(LevelPredEquivlences* lpes){
     std::unique_lock<std::shared_mutex> lock(rw_mutex_);
@@ -424,11 +435,18 @@ SMSet<int> RangeInvertedIndex::SuperSets(LevelPredEquivlences* lpes){
     assert(lpes);
     /**
      * MARK: can we escape shmemalloc while just seraching
+     * TODO: here i want to use dsa to allocate memory and free memory
      */
     SMLevelPredEquivlences* sm_lpes = (SMLevelPredEquivlences*)ShmemAlloc(sizeof(SMLevelPredEquivlences));
     new (sm_lpes) SMLevelPredEquivlences();
     sm_lpes->Copy(lpes);
     assert(sm_lpes);
+
+    // auto sm_lpes = dsa_allocate(area_, sizeof(SMLevelPredEquivlences));
+    // auto sm_lpes_address = (SMLevelPredEquivlences*) dsa_get_address(area_, sm_lpes);
+    // new (sm_lpes_address) SMLevelPredEquivlences();
+    // sm_lpes_address->Copy(lpes);
+    // assert(sm_lpes_address);
     
     std::shared_lock<std::shared_mutex> lock(rw_mutex_);
     SMSet<int>pe_id_set;
@@ -449,6 +467,8 @@ SMSet<int> RangeInvertedIndex::SuperSets(LevelPredEquivlences* lpes){
             }
         }
     }
+
+    //dsa_free(area_, sm_lpes);
 
     return pe_id_set;
 }

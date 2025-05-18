@@ -47,7 +47,6 @@ private:
     SMMap<SMString, spdlog::logger*> log_files_;
     SMString log_dir_;
     SMString time_str_;
-    LWLock* shmem_lock_;
 };
 
 class SqmsLogger {

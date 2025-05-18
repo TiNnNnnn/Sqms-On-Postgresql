@@ -195,9 +195,7 @@ class LevelResidualStrategy : public LevelStrategy{
 public:
     LevelResidualStrategy(size_t total_height)
         : LevelStrategy(total_height){
-            //LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
             inverted_idx_ = (InvertedIndex<PostingList>*) ShmemAlloc(sizeof(InvertedIndex<PostingList>));
-            //LWLockRelease(shmem_lock_);
             assert(inverted_idx_);
             new (inverted_idx_) InvertedIndex<PostingList>();
         }

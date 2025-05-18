@@ -3,6 +3,8 @@
 #include <threads.h>
 #include <sys/file.h>  // for flock
 #include <time.h>      // for time functions
+#include "utils/dsa.h"
+
 extern "C" {
 	PG_MODULE_MAGIC;
 
@@ -14,6 +16,7 @@ extern "C" {
 	static emit_log_hook_type prev_log_hook = NULL;
 	
 	static char time_str[20];
+	#define MY_DSA_TRANCHE_ID  100
 	//static int MyTrancheId = -1;
 
 	void StmtExecutorStart(QueryDesc *queryDesc, int eflags);
@@ -52,7 +55,7 @@ extern "C" {
         prev_ExecutorEnd = ExecutorEnd_hook;
         ExecutorEnd_hook = StmtExecutorEnd;
 
-		RequestAddinShmemSpace(shared_mem_size);		
+		RequestAddinShmemSpace(20485760000);		
 		
 		prev_shmem_startup_hook = shmem_startup_hook;
 		shmem_startup_hook = RegisterQueryIndex;
@@ -181,16 +184,7 @@ void StatCollecter::StmtExecutorEndWrapper(QueryDesc *queryDesc)
 extern "C" void RegisterQueryIndex(){
 	std::cout<<"begin building history query index..."<<std::endl;
 
-	// MyTrancheId = LWLockNewTrancheId();
-	// LWLockRegisterTranche(MyTrancheId, "sqms");
-	// std::cout<<"register shmem lwlock tranche id: "<<MyTrancheId<<std::endl;
-
 	bool found = true;
-	// StatCollecter::shared_lock_ = (LWLock *)ShmemInitStruct("SqmsShmemLock", sizeof(LWLock), &found);
-	// if (!found)
-    // {
-    //     LWLockInitialize(StatCollecter::shared_lock_, MyTrancheId);
-    // }
 
 	auto shared_index = (HistoryQueryLevelTree*)ShmemInitStruct(shared_index_name, sizeof(HistoryQueryLevelTree), &found);
 

@@ -34,12 +34,12 @@ bool NodeManager::SearchInternal(NodeCollector *node,double total_time,int finis
         type_str += ctype->type_name + ",";
         input_str += std::to_string(ctype->output) + ",";
    }
-   logger_->Logger("comming",("node type: "+node->type_name + ", child_types: "+type_str).c_str());
-   logger_->Logger("comming",("node type: "+node->type_name + ", child ouputs: "+ input_str).c_str());
+   //logger_->Logger("comming",("node type: "+node->type_name + ", child_types: "+type_str).c_str());
+   //logger_->Logger("comming",("node type: "+node->type_name + ", child ouputs: "+ input_str).c_str());
 
 
    if(shared_index_->Search(node) || node->match_cnt){
-        logger_->Logger("comming","match success for node");
+        //logger_->Logger("comming","match success for node");
         for(size_t i = 0; i < node->output_list_.size();++i){    
             total_time += node->time_list_[i];
             finish_node_num++;
@@ -47,16 +47,16 @@ bool NodeManager::SearchInternal(NodeCollector *node,double total_time,int finis
                 node->parent_->inputs[node->child_idx] = node->output_list_[i];
             }
 
-            logger_->Logger("comming","-----------------------------------------------");
-            logger_->Logger("comming",("finish_node_num:"+std::to_string(finish_node_num)+",node_num: "+std::to_string(node_num_)).c_str());
+            //logger_->Logger("comming","-----------------------------------------------");
+            //logger_->Logger("comming",("finish_node_num:"+std::to_string(finish_node_num)+",node_num: "+std::to_string(node_num_)).c_str());
             for(const auto& info : node->leaf_info_){
                 std::string input_str;
                 for(const auto& in : info->inputs_){
                     input_str += std::to_string(in)+",";
                 }
-                logger_->Logger("comming",("current node [" +std::to_string(finish_node_num-1)+"] output: "+std::to_string(info->output_)+", inputs: "+input_str).c_str());
+                //logger_->Logger("comming",("current node [" +std::to_string(finish_node_num-1)+"] output: "+std::to_string(info->output_)+", inputs: "+input_str).c_str());
             }
-            logger_->Logger("comming","-----------------------------------------------");
+            //logger_->Logger("comming","-----------------------------------------------");
             
             if(total_time >= query_min_duration && finish_node_num >= node_num_/2){
                 CancelQuery(pid_);
@@ -77,10 +77,10 @@ bool NodeManager::SearchInternal(NodeCollector *node,double total_time,int finis
         }
         return false;
     }else{ 
-        logger_->Logger("comming","match failed for node");
+        std::cout<<"[comming]match failed for node"<<std::endl;
+        //logger_->Logger("comming","match failed for node");
         return false;
     }    
-
    return false;
 }
 
@@ -319,13 +319,6 @@ void NodeManager::ComputeTotalNodes(HistorySlowPlanStat* hsps){
         node_collector->childs_.push_back(child_node_collector);
         ComputeTotalNodes(child_hsps);
     }
-
-    // elog(INFO, ("-------------------------------------------------------------"));
-    // elog(INFO, ("node output: "+std::to_string(node_collector->output)).c_str());
-    // for(const auto input: node_collector->inputs){
-    //     elog(INFO, ("node input: "+std::to_string(input)).c_str());
-    // }
-    // elog(INFO, ("-------------------------------------------------------------"));
 }
 
 /**
