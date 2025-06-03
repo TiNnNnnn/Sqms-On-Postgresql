@@ -74,7 +74,9 @@ public:
     }
 
     void Logger(const char* tag, const char* msg) {
-        //tagged_sink_->log(SMString(tag),SMString(msg));
+        if(!debug){
+            return;
+        }
         std::lock_guard<std::mutex> lock(mutex_);
         if(SMString(tag) == "comming" || SMString(tag) == "slow"){
             log_files_[tag]->info(msg);

@@ -1687,7 +1687,6 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		*child = ret.hps_;
 		hsp.childs[hsp.child_idx++] = child;
     }
-
 	/**
 	 * TODO: we need update here, cn_es not note these node info. 
 	 */
@@ -1732,7 +1731,6 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		default:
 			break;
 	}
-
 	/* subPlan-s */
 	if (planstate->subPlan){
 		/**

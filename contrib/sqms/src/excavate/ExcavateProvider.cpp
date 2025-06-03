@@ -2,6 +2,7 @@
 #include "common/config.h"
 #include <queue>
 
+/**default exavatestrategy*/
 bool CostBasedExcavateStrategy::excavate(std::vector<HistorySlowPlanStat*>& list) const{
     /*similar topological graph algorithm*/
     double t = query_min_duration * late_tolerance;
@@ -39,10 +40,12 @@ bool CostBasedExcavateStrategy::excavate(std::vector<HistorySlowPlanStat*>& list
     return true;
 } 
 
+/*another exavate strategy*/
 bool ExternalResourceExcavateStrategy::excavate(std::vector<HistorySlowPlanStat*>& list) const{
     return true;
 }
 
+/*not use any exavate strategy*/
 bool NoProcessedExcavateStrategy::excavate(std::vector<HistorySlowPlanStat*>& list) const {
     list.push_back(hsps_);
     return true;

@@ -17,7 +17,6 @@ extern "C" {
 	
 	static char time_str[20];
 	#define MY_DSA_TRANCHE_ID  100
-	//static int MyTrancheId = -1;
 
 	void StmtExecutorStart(QueryDesc *queryDesc, int eflags);
 	void StmtExecutorRun(QueryDesc *queryDesc, ScanDirection direction, uint64 count, bool execute_once);
@@ -41,8 +40,6 @@ extern "C" {
 							NULL,
 							NULL,
 							NULL); 
-		//EmitWarningsOnPlaceholders("sqms");
-
         prev_ExecutorStart = ExecutorStart_hook;
         ExecutorStart_hook = StmtExecutorStart;
 

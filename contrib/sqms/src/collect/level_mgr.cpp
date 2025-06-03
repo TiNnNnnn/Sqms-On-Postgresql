@@ -14,8 +14,8 @@ bool LevelManager::Format(){
  * LevelManager::PrintPredEquivlences
  */
 bool LevelManager::PrintPredEquivlences(){
-	//if(debug)
-	 	//ShowTotalPredClass();
+	if(debug)
+	 	ShowTotalPredClass();
 }
 /**
  * LevelManager::GetSubQueries
