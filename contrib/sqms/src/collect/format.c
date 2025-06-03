@@ -54,10 +54,6 @@ explain_get_index_name_hook_type explain_get_index_name_hook = NULL;
 #define X_CLOSE_IMMEDIATE 2
 #define X_NOWHITESPACE 4
 
-// static void ExplainOneQuery(Query *query, int cursorOptions,
-// 							IntoClause *into, ExplainState *es,
-// 							const char *queryString, ParamListInfo params,
-// 							QueryEnvironment *queryEnv);
 static void ExplainPrintJIT(ExplainState *es, int jit_flags,
 							JitInstrumentation *ji);
 static void report_triggers(ResultRelInfo *rInfo, bool show_relname,
@@ -159,6 +155,7 @@ static RecureState NewRecureState(){
 	rs.detail_str_ = makeStringInfo();
 	rs.node_type_set_ = NULL;
 	rs.cost_ = 0;
+	rs.subquery_cost_ = 0;
 	rs.hps_ =  (HistorySlowPlanStat){0};
 	return rs;
 }
@@ -644,6 +641,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	const char *operation = NULL;
 	const char *custom_name = NULL;
     double cumulate_cost = 0;
+	double subquery_cost = 0;
 	ExplainWorkersState *save_workers_state = total_es->workers_state;
 	
 	bool		haschildren;
@@ -1130,8 +1128,10 @@ ExplainNode(PlanState *planstate, List *ancestors,
 			hsp.actual_start_up = startup_ms;
 			FormatPropertyFloat("Actual Total Time", "s", total_ms,
 									 3, es);
-			hsp.actual_total = total_ms;
+			//hsp.actual_total = total_ms;
             cumulate_cost += total_ms;
+			elog(LOG, "init cumulate:%f",cumulate_cost);
+			subquery_cost += total_ms;
 		}
 		FormatPropertyFloat("Actual Rows", NULL, rows, 0, es);
 		hsp.actual_rows = rows;
@@ -1166,9 +1166,10 @@ ExplainNode(PlanState *planstate, List *ancestors,
 				FormatPropertyFloat("Actual Total Time", "ms",
 										 total_ms, 3, es);
 				hsp.actual_start_up = startup_ms;
-				hsp.actual_total = total_ms;
+				//hsp.actual_total = total_ms;
 			}
             cumulate_cost = Max(total_ms,cumulate_cost);
+			subquery_cost = Max(total_ms,subquery_cost);
 			FormatPropertyFloat("Actual Rows", NULL, rows, 0, es);
 			hsp.actual_rows = rows;
 			FormatPropertyFloat("Actual Loops", NULL, nloops, 0, es);
@@ -1194,7 +1195,6 @@ ExplainNode(PlanState *planstate, List *ancestors,
 				FormatPropertyBool("Inner Unique",((Join *) plan)->inner_unique,es);
 				hsp.inner_unique = ((Join *) plan)->inner_unique;
 			}
-
 			break;
 		default:
 			break;
@@ -1650,7 +1650,8 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	/* initPlan-s */
 	if (planstate->initPlan){
         RecureState ret = ExplainSubPlans(planstate->initPlan, ancestors, "InitPlan", total_es,total_ces,&hsp);
-		cumulate_cost += ret.cost_;
+		cumulate_cost -= ret.subquery_cost_;
+		elog(LOG, "cumulate after init plan:%f",cumulate_cost);
 		appendStringInfoString(es->str,ret.detail_str_->data);
 		appendStringInfoString(ces->str,ret.canonical_str_->data);
 		appendStringInfoString(cn_es->str,ret.canonical_str_->data);
@@ -1660,7 +1661,8 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	if (outerPlanState(planstate)){
         RecureState ret =  ExplainNode(outerPlanState(planstate), ancestors,
 					"Outer", NULL, total_es,total_ces);
-        cumulate_cost += ret.cost_;
+        cumulate_cost -= ret.subquery_cost_;
+		elog(LOG, "cumulate after left:%f",cumulate_cost);
 		appendStringInfoString(es->str,ret.detail_str_->data);
 		appendStringInfoString(ces->str,ret.canonical_str_->data);
 		push_node_type_set(rs.node_type_set_,ret.node_type_set_);
@@ -1674,7 +1676,8 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	if (innerPlanState(planstate)){
         RecureState ret = ExplainNode(innerPlanState(planstate), ancestors,
 					"Inner", NULL, total_es,total_ces);
-        cumulate_cost += ret.cost_;
+        cumulate_cost -= ret.subquery_cost_;
+		elog(LOG, "cumulate after right:%f",cumulate_cost);
 		appendStringInfoString(es->str,ret.detail_str_->data);
 		appendStringInfoString(ces->str,ret.canonical_str_->data);
 		push_node_type_set(rs.node_type_set_,ret.node_type_set_);
@@ -1719,8 +1722,8 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		case T_SubqueryScan:{
 			RecureState ret = ExplainNode(((SubqueryScanState *) planstate)->subplan, ancestors,
 						"Subquery", NULL, es,ces);
-			cumulate_cost += ret.cost_;
-
+			cumulate_cost -= ret.subquery_cost_;
+			elog(LOG, "cumulate after sub query scan:%f",cumulate_cost);
 			}break;
 		case T_CustomScan:
 			ExplainCustomChildren((CustomScanState *) planstate,
@@ -1737,7 +1740,8 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		 * will lead a empty node exists in finall plan,it is unecessily;
 		 */
 		RecureState ret = ExplainSubPlans(planstate->subPlan, ancestors, "SubPlan", es,ces,&hsp);
-		cumulate_cost += ret.cost_;
+		cumulate_cost -= ret.subquery_cost_;
+		elog(LOG, "cumulate after sub:%f",cumulate_cost);
 		appendStringInfoString(es->str,ret.detail_str_->data);
 		appendStringInfoString(ces->str,ret.canonical_str_->data);
 		appendStringInfoString(cn_es->str,ret.canonical_str_->data);
@@ -1759,14 +1763,25 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	hsp.json_plan = es->str->data;
 	hsp.canonical_json_plan = ces->str->data;
 	hsp.canonical_node_json_plan = cn_es->str->data;
-	hsp.sub_cost = cumulate_cost;
+
+	hsp.sub_cost = subquery_cost;
+	hsp.node_cost = cumulate_cost;
+	if(hsp.node_cost < 0){
+		elog(WARNING, "node cost is negative, this is not expected, node cost:%f",hsp.node_cost);
+		/**
+		 * FIXME: for materialize, i am not sure how it calualate its node time
+		 * */
+		hsp.node_cost = subquery_cost;
+		assert(hsp.node_cost >= 0);
+	}
+	hsp.actual_total = hsp.node_cost;
+	
 	/*mark the recurestat for parent to use,we need a deep copy for infostring*/
 	FormatCloseGroup("Plan",relationship ? NULL : "Plan",true, es);
 	FormatCloseGroup("Plan",relationship ? NULL : "Plan",true, ces);
 	FormatCloseGroup("Plan",relationship ? NULL : "Plan",true, cn_es);
-	//ExplainEndOutput(es);
 	
-	rs.cost_ = cumulate_cost;
+	rs.subquery_cost_ = subquery_cost;
 	appendStringInfoString(rs.detail_str_,es->str->data);
 	appendStringInfoString(rs.canonical_str_,ces->str->data);
 	rs.hps_ = hsp;
@@ -3436,11 +3451,6 @@ ExplainSubPlans(List *plans, List *ancestors,
 {
 	ListCell   *lst;
 	RecureState rs = NewRecureState();
-	// if(strcmp(relationship,"SubPlan")){
-	// 	rs.node_type_set_ = lappend(rs.node_type_set_,T_SubPlan);
-	// }else if(strcmp(relationship,"InitPlan")){
-	// 	rs.node_type_set_ = lappend(rs.node_type_set_);
-	// }
 	size_t p_size = list_length(plans);
 	foreach(lst, plans)
 	{
@@ -3469,7 +3479,8 @@ ExplainSubPlans(List *plans, List *ancestors,
 		 */
 		ancestors = lcons(sp, ancestors);
 		RecureState ret = ExplainNode(sps->planstate, ancestors,relationship, sp->plan_name, total_es,total_ces);
-		rs.cost_ += ret.cost_;
+		rs.subquery_cost_ += ret.subquery_cost_;
+		rs.cost_ = 0;
 		appendStringInfoString(rs.detail_str_,ret.detail_str_->data);
 		appendStringInfoString(rs.canonical_str_,ret.canonical_str_->data);
 		push_node_type_set(rs.node_type_set_,ret.node_type_set_);

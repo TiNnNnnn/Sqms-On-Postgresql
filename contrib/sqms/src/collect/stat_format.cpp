@@ -208,9 +208,9 @@ bool PlanStatFormat::Preprocessing(QueryDesc* qd){
     FormatEndOutput(total_ces);
     FormatEndOutput(total_es);
 
-    if(debug){
+    //if(debug){
         ShowAllHspsTree(&hsps_);
-    }
+    //}
     
     pfree(total_es);
     pfree(total_ces);
@@ -270,8 +270,8 @@ std::string PlanStatFormat::GetIndent(int depth){
 void PlanStatFormat::ShowAllHspsTree(HistorySlowPlanStat* hsps,int h_depth){
     if(!hsps)return;
     PrintIndent(h_depth);
-    std::cout << "["<<hsps->node_type<<"]:"<<std::endl;
-
+    std::cout << "["<<hsps->node_type<<"]:("<<hsps->actual_total<<","<<hsps->sub_cost<<")"<<std::endl;
+    
     ShowAllPredTree(hsps,h_depth+1);
     ShowSubPlansTree(hsps,h_depth);
     

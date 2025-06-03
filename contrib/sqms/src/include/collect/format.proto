@@ -85,6 +85,8 @@ message HistorySlowPlanStat{
 	/*we storage subplan divide from sommon childs*/
 	repeated HistorySlowPlanStat subplans = 55;
 	string canonical_node_json_plan = 56;
+
+	double node_cost = 57;
 }
 
 enum PredTypeTag{

@@ -21,7 +21,10 @@
 #include "common/config.h"
 
 typedef struct RecureState{
-    double cost_;
+    /*cost of node */
+	double cost_;
+	/*cost of subquery */
+	double subquery_cost_;
 	/*in detail_str_,we need reserve all detail about a physical node,it will used
 	  for compute equivlence class*/
 	StringInfo detail_str_;
