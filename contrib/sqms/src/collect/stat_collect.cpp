@@ -159,15 +159,10 @@ void StatCollecter::StmtExecutorEndWrapper(QueryDesc *queryDesc)
 		 */
 		InstrEndLoop(queryDesc->totaltime);
 		
-		//std::cout<<"sleep: 2s ..."<<std::endl;
-		//sleep(2);
-		
 		/*stoage plan stats*/
-		msec = queryDesc->totaltime->total * 1000.0;
-		if (msec >= query_min_duration){
-		   PlanStatFormat& es = PlanStatFormat::getInstance();
-		   es.ProcQueryDesc(queryDesc,oldcxt,true);
-		} 
+		PlanStatFormat& es = PlanStatFormat::getInstance();
+		es.ProcQueryDesc(queryDesc,oldcxt,true); 
+		
 		MemoryContextSwitchTo(oldcxt);
 	}
 
@@ -179,33 +174,40 @@ void StatCollecter::StmtExecutorEndWrapper(QueryDesc *queryDesc)
 }
 
 extern "C" void RegisterQueryIndex(){
+
 	std::cout<<"begin building history query index..."<<std::endl;
-
 	bool found = true;
-
 	auto shared_index = (HistoryQueryLevelTree*)ShmemInitStruct(shared_index_name, sizeof(HistoryQueryLevelTree), &found);
 
 	if (!shared_index) {
         elog(ERROR, "Failed to allocate shared memory for root node.");
         return;
-    }
+	}
 	if(!found){
 		new (shared_index) HistoryQueryLevelTree(1);
 	}
+	std::cout<<"finish building history query index..."<<std::endl;
+	
+	found = true;
+	auto scan_index = (HistoryQueryLevelTree*)ShmemInitStruct(scan_index_name, sizeof(HistoryQueryLevelTree), &found);
+	if(!scan_index) {
+		elog(ERROR, "Failed to allocate shared memory for scan index.");
+		return;
+	}
+	if(!found){
+		new (scan_index) HistoryQueryLevelTree(1);
+	}
+
 	/**
 	 * TODO: here we should load history slow queries in redis into shared_index
 	 */
-	std::cout<<"finish building history query index..."<<std::endl;
 
 	std::cout<<"begin building sqms logger..."<<std::endl;
 	found = false;
-
 	auto logger = (SqmsLogger*)ShmemInitStruct("SqmsLogger", sizeof(SqmsLogger), &found);
-	
 	if(!found){
 		new (logger) SqmsLogger();
 	}
-
 	std::cout<<"finsh building sqms logger..."<<std::endl;
 }
 

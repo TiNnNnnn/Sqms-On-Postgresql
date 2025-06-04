@@ -37,7 +37,6 @@ bool NodeManager::SearchInternal(NodeCollector *node,double total_time,int finis
    //logger_->Logger("comming",("node type: "+node->type_name + ", child_types: "+type_str).c_str());
    //logger_->Logger("comming",("node type: "+node->type_name + ", child ouputs: "+ input_str).c_str());
 
-
    if(shared_index_->Search(node) || node->match_cnt){
         //logger_->Logger("comming","match success for node");
         for(size_t i = 0; i < node->output_list_.size();++i){    
@@ -390,7 +389,8 @@ bool NodeManager::CancelQuery(pid_t pid){
     Datum result = DirectFunctionCall1(pg_cancel_backend, arg);
     bool success = DatumGetBool(result);
     if(success){
-        logger_->Logger("comming","cancel query success...");
+        elog(LOG,"Node View Stitch Match] cancel query success...");
+        logger_->Logger("comming","[Node View Stitch Match] cancel query success...");
         return true;
     } else {
         logger_->Logger("comming","cancel query failed or has been canceled...");

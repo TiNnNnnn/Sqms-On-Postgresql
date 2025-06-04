@@ -1063,8 +1063,8 @@ bool LeafStrategy::Insert(NodeCollector* node_collector){
     output_ = node_collector->output;
     time_ = node_collector->time;
     
-    std::cout<<"<"<<node_collector->type_name<<"> insert node: output: "+std::to_string(output_)+", inputs: "<<input_str<<std::endl;
-    std::cout<<"<"<<node_collector->type_name<<">: \n"<<node_collector->json_sub_plan<<std::endl;
+    //std::cout<<"<"<<node_collector->type_name<<"> insert node: output: "+std::to_string(output_)+", inputs: "<<input_str<<std::endl;
+    //std::cout<<"<"<<node_collector->type_name<<">: \n"<<node_collector->json_sub_plan<<std::endl;
     
     insert_cnt_++;
     std::cout<<"insert cnt: "<<insert_cnt_<<","<<this<<std::endl;

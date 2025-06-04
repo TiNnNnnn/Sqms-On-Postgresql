@@ -36,9 +36,11 @@ extern bool excavate_enabled;
 extern bool plan_match_enabled;
 /*if enable to use node phyiscla view stitch metod to match slow plans*/
 extern bool node_match_enabled;
+extern bool collect_scans_enabled;
 
 extern const int max_msg_size;
 extern const size_t shared_mem_size;
 extern const char* queue_name;
 extern const char* shared_index_name;
+extern const char* scan_index_name;
 

@@ -30,7 +30,8 @@ bool debug = false;
 bool excavate_enabled = false;
 bool plan_match_enabled = true;
 bool node_match_enabled = true;
-
+bool collect_scans_enabled = false;
 const char* redis_host = "127.0.0.1";
 const char* shared_index_name = "HISTORY_QUERY_TREE_INDEX";
+const char* scan_index_name = "HISTORY_QUERY_SCAN_INDEX";
 const char* queue_name = "query_index";

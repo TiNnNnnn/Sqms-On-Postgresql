@@ -26,7 +26,8 @@ PlanStatFormat::PlanStatFormat(int psize)
     assert(found);
 }
 
-bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt,bool slow){
+bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slow){
+    double msec = qd->totaltime->total * 1000.0;
     Preprocessing(qd);
     if(!&hsps_){
         std::cout<<"hsps is nullptr"<<std::endl;
@@ -60,13 +61,13 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt,bool slow
             std::cerr<<"shared_index not exist!"<<std::endl;
             exit(-1);
         }
-
-        if(slow){
+        if(slow && msec >= query_min_duration){
             if(!plan_match_enabled && !node_match_enabled){
                 elog(ERROR, "plan_match_enabled and node_match_enabled are both false, so we will not process slow query");
                 assert(!plan_match_enabled && !node_match_enabled);
             }
             logger_->Logger("slow","begin process comming query...");
+            std::cout<<"begin process comming query..."<<std::endl;;
             /*1. execute core slow query execavate strategy*/
             ExcavateContext *context = new ExcavateContext();
             if(excavate_enabled){
@@ -128,10 +129,11 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt,bool slow
             //     std::string hash_val = HashCanonicalPlan(q->json_plan);
             //     storage_->PutStat(hash_val,hsps);
             // }
+            std::cout<<"finish process slow query..."<<std::endl;
             logger_->Logger("slow","finish process slow query...");
         }else{
             logger_->Logger("comming","begin process comming query...");
-            
+            std::cout<<"begin process comming query..."<<std::endl;
             /*check all subuqueries in plan*/
             std::vector<HistorySlowPlanStat*>sub_list;
             LevelOrder(hsps,sub_list);
@@ -139,7 +141,9 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt,bool slow
             logger_->Logger("comming",("subplan size: "+std::to_string(sub_list.size())).c_str());
             size_t sub_idx = 0;
 
+            bool cancel = false;
             if(plan_match_enabled){
+                std::cout<<"begin plan match..."<<std::endl;
                 for(const auto& p : sub_list){
                 /**
                  * MARK: to make test more easy,here move muti-thread while testing
@@ -156,7 +160,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt,bool slow
                     // if(!p){
                     //     std::cerr<<"history_slow_plan_stat__unpack failed in thered: "<<ThreadPool::GetTid()<<std::endl;
                     // }
-                    //logger_->Logger("comming",("**********sub_query ["+std::to_string(sub_idx)+"]***************").c_str());
+                    logger_->Logger("comming",("**********sub_query ["+std::to_string(sub_idx)+"]***************").c_str());
                     SlowPlanStat *sps= new SlowPlanStat();
                     PlanFormatContext* pf_context_1 = new PlanFormatContext();
                     auto level_mgr = std::make_shared<LevelManager>(p,sps,logger_,"comming");
@@ -164,42 +168,77 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt,bool slow
                     pf_context_1->executeStrategy();
                     level_mgr->ShowTotalPredClass();
 
-                    // if(debug){
-                    //     auto node_collect_map = level_mgr->GetNodeCollector();
-                    //     logger_->Logger("comming",ShowAllNodeCollect(p,node_collect_map,"comming").c_str());
-                    // }
+                    if(debug){
+                        auto node_collect_map = level_mgr->GetNodeCollector();
+                        logger_->Logger("comming",ShowAllNodeCollect(p,node_collect_map,"comming").c_str());
+                    }
 
-                    // if(shared_index->Search(level_mgr.get(),1)){
-                    //     CancelQuery(pid);
-                    //     //elog(NOTICE, "query has been canceled!");
-                    //     logger_->Logger("comming","****************************");
-                    //     break;
-                    // }
-                    // logger_->Logger("comming","****************************");
+                    if(shared_index->Search(level_mgr.get(),1)){
+                        CancelQuery(pid);
+                        logger_->Logger("comming","****************************");
+                        cancel = true;
+                        break;
+                    }
+                    logger_->Logger("comming","****************************");
                     //return true;
                 //});
                     ++sub_idx;
                 }
+                std::cout<<"finsh plan match..."<<std::endl;
             }
             
-            if(node_match_enabled){
+            if(node_match_enabled && !cancel){
+                std::cout<<"begin node match..."<<std::endl;
                 auto top_p = sub_list[0];
                 SlowPlanStat *sps= new SlowPlanStat();
                 PlanFormatContext* pf_context_1 = new PlanFormatContext();
                 auto level_mgr = std::make_shared<LevelManager>(top_p,sps,logger_,"comming");
                 pf_context_1->SetStrategy(level_mgr);
                 pf_context_1->executeStrategy();
-                level_mgr->ShowTotalPredClass();
-                std::cout<<"finish execute strategy1"<<std::endl;
 
                 PlanFormatContext* pf_context_2 = new PlanFormatContext();
                 auto node_mgr = std::make_shared<NodeManager>(top_p,level_mgr,pid);
                 pf_context_2->SetStrategy(node_mgr);
                 pf_context_2->executeStrategy();
                 node_mgr->Search();
+                std::cout<<"finish node match..."<<std::endl;
             }
+            std::cout<<"finish process comming query..."<<std::endl;
             logger_->Logger("comming","finish process comming query...");
         }
+
+        /**collect scan nodes of all querys */
+        if(slow && collect_scans_enabled){
+            bool found = true;
+            auto scan_index = (HistoryQueryLevelTree*)ShmemInitStruct(scan_index_name, sizeof(HistoryQueryLevelTree), &found);
+            if(!found || !scan_index){
+                std::cerr<<"scan_index not exist!"<<std::endl;
+                exit(-1);
+            }
+                
+            SlowPlanStat *sps= new SlowPlanStat();
+            PlanFormatContext* pf_context_1 = new PlanFormatContext();
+            auto level_mgr = std::make_shared<LevelManager>(hsps_,sps,logger_,"comming");
+            pf_context_1->SetStrategy(level_mgr);
+            pf_context_1->executeStrategy();
+
+            PlanFormatContext* pf_context_2 = new PlanFormatContext();
+            auto node_mgr = std::make_shared<NodeManager>(hsps_,level_mgr,pid);
+            pf_context_2->SetStrategy(node_mgr);
+            pf_context_2->executeStrategy();
+            
+            for(const auto& node_collector : node_mgr->GetNodeCollectorList()){
+                /**
+                 * TODO: search history scan nodes in scan_index;
+                 */
+                
+                if(node_collector->childs_.empty() && !scan_index->Insert(node_collector)){
+                    logger_->Logger("slow","shared_index insert error in strategy 2");
+                    exit(-1);
+                }
+            }
+        }
+
         std::cout<<"Thread: "<<ThreadPool::GetTid()<<" Finish Working..."<<std::endl;
         return true;
     //});
@@ -258,7 +297,8 @@ bool PlanStatFormat::CancelQuery(pid_t pid){
     Datum result = DirectFunctionCall1(pg_cancel_backend, arg);
     bool success = DatumGetBool(result);
     if(success){
-        logger_->Logger("comming","cancel query success...");
+        elog(LOG,"[Plan View Match] cancel query success...");
+        logger_->Logger("comming","[Plan View Match] cancel query success...");
         return true;
     } else {
         logger_->Logger("comming","cancel query failed or has been canceled...");
