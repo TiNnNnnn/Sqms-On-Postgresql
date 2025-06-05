@@ -40,6 +40,8 @@ extern bool collect_scans_enabled;
 
 extern const int max_msg_size;
 extern const size_t shared_mem_size;
+extern const int node_search_topk;
+
 extern const char* queue_name;
 extern const char* shared_index_name;
 extern const char* scan_index_name;

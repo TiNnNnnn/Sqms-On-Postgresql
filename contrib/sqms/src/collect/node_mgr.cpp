@@ -45,17 +45,6 @@ bool NodeManager::SearchInternal(NodeCollector *node,double total_time,int finis
             if(node->parent_){
                 node->parent_->inputs[node->child_idx] = node->output_list_[i];
             }
-
-            //logger_->Logger("comming","-----------------------------------------------");
-            //logger_->Logger("comming",("finish_node_num:"+std::to_string(finish_node_num)+",node_num: "+std::to_string(node_num_)).c_str());
-            for(const auto& info : node->leaf_info_){
-                std::string input_str;
-                for(const auto& in : info->inputs_){
-                    input_str += std::to_string(in)+",";
-                }
-                //logger_->Logger("comming",("current node [" +std::to_string(finish_node_num-1)+"] output: "+std::to_string(info->output_)+", inputs: "+input_str).c_str());
-            }
-            //logger_->Logger("comming","-----------------------------------------------");
             
             if(total_time >= query_min_duration && finish_node_num >= node_num_/2){
                 CancelQuery(pid_);

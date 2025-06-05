@@ -652,14 +652,6 @@ private:
     std::string serialization_;
 };
 
-
-class LeafNodeInfo{
-public:
-    int output_ = 0;
-    SMVector<int>inputs_;
-    double time_ = 0;
-};
-
 /**
  * NodeCollector: supplementary information for hsps node
  */
@@ -677,24 +669,36 @@ public:
     LevelTblList* node_tbls_ = nullptr;
     const char * json_sub_plan = nullptr;
     std::vector<std::string> join_type_list;
-
+    /*childs and parent of current node*/
     std::vector<NodeCollector*>childs_;
     NodeCollector* parent_ = nullptr;
-
-    std::vector<LeafNodeInfo*> leaf_info_; 
-
+    /**node execute info: inputs,output,time*/
     std::vector<int> inputs;
-    int output;
-    double time;
-
+    int output = 0;
+    double time = 0;
+    /*type name of node*/
     std::string type_name;
-
+    /**match cnt count for single matching process*/
     int match_cnt = 0;
-    size_t child_idx = -1;
-
     std::vector<int>output_list_;
     std::vector<int>time_list_;
-
+    /*if set effictive for match node in shared_index*/
+    bool set_effective_ = false;
+    /**
+     * check_scan_view_decrease_: whether to check scan_view_decrease_
+     * scan_view_decrease_：if scan node view has data decrease in scan_index
+     * */
+    bool check_scan_view_decrease_ = false;
+    bool scan_view_decrease_ = false;
+    /**
+     * Execute time and output for scan node
+     * They are different from node time and output, they are used in slow plan match,
+     * they will be calulated in slow plan match process.
+     */
+    double scan_time  = 0;
+    int scan_output = 0;
+    /*unused variables*/
+    size_t child_idx = -1;
     int pe_idx = -1;
 };
 
@@ -757,15 +761,21 @@ private:
     void ReSetAllPreProcessd();
     bool CancelQuery();
 private:
-    HistorySlowPlanStat* hsps_ = nullptr; /*plan we need to process to sps_*/
+    /*plan we need to process to sps_ (root)*/
+    HistorySlowPlanStat* hsps_ = nullptr; 
+    /*sub plan we are processing*/
     HistorySlowPlanStat* cur_hsps_ = nullptr;
     bool first_pred_check_ = false;
+    /*final output,sps will dircetly storaged*/
+    SlowPlanStat * sps_ = nullptr; 
+    /*plan height*/
+    int total_height_ = 0;
+    /* from bottom to the top,begin height is 0 ... */ 
+    int cur_height_ = 0; 
 
-    SlowPlanStat * sps_ = nullptr; /*final output,sps will dircetly storaged*/
-    int total_height_ = 0; /*plan height*/
-    int cur_height_ = 0; /* from bottom to the top,begin height is 0 ... */
+    /*match strategy,no used yet...*/
     MatchStrategy ms_;
-    
+
     /* total equivlences for predicates */
     std::vector<LevelPredEquivlencesList*> total_equivlences_;
     /* total equivlences for outputs */

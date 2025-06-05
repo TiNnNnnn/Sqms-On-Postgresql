@@ -53,8 +53,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
         //     std::cerr<<"history_slow_plan_stat__unpack failed in thered: "<<ThreadPool::GetTid()<<std::endl;
         // }
 
-        auto hsps = &hsps_;
-
+        HistorySlowPlanStat *hsps = &hsps_;
         bool found = true;
         auto shared_index = (HistoryQueryLevelTree*)ShmemInitStruct(shared_index_name, sizeof(HistoryQueryLevelTree), &found);
         if(!found || !shared_index){
@@ -218,27 +217,43 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
                 
             SlowPlanStat *sps= new SlowPlanStat();
             PlanFormatContext* pf_context_1 = new PlanFormatContext();
-            auto level_mgr = std::make_shared<LevelManager>(hsps_,sps,logger_,"comming");
+            auto level_mgr = std::make_shared<LevelManager>(hsps,sps,logger_,"comming");
             pf_context_1->SetStrategy(level_mgr);
             pf_context_1->executeStrategy();
 
             PlanFormatContext* pf_context_2 = new PlanFormatContext();
-            auto node_mgr = std::make_shared<NodeManager>(hsps_,level_mgr,pid);
+            auto node_mgr = std::make_shared<NodeManager>(hsps,level_mgr,pid);
             pf_context_2->SetStrategy(node_mgr);
             pf_context_2->executeStrategy();
             
             for(const auto& node_collector : node_mgr->GetNodeCollectorList()){
+                if(node_collector->childs_.size()) continue;
                 /**
-                 * TODO: search history scan nodes in scan_index;
+                 * check if there is any scan view time decrease, then we will
+                 * not believe the plan base on this view is effective 
                  */
-                
-                if(node_collector->childs_.empty() && !scan_index->Insert(node_collector)){
-                    logger_->Logger("slow","shared_index insert error in strategy 2");
+                node_collector->scan_view_decrease_=false;
+                node_collector->check_scan_view_decrease_ = true;
+                if(!scan_index->Search(node_collector)){
+                    logger_->Logger("slow","scan_index search error");
                     exit(-1);
                 }
+                /**
+                 * search all history matched view,and set then as not effective,
+                 * then they will not be matched any more in after querys
+                 */
+                if(node_collector->scan_view_decrease_){
+                    node_collector->set_effective_ = true;
+                    shared_index->Search(node_collector);
+                }
+                /*insert new scan view into index*/
+                if(!scan_index->Insert(node_collector)){
+                    logger_->Logger("slow","scan_index insert error");
+                    exit(-1);
+                }
+                node_collector->check_scan_view_decrease_ = false;
             }
         }
-
         std::cout<<"Thread: "<<ThreadPool::GetTid()<<" Finish Working..."<<std::endl;
         return true;
     //});

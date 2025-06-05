@@ -8,6 +8,7 @@
 #include <mutex>
 #include <thread>
 #include <functional>
+#include <atomic>
 
 #include "inverted_index.hpp"
 #include "collect/level_mgr.hpp"
@@ -64,8 +65,8 @@ public:
 
 /**
  * LevelOneStrategy: check the set of subplan's node type set,if the sub_plan's 
- * node type is in (join,project,filter,groupby),we will apply more checking,ohterwise,
- * we just use hash to compare,with time going,we will 
+ * node type is in (join,project,filter,groupby),we will apply more checking.Here
+ * we call this as Skeleton plan Match.
  */
 class LevelHashStrategy : public LevelStrategy{
 public:
@@ -113,7 +114,7 @@ public:
             inverted_idx_ = (InvertedIndex<PostingList>*) ShmemAlloc(sizeof(InvertedIndex<PostingList>));
             assert(inverted_idx_);
             new (inverted_idx_) InvertedIndex<PostingList>();
-        }
+    }
     SMString Name(){return "PlanGroupKeyStrategy";}
     bool Insert(LevelManager* level_mgr);
     bool Serach(LevelManager* level_mgr,int id);
@@ -135,7 +136,7 @@ public:
             inverted_idx_ = (InvertedIndex<PostingList>*) ShmemAlloc(sizeof(InvertedIndex<PostingList>));
             assert(inverted_idx_);
             new (inverted_idx_) InvertedIndex<PostingList>();
-        }
+    }
     SMString Name(){return "PlanGroupKeyStrategy";}
     bool Insert(LevelManager* level_mgr);
     bool Serach(LevelManager* level_mgr,int id);
@@ -154,20 +155,14 @@ class LevelRangeStrategy : public LevelStrategy{
 public:
     LevelRangeStrategy(size_t total_height)
         : LevelStrategy(total_height){
-            //LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
             inverted_idx_ = (InvertedIndex<PostingList>*) ShmemAlloc(sizeof(InvertedIndex<PostingList>));
-            //LWLockRelease(shmem_lock_);
-
             assert(inverted_idx_);
             new (inverted_idx_) InvertedIndex<PostingList>();
 
-            //LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
             range_inverted_idx_ = (RangeInvertedIndex*) ShmemAlloc(sizeof(RangeInvertedIndex));
-            //LWLockRelease(shmem_lock_);
-
             assert(range_inverted_idx_);
             new (range_inverted_idx_) RangeInvertedIndex();
-        }
+    }
     SMString Name(){return "PlanRangePredsStrategy";}
     bool Insert(LevelManager* level_mgr);
     bool Serach(LevelManager* level_mgr,int id);
@@ -176,14 +171,11 @@ public:
     bool Insert(NodeCollector* node_collector);
     bool Remove(NodeCollector* node_collector);
     bool Search(NodeCollector* node_collector);
-
 private:
+    std::shared_mutex rw_mutex_;
     InvertedIndex<PostingList>* inverted_idx_;
     RangeInvertedIndex* range_inverted_idx_;
     SMConcurrentHashMap<SET,HistoryQueryIndexNode*,SetHasher> child_map_;
-    //SMUnorderedMap<SET,HistoryQueryIndexNode*,SetHasher> child_map_;
-    //SMUnorderedMap<SET,SMUnorderedMap<LevelPredEquivlences*,HistoryQueryIndexNode*>,SetHasher> child_map_;
-    std::shared_mutex rw_mutex_;
     size_t s_level_;
 };
 
@@ -236,10 +228,12 @@ public:
     bool Remove(NodeCollector* node_collector);
     bool Search(NodeCollector* node_collector);
 
+    void SetEffective(bool effective);
 private: 
     bool SearchInternal(LevelManager* src_mgr,int h,int id,int dst_id);
     bool SerachRange(LevelManager* src_mgr,int h,int id, std::vector<size_t> &match_lpes_idxs);
-    /*old interface*/
+
+    /** TODO: old interface,this should be removed*/
     bool SerachAgg(LevelManager* src_mgr,int h,int id);
     bool SerachSort(LevelManager* src_mgr,int h,int id);
     bool SerachResidual(LevelManager* src_mgr,int h,int id);
@@ -253,19 +247,27 @@ private:
     bool Match(LevelPredEquivlences* dst_lpes, SMLevelPredEquivlences* lpes);
     bool SuperSet(SMPredEquivlence* dst_pe,PredEquivlence* pe);
 private:
+    std::shared_mutex rw_mutex_;
     /*for plan level matching*/
     SMLevelManager* level_mgr_;
-
     /*for node level matching*/
     int output_ = 0;
     SMVector<int>inputs_;
     double time_;
-
     SMVector<SMLevelManager*>historys_;
     SMMap<std::pair<int,int>,std::pair<int,double>,PairCompare> history_map_;
-
-    std::shared_mutex rw_mutex_;
-    int insert_cnt_ = 0;
+    /**
+     * statistics for current node
+     * TODO: 2025-06-04 put node with high search_cnt_,match_cnt- into the top of the list
+     */
+    std::atomic<int> insert_cnt_ = 0;
+    std::atomic<int> search_cnt_ = 0;
+    std::atomic<int> match_cnt_ = 0;
+    /**
+     * if this node is effective,if not, even a view can match it, return false.
+     * This is used for both plan matching and node matching method.
+     */
+    bool effective_ = true;
 };
 
 /**
@@ -319,65 +321,49 @@ public:
     void SetStrategy(int l,int total_height){
         switch(l){
             case 0: {
-                //LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
                 strategy_ = (DeBugStrategy*)ShmemAlloc(sizeof(DeBugStrategy));
-                //LWLockRelease(shmem_lock_);
                 if (!strategy_)
                     elog(ERROR, "ShmemAlloc failed: not enough shared memory");
                 new (strategy_) DeBugStrategy(total_height);
             }break;
             case 1 :{
-                //LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
                 strategy_ = (LevelHashStrategy*)ShmemAlloc(sizeof(LevelHashStrategy));
-                //LWLockRelease(shmem_lock_);
                 if (!strategy_)
                     elog(ERROR, "ShmemAlloc failed: not enough shared memory");
                 new (strategy_)LevelHashStrategy(total_height);
             }break;
             case 2 :{
-                //LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
                 strategy_ = (LevelScalingStrategy*)ShmemAlloc(sizeof(LevelScalingStrategy));
-                //LWLockRelease(shmem_lock_);
                 if (!strategy_)
                     elog(ERROR, "ShmemAlloc failed: not enough shared memory");
                 new (strategy_)LevelScalingStrategy(total_height);
             }break;
             case 3 :{
-                //LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
                 strategy_ = (LevelRangeStrategy*)ShmemAlloc(sizeof(LevelRangeStrategy));
-                //LWLockRelease(shmem_lock_);
                 if (!strategy_)
                     elog(ERROR, "ShmemAlloc failed: not enough shared memory");
                 new (strategy_)LevelRangeStrategy(total_height);
             }break;
             case 4 :{
-                //LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
                 strategy_ = (LevelSortStrategy*)ShmemAlloc(sizeof(LevelSortStrategy));
-                //LWLockRelease(shmem_lock_);
                 if (!strategy_)
                     elog(ERROR, "ShmemAlloc failed: not enough shared memory");
                 new (strategy_)LevelSortStrategy(total_height);
             }break;
             case 5 :{
-                //LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
                 strategy_ = (LevelAggStrategy*)ShmemAlloc(sizeof(LevelAggStrategy));
-                //LWLockRelease(shmem_lock_);
                 if (!strategy_)
                     elog(ERROR, "ShmemAlloc failed: not enough shared memory");                
                 new (strategy_)LevelAggStrategy(total_height);
             }break;
             case 6 :{
-                //LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
                 strategy_ = (LevelResidualStrategy*)ShmemAlloc(sizeof(LevelResidualStrategy));
-                //LWLockRelease(shmem_lock_);
                 if (!strategy_)
                     elog(ERROR, "ShmemAlloc failed: not enough shared memory");    
                 new (strategy_)LevelResidualStrategy(total_height);
             }break;
             case 7: {
-                //LWLockAcquire(shmem_lock_, LW_EXCLUSIVE);
                 strategy_ = (LeafStrategy*)ShmemAlloc(sizeof(LeafStrategy));
-                //LWLockRelease(shmem_lock_);
                 if (!strategy_)
                     elog(ERROR, "ShmemAlloc failed: not enough shared memory");    
                 new (strategy_)LeafStrategy(total_height);
@@ -396,7 +382,6 @@ public:
     bool Insert(NodeCollector* node_collector);
     bool Remove(NodeCollector* node_collector);
     bool Search(NodeCollector* node_collector);
-
 private:
     LevelStrategy* strategy_;
 };

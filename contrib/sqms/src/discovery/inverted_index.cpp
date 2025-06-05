@@ -66,7 +66,7 @@ SMVector<int> RangePostingList::SuperSet(SMPredEquivlence* pe){
 /**
 * TODO: not implement yet
 */
-SMVector<int> RangePostingList::SubSet(SMPredEquivlence* range){
+SMVector<int> RangePostingList::SubSet(SMPredEquivlence* pe){
     SMVector<int> rets;
     return rets;
 }
@@ -442,6 +442,9 @@ SMSet<int> RangeInvertedIndex::SuperSets(LevelPredEquivlences* lpes){
     sm_lpes->Copy(lpes);
     assert(sm_lpes);
 
+    /**
+     * TODO: use dsa to allocate memory and free memory
+     */
     // auto sm_lpes = dsa_allocate(area_, sizeof(SMLevelPredEquivlences));
     // auto sm_lpes_address = (SMLevelPredEquivlences*) dsa_get_address(area_, sm_lpes);
     // new (sm_lpes_address) SMLevelPredEquivlences();
@@ -467,7 +470,6 @@ SMSet<int> RangeInvertedIndex::SuperSets(LevelPredEquivlences* lpes){
             }
         }
     }
-
     //dsa_free(area_, sm_lpes);
 
     return pe_id_set;

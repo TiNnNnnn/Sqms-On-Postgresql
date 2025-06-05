@@ -900,7 +900,7 @@ bool LevelRangeStrategy::Search(NodeCollector* node_collector){
 
     auto top_eqs = node_collector->node_equivlences_;
 
-    /*if top_eqs, it means it can match all set in current node*/
+    /*if top_eqs empty, it means it can match all set in current node*/
     if(!top_eqs->Size() || (top_eqs->GetLpesList().size() == 0)){
         for(const auto& iter : child_map_){
             if(iter.second->Serach(node_collector)){
@@ -1063,11 +1063,7 @@ bool LeafStrategy::Insert(NodeCollector* node_collector){
     output_ = node_collector->output;
     time_ = node_collector->time;
     
-    //std::cout<<"<"<<node_collector->type_name<<"> insert node: output: "+std::to_string(output_)+", inputs: "<<input_str<<std::endl;
-    //std::cout<<"<"<<node_collector->type_name<<">: \n"<<node_collector->json_sub_plan<<std::endl;
-    
-    insert_cnt_++;
-    std::cout<<"insert cnt: "<<insert_cnt_<<","<<this<<std::endl;
+    insert_cnt_.fetch_add(1);
     return true;
 }
 
@@ -1078,12 +1074,18 @@ bool LeafStrategy::Remove(NodeCollector* node_collector){
 bool LeafStrategy::Search(NodeCollector* node_collector){
     assert(node_collector);
     std::shared_lock<std::shared_mutex>lock(rw_mutex_);
-
+    
+    search_cnt_.fetch_add(1);
+    if(!effective_){
+        elog(LOG, "LeafStrategy::Search: strategy is not effective");
+        return false;
+    }
+    
     bool found = false;
     node_collector->output = 0;
     for(const auto& his : history_map_){
-        if(node_collector->inputs.size() == 0){
-
+        if(!node_collector->inputs.size()){
+            /*nothing todo*/
         }else if(node_collector->inputs.size() == 1){
             if(node_collector->inputs[0] < his.first.first){
                 continue;
@@ -1094,6 +1096,11 @@ bool LeafStrategy::Search(NodeCollector* node_collector){
             }
         }
         found = true;
+        /**
+         * TODO: Here priorvly match larger output instead of time
+         * however, i can't proof this is a good idea,it just seems
+         * like not bad while running.
+         **/
         if(node_collector->output < his.second.first){
             node_collector->output = his.second.first;
             node_collector->time = his.second.second;
@@ -1103,14 +1110,47 @@ bool LeafStrategy::Search(NodeCollector* node_collector){
     if(!found){
         return false;
     }
+    if(node_collector->set_effective_){
+        SetEffective(true);
+        /*here we should retrun false, then it will keeping matching all the index*/
+        return false;
+    }
 
+    if(node_collector->check_scan_view_decrease_){
+        assert(node_collector->inputs.empty());
+        assert(!node_collector->set_effective_);
+        /**
+         * scan has no inputs, just has time and output. 
+         * example:
+         * history scan: [SeqScan(t1),t1.a < 120] [time: 0.1s] [output: 1000]
+         * comming scan: [SeqScan(t1),t1.a < 140] [time: 0.08s] [output: 800]
+         * it means this history scan is not effective
+         */
+        for(const auto& his : history_map_){
+           if(node_collector->scan_output <= his.second.first*0.9
+            /*&& node_collector->scan_time < his.second.second*/
+            ){
+                node_collector->scan_view_decrease_ = true;
+                break;
+            }
+        }
+        node_collector->scan_view_decrease_ = false;
+        return true;
+    }
+
+    match_cnt_.fetch_add(1);
     node_collector->match_cnt++;
-    if(node_collector->match_cnt < 5){
+    if(node_collector->match_cnt < node_search_topk){
         node_collector->output_list_.push_back(node_collector->output);
         node_collector->time_list_.push_back(node_collector->time);
         return false;
     }
     return true;
+}
+
+void LeafStrategy::SetEffective(bool effective){
+    std::unique_lock<std::shared_mutex> lock(rw_mutex_);
+    effective_ = effective;
 }
 
 /**

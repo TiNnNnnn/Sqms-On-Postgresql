@@ -24,6 +24,7 @@ long totalFetchTimeoutMillis = 1000;
 long totalSetTimeMillis = 1000;
 long defaultTTLSeconds = INT_MAX;
 const size_t shared_mem_size = 1024* 1024* 1024 * 10;
+const int node_search_topk = 5;
 const int max_msg_size = 1024; 
 
 bool debug = false;
