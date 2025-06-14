@@ -289,18 +289,36 @@ bool PlanStatFormat::ExplainQueryDesc(QueryDesc *qd,ExplainState *es){
     logger_->Logger("comming","begin explain comming query...");
     std::cout<<"begin explain comming query..."<<std::endl;
 
-    SlowPlanStat *sps= new SlowPlanStat();
-    PlanFormatContext* pf_context_1 = new PlanFormatContext();
-    auto level_mgr = std::make_shared<LevelManager>(hsps,sps,logger_,"comming");
-    pf_context_1->SetStrategy(level_mgr);
-    pf_context_1->executeStrategy();
+
+    std::vector<HistorySlowPlanStat*>sub_list;
+    LevelOrder(hsps,sub_list);
 
     bool cancel = false;
     std::string append_str;
+
+    PlanFormatContext* pf_context_1 = new PlanFormatContext();
+    PlanFormatContext* pf_context_2 = new PlanFormatContext();
     if(plan_match_enabled){
-        if(shared_index->Search(level_mgr.get(),1)){
-            std::string slow_query = level_mgr->GetSourceQuery();
-            append_str += slow_query;
+        size_t sub_idx = 0;
+        for(const auto& p : sub_list){
+            SlowPlanStat *sps= new SlowPlanStat();
+            auto level_mgr = std::make_shared<LevelManager>(p,sps,logger_,"comming");
+            pf_context_1->SetStrategy(level_mgr);
+            pf_context_1->executeStrategy();
+
+            if(shared_index->Search(level_mgr.get(),1)){
+                std::string slow_query = level_mgr->GetSourceQuery();
+                append_str += "[Match History Slow Query]:" + slow_query + "\n";
+                /*unpack history planstate from slow view index*/
+                auto uhsps = PlanStatFormat::UnPackHistoryPlanState(level_mgr->GetHspsPackage(),level_mgr->GetHspsPackSize());
+                uhsps->sub_id = sub_idx;
+                appendStringInfoString(es->str, append_str.c_str());
+                PrintSlowPlan(es,qd,uhsps);
+                cancel = true;
+                break;
+            }
+            delete(sps);
+            ++sub_idx;
         }
     }
 
@@ -308,12 +326,14 @@ bool PlanStatFormat::ExplainQueryDesc(QueryDesc *qd,ExplainState *es){
 
     }
 
-    appendStringInfoString(es->str, append_str.c_str());
-
+    if(!cancel)
+        ExplainPrintPlan(es, qd);
+    
     std::cout<<"finish explain comming query..."<<std::endl;
     logger_->Logger("comming","finish explain comming query...");
-    delete(sps);
+
     delete(pf_context_1);
+    delete(pf_context_2);
     return true;
 }
 
@@ -574,21 +594,24 @@ void PlanStatFormat::ShowPredTree(PredExpression* p_expr, int depth) {
     }
 }
 
-std::string PlanStatFormat::PackHistoryPlanState(HistorySlowPlanStat* hsps){
+const uint8_t* PlanStatFormat::PackHistoryPlanState(HistorySlowPlanStat* hsps,size_t& sz){
     size_t msg_size = history_slow_plan_stat__get_packed_size(hsps);
     uint8_t *buffer = (uint8_t*)malloc(msg_size);
+    sz = msg_size;
+    history_slow_plan_stat__pack(hsps, buffer);
     if (buffer == NULL) {
         perror("Failed to allocate memory");
         exit(-1);
     }
-    history_slow_plan_stat__pack(hsps,buffer);
-    return std::string(reinterpret_cast<const char*>(buffer), msg_size);
+    return buffer;
 } 
 
-HistorySlowPlanStat* PlanStatFormat::UnPackHistoryPlanState(const std::string& s){
-    auto hsps = history_slow_plan_stat__unpack(NULL, s.size(), reinterpret_cast<const uint8_t*>(s.data()));
+HistorySlowPlanStat* PlanStatFormat::UnPackHistoryPlanState(const uint8_t* s,size_t msg_size){
+    std::cout<<"msg_size:"<<msg_size<<std::endl;
+    auto hsps = history_slow_plan_stat__unpack(NULL, msg_size, s);
     if(!hsps){
         std::cerr<<"history_slow_plan_stat__unpack failed in thered: "<<ThreadPool::GetTid()<<std::endl;
+        exit(-1);
     }
     return hsps;
 }

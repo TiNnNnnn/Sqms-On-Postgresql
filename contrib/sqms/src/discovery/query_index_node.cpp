@@ -1007,7 +1007,8 @@ bool LeafStrategy::Serach(LevelManager* level_mgr,int id){
             }
         }
         level_mgr->SetSourceQuery(level_mgr_->GetQueryStr().c_str());
-        level_mgr->SetHspsPackage(level_mgr_->GetHspsPackage().c_str());
+        level_mgr->SetHspsPackage(level_mgr_->GetHspsPackage());
+        level_mgr->SetHspsPackSize(level_mgr_->GetHspsPackSize());
         return true;
     }
 }

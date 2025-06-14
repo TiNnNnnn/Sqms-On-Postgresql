@@ -87,6 +87,8 @@ message HistorySlowPlanStat{
 	string canonical_node_json_plan = 56;
 
 	double node_cost = 57;
+	/*cur hsp postiton in opne query's all subplan*/
+	int32 sub_id = 58;
 }
 
 enum PredTypeTag{

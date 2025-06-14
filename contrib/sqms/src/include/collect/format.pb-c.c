@@ -457,7 +457,7 @@ void   slow_plan_stat__free_unpacked
   assert(message->base.descriptor == &slow_plan_stat__descriptor);
   protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
 }
-static const ProtobufCFieldDescriptor history_slow_plan_stat__field_descriptors[55] =
+static const ProtobufCFieldDescriptor history_slow_plan_stat__field_descriptors[56] =
 {
   {
     "custom_plan_provider",
@@ -1119,6 +1119,18 @@ static const ProtobufCFieldDescriptor history_slow_plan_stat__field_descriptors[
     0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
+  {
+    "sub_id",
+    58,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_INT32,
+    0,   /* quantifier_offset */
+    offsetof(HistorySlowPlanStat, sub_id),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
 };
 static const unsigned history_slow_plan_stat__field_indices_by_name[] = {
   2,   /* field[2] = actual_nloops */
@@ -1170,6 +1182,7 @@ static const unsigned history_slow_plan_stat__field_indices_by_name[] = {
   13,   /* field[13] = schema */
   8,   /* field[8] = strategy */
   27,   /* field[27] = sub_cost */
+  55,   /* field[55] = sub_id */
   30,   /* field[30] = sub_node_type_set */
   10,   /* field[10] = sub_plan_name */
   51,   /* field[51] = subplan_idx */
@@ -1181,7 +1194,7 @@ static const ProtobufCIntRange history_slow_plan_stat__number_ranges[2 + 1] =
 {
   { 1, 0 },
   { 4, 1 },
-  { 0, 55 }
+  { 0, 56 }
 };
 const ProtobufCMessageDescriptor history_slow_plan_stat__descriptor =
 {
@@ -1191,7 +1204,7 @@ const ProtobufCMessageDescriptor history_slow_plan_stat__descriptor =
   "HistorySlowPlanStat",
   "",
   sizeof(HistorySlowPlanStat),
-  55,
+  56,
   history_slow_plan_stat__field_descriptors,
   history_slow_plan_stat__field_indices_by_name,
   2,  history_slow_plan_stat__number_ranges,

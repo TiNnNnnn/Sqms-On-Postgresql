@@ -234,7 +234,7 @@ void StatCollecter::ExplainOneQueryWithSlowWrapper(Query *query,
 			eflags = 0;
 		else
 			eflags = EXEC_FLAG_EXPLAIN_ONLY;
-			
+
 		es->format = ExplainFormat::EXPLAIN_FORMAT_TEXT;
 		QueryDesc  *queryDesc = CreateQueryDesc(plan, queryString,
 								InvalidSnapshot, InvalidSnapshot,
@@ -242,12 +242,13 @@ void StatCollecter::ExplainOneQueryWithSlowWrapper(Query *query,
 		
 								standard_ExecutorStart(queryDesc, eflags);
 		ExplainOpenGroup("Query", NULL, true, es);
-		/* Create textual dump of plan tree */
-		ExplainPrintPlan(es, queryDesc);
-		
-		/* search history slow view index*/
-		PlanStatFormat& psf = PlanStatFormat::getInstance();
-		psf.ExplainQueryDesc(queryDesc,es);
+
+		if(queryDesc->operation != CMD_SELECT){
+			ExplainPrintPlan(es, queryDesc);
+		}else{
+			PlanStatFormat& psf = PlanStatFormat::getInstance();
+			psf.ExplainQueryDesc(queryDesc,es);
+		}
 
 		standard_ExecutorEnd(queryDesc);
 		FreeQueryDesc(queryDesc);

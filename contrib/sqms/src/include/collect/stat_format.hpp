@@ -20,6 +20,7 @@ extern "C"{
     #include "storage/lwlock.h"
     #include "utils/guc.h"
     #include "miscadmin.h"
+    #include "collect/explain_slow.h"
 };
 /** 
  * TODO: the name of HistorySlowPanStat and SlowPlanStat is simlar, we need rename 
@@ -41,8 +42,8 @@ public:
     bool ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt,bool slow = false);
     bool ExplainQueryDesc(QueryDesc *qd,ExplainState *es);
     bool CollectScan(QueryDesc* qd);
-    static std::string PackHistoryPlanState(HistorySlowPlanStat* hsps);
-    static HistorySlowPlanStat* UnPackHistoryPlanState(const std::string& s);
+    static const uint8_t* PackHistoryPlanState(HistorySlowPlanStat* hsps,size_t& msg_size);
+    static HistorySlowPlanStat* UnPackHistoryPlanState(const uint8_t* s,size_t msg_size);
 private:
     std::string HashCanonicalPlan(char *json_plan);
     void LevelOrder(HistorySlowPlanStat* hsps,std::vector<HistorySlowPlanStat*>& sub_list);

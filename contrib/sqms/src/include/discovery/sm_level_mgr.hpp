@@ -295,7 +295,8 @@ public:
     const SMVector<SMString>& GetJoinTypeList(){return join_type_list_;}
     const SMString& GetJsonSubPlan();
     const SMString& GetJsonFullSubPlan();
-    const SMString& GetHspsPackage();
+    const uint8_t* GetHspsPackage();
+    const size_t GetHspsPackSize();
     const SMString& GetQueryStr();
     void Copy(LevelManager* level_mgr){
         for(const auto& pe : level_mgr->GetTotalEquivlences()){
@@ -345,8 +346,10 @@ public:
         for(const auto& join_type : level_mgr->GetJoinTypeList()){
             join_type_list_.push_back(SMString(join_type));
         }
-        hsps_package_ = SMString(level_mgr->GetHspsPackage());
+        hsps_package_ = level_mgr->GetHspsPackage();
         q_str_ = SMString(level_mgr->GetSourceQuery());
+        hsps_size_ = level_mgr->GetHspsPackSize();
+        
     }
 private:
     /* total equivlences for predicates */
@@ -365,6 +368,8 @@ private:
     SMString json_sub_plan_;
     SMString json_full_sub_plan_;
     SMVector<SMString> join_type_list_;
-    SMString hsps_package_;
     SMString q_str_;
+    /*hsps info after packing*/
+    size_t hsps_size_;
+    const uint8_t* hsps_package_ = nullptr;
 };

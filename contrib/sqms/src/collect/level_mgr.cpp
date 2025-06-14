@@ -3127,4 +3127,3 @@ std::string LevelManager::GetSerialization() const{
 
 std::string LevelManager::GetPlanFullJson() const {return std::string(hsps_->json_plan);}
 std::string LevelManager::GetPlanCannonicalJson() const {return std::string(hsps_->canonical_json_plan);}
-std::string LevelManager::GetHspsPackage() const { return hsps_package_;}

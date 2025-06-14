@@ -711,7 +711,7 @@ public:
     LevelManager(HistorySlowPlanStat* hsps, SlowPlanStat*sps, SqmsLogger* logger,std::string log_tag = "slow")
         :hsps_(hsps),sps_(sps),logger_(logger),log_tag_(log_tag)
     {
-        hsps_package_ =  PlanStatFormat::PackHistoryPlanState(hsps);
+        hsps_package_ =  PlanStatFormat::PackHistoryPlanState(hsps,pack_size_);
     }
 
     virtual bool Format();
@@ -742,8 +742,11 @@ public:
     std::string GetPlanFullJson() const;
     std::string GetPlanCannonicalJson() const;
 
-    void SetHspsPackage(const char* buffer){hsps_package_ = std::string(buffer);}
-    std::string GetHspsPackage() const;
+    void SetHspsPackage(const uint8_t* buffer){ hsps_package_ = buffer;}
+    const uint8_t* GetHspsPackage() {return hsps_package_;}
+
+    void SetHspsPackSize(size_t size) {pack_size_ = size;}
+    size_t GetHspsPackSize(){return pack_size_;}
 
     void SetSourceQuery(const char* query){q_str_ = std::string(query);}
     std::string GetSourceQuery(){return q_str_;}
@@ -780,7 +783,8 @@ private:
     /* from bottom to the top,begin height is 0 ... */ 
     int cur_height_ = 0; 
     /* hsps after packing */
-    std::string hsps_package_;
+    const uint8_t* hsps_package_ = nullptr;
+    size_t pack_size_ = 0;
     /* origin query */
     std::string q_str_;
     /*match strategy,no used yet...*/

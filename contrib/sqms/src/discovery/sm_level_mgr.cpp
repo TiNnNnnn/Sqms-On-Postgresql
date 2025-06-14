@@ -193,5 +193,6 @@ SMString SMPredEquivlence::GetSerialization(){
 
 const SMString& SMLevelManager::GetJsonSubPlan(){return json_sub_plan_;}
 const SMString& SMLevelManager::GetJsonFullSubPlan(){return json_full_sub_plan_;}
-const SMString& SMLevelManager::GetHspsPackage(){return hsps_package_;}
+const uint8_t* SMLevelManager::GetHspsPackage(){return hsps_package_;}
 const SMString& SMLevelManager::GetQueryStr(){return q_str_;}
+const size_t SMLevelManager::GetHspsPackSize(){return hsps_size_;}
