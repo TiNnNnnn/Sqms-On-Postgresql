@@ -291,17 +291,13 @@ HistorySlowPlanStat FormatPrintPlan(ExplainState *es, ExplainState *ces,QueryDes
 	 * plan.  We skip that node, and we must also hide per-worker detail data
 	 * further down in the plan tree.
 	 */
-
-
 	ps = queryDesc->planstate;
 	if (IsA(ps, GatherState) && ((Gather *) ps->plan)->invisible)
 	{
 		ps = outerPlanState(ps);
 		es->hide_workers = true;
 	}
-	
 	RecureState ret = ExplainNode(ps, NIL, NULL, NULL, es , ces);
-
 	return ret.hps_;
 	/*
 	 * If requested, include information about GUC parameters with values that

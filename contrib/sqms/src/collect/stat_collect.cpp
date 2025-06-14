@@ -4,6 +4,8 @@
 #include <sys/file.h>  // for flock
 #include <time.h>      // for time functions
 #include "utils/dsa.h"
+#include "utils/snapmgr.h"
+#include "commands/explain.h"
 
 extern "C" {
 	PG_MODULE_MAGIC;
@@ -14,6 +16,7 @@ extern "C" {
 	static ExecutorEnd_hook_type prev_ExecutorEnd = NULL;
 	static shmem_startup_hook_type prev_shmem_startup_hook = NULL;
 	static emit_log_hook_type prev_log_hook = NULL;
+	static ExplainOneQuery_hook_type prev_explain_one_query_hook = NULL;
 	
 	static char time_str[20];
 	#define MY_DSA_TRANCHE_ID  100
@@ -24,6 +27,13 @@ extern "C" {
 	void StmtExecutorEnd(QueryDesc *queryDesc);
 	void RegisterQueryIndex();
 	void ShuntLog(ErrorData *edata);
+	void ExplainOneQueryWithSlow(Query *query,
+							int cursorOptions,
+							IntoClause *into,
+							ExplainState *es,
+							const char *queryString,
+							ParamListInfo params,
+							QueryEnvironment *queryEnv);
 
     void		_PG_init(void);
     void		_PG_fini(void);
@@ -52,7 +62,10 @@ extern "C" {
         prev_ExecutorEnd = ExecutorEnd_hook;
         ExecutorEnd_hook = StmtExecutorEnd;
 
-		RequestAddinShmemSpace(20485760000);		
+		RequestAddinShmemSpace(20485760000);	
+		
+		prev_explain_one_query_hook = ExplainOneQuery_hook;
+		ExplainOneQuery_hook = ExplainOneQueryWithSlow;
 		
 		prev_shmem_startup_hook = shmem_startup_hook;
 		shmem_startup_hook = RegisterQueryIndex;
@@ -63,7 +76,7 @@ extern "C" {
         ExecutorRun_hook = prev_ExecutorRun;
         ExecutorFinish_hook = prev_ExecutorFinish;
         ExecutorEnd_hook = prev_ExecutorEnd;       
-
+		ExplainOneQuery_hook = prev_explain_one_query_hook;
 		shmem_startup_hook = prev_shmem_startup_hook;
     }
 };
@@ -173,6 +186,78 @@ void StatCollecter::StmtExecutorEndWrapper(QueryDesc *queryDesc)
 	}
 }
 
+void StatCollecter::ExplainOneQueryWithSlowWrapper(Query *query,
+							int cursorOptions,
+							IntoClause *into,
+							ExplainState *es,
+							const char *queryString,
+							ParamListInfo params,
+							QueryEnvironment *queryEnv){
+	if (prev_explain_one_query_hook)
+        prev_explain_one_query_hook(query, cursorOptions, into, es, queryString, params, queryEnv);
+    else{
+		PlannedStmt *plan;
+		instr_time	planstart,
+					planduration;
+		BufferUsage bufusage_start,
+					bufusage;
+
+		if (es->buffers)
+			bufusage_start = pgBufferUsage;
+		INSTR_TIME_SET_CURRENT(planstart);
+
+		/* plan the query */
+		plan = pg_plan_query(query, queryString, cursorOptions, params);
+
+		INSTR_TIME_SET_CURRENT(planduration);
+		INSTR_TIME_SUBTRACT(planduration, planstart);
+
+		/* calc differences of buffer counters. */
+		if (es->buffers)
+		{
+			memset(&bufusage, 0, sizeof(BufferUsage));
+			BufferUsageAccumDiff(&bufusage, &pgBufferUsage, &bufusage_start);
+		}
+
+		/* run it (if needed) and produce output */
+		int			instrument_option = 0;
+		DestReceiver *dest = None_Receiver;
+		int			eflags;
+
+		if (es->analyze && es->timing)
+			instrument_option |= INSTRUMENT_TIMER;
+		else if (es->analyze)
+			instrument_option |= INSTRUMENT_ROWS;
+
+		if (es->buffers)
+			instrument_option |= INSTRUMENT_BUFFERS;
+		if (es->wal)
+			instrument_option |= INSTRUMENT_WAL;
+
+		/* Select execution options */
+		if (es->analyze)
+			eflags = 0;				/* default run-to-completion flags */
+		else
+			eflags = EXEC_FLAG_EXPLAIN_ONLY;
+		es->format = ExplainFormat::EXPLAIN_FORMAT_TEXT;
+		QueryDesc  *queryDesc = CreateQueryDesc(plan, queryString,
+								InvalidSnapshot, InvalidSnapshot,
+								dest, params, queryEnv, instrument_option);
+		standard_ExecutorStart(queryDesc, eflags);
+		ExplainOpenGroup("Query", NULL, true, es);
+		/* Create textual dump of plan tree */
+		ExplainPrintPlan(es, queryDesc);
+		/* search history slow view index*/
+		
+		standard_ExecutorEnd(queryDesc);
+		FreeQueryDesc(queryDesc);
+		
+		ExplainCloseGroup("Query", NULL, true, es);
+	}
+}
+
+
+
 extern "C" void RegisterQueryIndex(){
 
 	std::cout<<"begin building history query index..."<<std::endl;
@@ -226,6 +311,13 @@ extern "C" void StmtExecutorFinish(QueryDesc *queryDesc) {
 
 extern "C" void StmtExecutorEnd(QueryDesc *queryDesc) {
     StatCollecter::StmtExecutorEndWrapper(queryDesc);
+}
+
+extern "C" void ExplainOneQueryWithSlow(Query *query,int cursorOptions,IntoClause *into,
+							ExplainState *es,const char *queryString,ParamListInfo params,
+							QueryEnvironment *queryEnv) {
+    StatCollecter::ExplainOneQueryWithSlowWrapper(query,cursorOptions,into,
+							es,queryString,params,queryEnv);
 }
 
 static const char* error_severity(int elevel)

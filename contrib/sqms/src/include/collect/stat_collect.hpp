@@ -49,6 +49,13 @@ public:
     static void StmtExecutorRunWrapper(QueryDesc *queryDesc,ScanDirection direction,uint64 count, bool execute_once);
     static void StmtExecutorFinishWrapper(QueryDesc *queryDesc);
     static void StmtExecutorEndWrapper(QueryDesc *queryDesc);
+    static void ExplainOneQueryWithSlowWrapper(Query *query,
+							int cursorOptions,
+							IntoClause *into,
+							ExplainState *es,
+							const char *queryString,
+							ParamListInfo params,
+							QueryEnvironment *queryEnv);
 
 private:
     static bool auto_explain_enabled(){
