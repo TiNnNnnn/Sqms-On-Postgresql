@@ -3084,8 +3084,10 @@ std::string LevelManager::GetPredClassStr(int height,std::string tag,int depth){
 	return str;
 }
 
-void LevelManager::ShowTotalPredClass(int depth){
-	logger_->Logger(log_tag_.c_str(),GetTotalPredClassStr(depth).c_str());
+std::string LevelManager::ShowTotalPredClass(int depth){
+	auto l_str = GetTotalPredClassStr(depth);
+	logger_->Logger(log_tag_.c_str(),l_str.c_str());
+	return l_str;
 }
 
 std::string LevelManager::GetTotalPredClassStr(int depth){

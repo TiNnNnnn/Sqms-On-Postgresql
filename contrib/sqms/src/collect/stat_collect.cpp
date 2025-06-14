@@ -211,14 +211,12 @@ void StatCollecter::ExplainOneQueryWithSlowWrapper(Query *query,
 
 		INSTR_TIME_SET_CURRENT(planduration);
 		INSTR_TIME_SUBTRACT(planduration, planstart);
-
 		/* calc differences of buffer counters. */
 		if (es->buffers)
 		{
 			memset(&bufusage, 0, sizeof(BufferUsage));
 			BufferUsageAccumDiff(&bufusage, &pgBufferUsage, &bufusage_start);
 		}
-
 		/* run it (if needed) and produce output */
 		int			instrument_option = 0;
 		DestReceiver *dest = None_Receiver;
@@ -228,27 +226,31 @@ void StatCollecter::ExplainOneQueryWithSlowWrapper(Query *query,
 			instrument_option |= INSTRUMENT_TIMER;
 		else if (es->analyze)
 			instrument_option |= INSTRUMENT_ROWS;
-
 		if (es->buffers)
 			instrument_option |= INSTRUMENT_BUFFERS;
 		if (es->wal)
 			instrument_option |= INSTRUMENT_WAL;
 
-		/* Select execution options */
+		/* Select execution options,SlowViews has not support explain with analyzing yet*/
 		if (es->analyze)
-			eflags = 0;				/* default run-to-completion flags */
+			eflags = 0;
 		else
 			eflags = EXEC_FLAG_EXPLAIN_ONLY;
+		
 		es->format = ExplainFormat::EXPLAIN_FORMAT_TEXT;
 		QueryDesc  *queryDesc = CreateQueryDesc(plan, queryString,
 								InvalidSnapshot, InvalidSnapshot,
 								dest, params, queryEnv, instrument_option);
-		standard_ExecutorStart(queryDesc, eflags);
+		
+								standard_ExecutorStart(queryDesc, eflags);
 		ExplainOpenGroup("Query", NULL, true, es);
 		/* Create textual dump of plan tree */
 		ExplainPrintPlan(es, queryDesc);
-		/* search history slow view index*/
 		
+		/* search history slow view index*/
+		PlanStatFormat& psf = PlanStatFormat::getInstance();
+		psf.ExplainQueryDesc(queryDesc,es);
+
 		standard_ExecutorEnd(queryDesc);
 		FreeQueryDesc(queryDesc);
 		

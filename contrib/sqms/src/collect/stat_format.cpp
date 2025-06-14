@@ -52,7 +52,6 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
         // if(!hsps){
         //     std::cerr<<"history_slow_plan_stat__unpack failed in thered: "<<ThreadPool::GetTid()<<std::endl;
         // }
-
         HistorySlowPlanStat *hsps = &hsps_;
         bool found = true;
         auto shared_index = (HistoryQueryLevelTree*)ShmemInitStruct(shared_index_name, sizeof(HistoryQueryLevelTree), &found);
@@ -77,14 +76,17 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
             std::vector<HistorySlowPlanStat*> list;
             context->executeStrategy(list);
             std::cout<<"[slow] finish execute strategy"<<std::endl;
-            
+
+            PlanFormatContext* pf_context_1 = new PlanFormatContext();
+            PlanFormatContext* pf_context_2 = new PlanFormatContext();
+
             /*2. put slow subplans into slow plan index*/
+
             for(const auto& p : list){
                 /*format strategy 1*/
                 SlowPlanStat *sps= new SlowPlanStat();
                 auto level_mgr = std::make_shared<LevelManager>(p,sps,logger_,"slow");
-
-                PlanFormatContext* pf_context_1 = new PlanFormatContext();
+                
                 pf_context_1->SetStrategy(level_mgr);
                 pf_context_1->executeStrategy();
                 level_mgr->ShowTotalPredClass();
@@ -96,7 +98,6 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
                 /*format strategt 2*/
                 std::shared_ptr<NodeManager>node_manager = nullptr;
                 if(node_match_enabled){
-                    PlanFormatContext* pf_context_2 = new PlanFormatContext();
                     node_manager = std::make_shared<NodeManager>(p,level_mgr,pid);
                     pf_context_2->SetStrategy(node_manager);
                     pf_context_2->executeStrategy();
@@ -120,7 +121,10 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
                         }
                     }
                 }
+                delete(sps);
             }
+            delete(pf_context_1);
+            delete(pf_context_2);
             /**
              * TODO: 11-23 storage the slow sub query
              */
@@ -141,6 +145,9 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
             size_t sub_idx = 0;
 
             bool cancel = false;
+            PlanFormatContext* pf_context_1 = new PlanFormatContext();
+            PlanFormatContext* pf_context_2 = new PlanFormatContext();
+
             if(plan_match_enabled){
                 std::cout<<"begin plan match..."<<std::endl;
                 for(const auto& p : sub_list){
@@ -161,17 +168,15 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
                     // }
                     logger_->Logger("comming",("**********sub_query ["+std::to_string(sub_idx)+"]***************").c_str());
                     SlowPlanStat *sps= new SlowPlanStat();
-                    PlanFormatContext* pf_context_1 = new PlanFormatContext();
                     auto level_mgr = std::make_shared<LevelManager>(p,sps,logger_,"comming");
                     pf_context_1->SetStrategy(level_mgr);
                     pf_context_1->executeStrategy();
                     level_mgr->ShowTotalPredClass();
-
                     if(debug){
                         auto node_collect_map = level_mgr->GetNodeCollector();
                         logger_->Logger("comming",ShowAllNodeCollect(p,node_collect_map,"comming").c_str());
                     }
-
+                    delete(sps);
                     if(shared_index->Search(level_mgr.get(),1)){
                         CancelQuery(pid);
                         logger_->Logger("comming","****************************");
@@ -190,18 +195,19 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
                 std::cout<<"begin node match..."<<std::endl;
                 auto top_p = sub_list[0];
                 SlowPlanStat *sps= new SlowPlanStat();
-                PlanFormatContext* pf_context_1 = new PlanFormatContext();
                 auto level_mgr = std::make_shared<LevelManager>(top_p,sps,logger_,"comming");
                 pf_context_1->SetStrategy(level_mgr);
                 pf_context_1->executeStrategy();
 
-                PlanFormatContext* pf_context_2 = new PlanFormatContext();
                 auto node_mgr = std::make_shared<NodeManager>(top_p,level_mgr,pid);
                 pf_context_2->SetStrategy(node_mgr);
                 pf_context_2->executeStrategy();
                 node_mgr->Search();
                 std::cout<<"finish node match..."<<std::endl;
+                delete(sps);
             }
+            delete(pf_context_1);
+            delete(pf_context_2);
             std::cout<<"finish process comming query..."<<std::endl;
             logger_->Logger("comming","finish process comming query...");
         }
@@ -253,12 +259,50 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
                 }
                 node_collector->check_scan_view_decrease_ = false;
             }
+            delete(sps);
+            delete(pf_context_1);
+            delete(pf_context_2);
         }
         std::cout<<"Thread: "<<ThreadPool::GetTid()<<" Finish Working..."<<std::endl;
         return true;
     //});
     //t.detach();
     //return true;
+}
+
+/**
+ * ProcQueryExplain: explain query with slow query detect information.
+ */
+bool PlanStatFormat::ExplainQueryDesc(QueryDesc *qd,ExplainState *es){
+    Preprocessing(qd);
+    if(!&hsps_){
+        std::cout<<"hsps is nullptr"<<std::endl;
+        return -1;
+    }
+    HistorySlowPlanStat *hsps = &hsps_;
+    bool found = true;
+    auto shared_index = (HistoryQueryLevelTree*)ShmemInitStruct(shared_index_name, sizeof(HistoryQueryLevelTree), &found);
+    if(!found || !shared_index){
+        std::cerr<<"shared_index not exist!"<<std::endl;
+        exit(-1);
+    }
+    logger_->Logger("comming","begin explain comming query...");
+    std::cout<<"begin explain comming query..."<<std::endl;
+
+    SlowPlanStat *sps= new SlowPlanStat();
+    PlanFormatContext* pf_context_1 = new PlanFormatContext();
+    auto level_mgr = std::make_shared<LevelManager>(hsps,sps,logger_,"comming");
+    pf_context_1->SetStrategy(level_mgr);
+    pf_context_1->executeStrategy();
+    
+    std::string append_str = "\n" + level_mgr->ShowTotalPredClass(); 
+    appendStringInfoString(es->str, append_str.c_str());
+
+    std::cout<<"finish explain comming query..."<<std::endl;
+    logger_->Logger("comming","finish explain comming query...");
+    delete(sps);
+    delete(pf_context_1);
+    return true;
 }
 
 /**

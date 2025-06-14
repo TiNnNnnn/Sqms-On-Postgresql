@@ -720,7 +720,7 @@ public:
     void ShowPredClass(int height,std::string tag,int depth = 0);
     std::string GetPredClassStr(int height,std::string tag,int depth = 0);
 
-    void ShowTotalPredClass(int depth = 0);
+    std::string ShowTotalPredClass(int depth = 0);
     std::string GetTotalPredClassStr(int depth = 0);
 
     /*for index*/
