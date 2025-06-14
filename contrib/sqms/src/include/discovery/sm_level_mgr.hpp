@@ -295,6 +295,8 @@ public:
     const SMVector<SMString>& GetJoinTypeList(){return join_type_list_;}
     const SMString& GetJsonSubPlan();
     const SMString& GetJsonFullSubPlan();
+    const SMString& GetHspsPackage();
+    const SMString& GetQueryStr();
     void Copy(LevelManager* level_mgr){
         for(const auto& pe : level_mgr->GetTotalEquivlences()){
             SMLevelPredEquivlencesList* sm_lpes_list = (SMLevelPredEquivlencesList*)ShmemAlloc(sizeof(SMLevelPredEquivlencesList));
@@ -343,6 +345,8 @@ public:
         for(const auto& join_type : level_mgr->GetJoinTypeList()){
             join_type_list_.push_back(SMString(join_type));
         }
+        hsps_package_ = SMString(level_mgr->GetHspsPackage());
+        q_str_ = SMString(level_mgr->GetSourceQuery());
     }
 private:
     /* total equivlences for predicates */
@@ -361,4 +365,6 @@ private:
     SMString json_sub_plan_;
     SMString json_full_sub_plan_;
     SMVector<SMString> join_type_list_;
+    SMString hsps_package_;
+    SMString q_str_;
 };

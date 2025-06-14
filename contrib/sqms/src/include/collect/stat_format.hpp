@@ -41,6 +41,8 @@ public:
     bool ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt,bool slow = false);
     bool ExplainQueryDesc(QueryDesc *qd,ExplainState *es);
     bool CollectScan(QueryDesc* qd);
+    static std::string PackHistoryPlanState(HistorySlowPlanStat* hsps);
+    static HistorySlowPlanStat* UnPackHistoryPlanState(const std::string& s);
 private:
     std::string HashCanonicalPlan(char *json_plan);
     void LevelOrder(HistorySlowPlanStat* hsps,std::vector<HistorySlowPlanStat*>& sub_list);

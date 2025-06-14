@@ -710,7 +710,9 @@ class LevelManager : public AbstractFormatStrategy{
 public:
     LevelManager(HistorySlowPlanStat* hsps, SlowPlanStat*sps, SqmsLogger* logger,std::string log_tag = "slow")
         :hsps_(hsps),sps_(sps),logger_(logger),log_tag_(log_tag)
-    {}
+    {
+        hsps_package_ =  PlanStatFormat::PackHistoryPlanState(hsps);
+    }
 
     virtual bool Format();
     virtual bool PrintPredEquivlences();
@@ -740,6 +742,12 @@ public:
     std::string GetPlanFullJson() const;
     std::string GetPlanCannonicalJson() const;
 
+    void SetHspsPackage(const char* buffer){hsps_package_ = std::string(buffer);}
+    std::string GetHspsPackage() const;
+
+    void SetSourceQuery(const char* query){q_str_ = std::string(query);}
+    std::string GetSourceQuery(){return q_str_;}
+
 private:
     void ComputeLevelClass(const std::vector<HistorySlowPlanStat*>& list);
     void HandleEquivleces(HistorySlowPlanStat* hsps);
@@ -751,7 +759,6 @@ private:
     void OutputDecompase(HistorySlowPlanStat* hsps);
     void GroupKeyDecompase(HistorySlowPlanStat* hsps);
     void SortKeyDecompase(HistorySlowPlanStat* hsps);
-
     void GetSubQueries();
 
 private:
@@ -772,7 +779,10 @@ private:
     int total_height_ = 0;
     /* from bottom to the top,begin height is 0 ... */ 
     int cur_height_ = 0; 
-
+    /* hsps after packing */
+    std::string hsps_package_;
+    /* origin query */
+    std::string q_str_;
     /*match strategy,no used yet...*/
     MatchStrategy ms_;
 

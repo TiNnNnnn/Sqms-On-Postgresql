@@ -81,12 +81,12 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
             PlanFormatContext* pf_context_2 = new PlanFormatContext();
 
             /*2. put slow subplans into slow plan index*/
-
             for(const auto& p : list){
                 /*format strategy 1*/
                 SlowPlanStat *sps= new SlowPlanStat();
-                auto level_mgr = std::make_shared<LevelManager>(p,sps,logger_,"slow");
                 
+                auto level_mgr = std::make_shared<LevelManager>(p,sps,logger_,"slow");
+                level_mgr->SetSourceQuery(qd->sourceText);
                 pf_context_1->SetStrategy(level_mgr);
                 pf_context_1->executeStrategy();
                 level_mgr->ShowTotalPredClass();
@@ -294,8 +294,20 @@ bool PlanStatFormat::ExplainQueryDesc(QueryDesc *qd,ExplainState *es){
     auto level_mgr = std::make_shared<LevelManager>(hsps,sps,logger_,"comming");
     pf_context_1->SetStrategy(level_mgr);
     pf_context_1->executeStrategy();
-    
-    std::string append_str = "\n" + level_mgr->ShowTotalPredClass(); 
+
+    bool cancel = false;
+    std::string append_str;
+    if(plan_match_enabled){
+        if(shared_index->Search(level_mgr.get(),1)){
+            std::string slow_query = level_mgr->GetSourceQuery();
+            append_str += slow_query;
+        }
+    }
+
+    if(!cancel && node_match_enabled){
+
+    }
+
     appendStringInfoString(es->str, append_str.c_str());
 
     std::cout<<"finish explain comming query..."<<std::endl;
@@ -560,4 +572,23 @@ void PlanStatFormat::ShowPredTree(PredExpression* p_expr, int depth) {
         PrintIndent(depth);
         std::cerr << "Unknown expression type." << std::endl;
     }
+}
+
+std::string PlanStatFormat::PackHistoryPlanState(HistorySlowPlanStat* hsps){
+    size_t msg_size = history_slow_plan_stat__get_packed_size(hsps);
+    uint8_t *buffer = (uint8_t*)malloc(msg_size);
+    if (buffer == NULL) {
+        perror("Failed to allocate memory");
+        exit(-1);
+    }
+    history_slow_plan_stat__pack(hsps,buffer);
+    return std::string(reinterpret_cast<const char*>(buffer), msg_size);
+} 
+
+HistorySlowPlanStat* PlanStatFormat::UnPackHistoryPlanState(const std::string& s){
+    auto hsps = history_slow_plan_stat__unpack(NULL, s.size(), reinterpret_cast<const uint8_t*>(s.data()));
+    if(!hsps){
+        std::cerr<<"history_slow_plan_stat__unpack failed in thered: "<<ThreadPool::GetTid()<<std::endl;
+    }
+    return hsps;
 }

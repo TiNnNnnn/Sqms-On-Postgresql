@@ -101,7 +101,7 @@ bool LevelHashStrategy::Search(NodeCollector* node_collector){
         auto child = acc->second;
         return child->Serach(node_collector);
     }else{
-        elog(INFO, "search failed in hash steategy");
+        //elog(INFO, "search failed in hash steategy");
         return false;
     }
     return false;
@@ -968,7 +968,6 @@ bool LeafStrategy::Insert(LevelManager* level_mgr){
     /*new sm level manager need shmemalloc*/
     new (new_level_mgr) SMLevelManager();
     new_level_mgr->Copy(level_mgr);
-
     level_mgr_ = new_level_mgr;
     return true;
 }
@@ -980,6 +979,7 @@ bool LeafStrategy::Serach(LevelManager* level_mgr,int id){
     int lpe_id = id;
     {
         std::shared_lock<std::shared_mutex>lock(rw_mutex_);
+
         while(h >= 1){
             auto child_lpes_list = total_lpes_list[h]->GetChildLpesMap()[lpe_id];
             if(child_lpes_list.empty()){
@@ -1006,6 +1006,8 @@ bool LeafStrategy::Serach(LevelManager* level_mgr,int id){
                 return false;
             }
         }
+        level_mgr->SetSourceQuery(level_mgr_->GetQueryStr().c_str());
+        level_mgr->SetHspsPackage(level_mgr_->GetHspsPackage().c_str());
         return true;
     }
 }

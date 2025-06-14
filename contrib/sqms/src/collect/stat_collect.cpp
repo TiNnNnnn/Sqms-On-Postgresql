@@ -89,7 +89,6 @@ StatCollecter::StatCollecter(){
 }
 
 void StatCollecter::StmtExecutorStartWrapper(QueryDesc *queryDesc, int eflags){
-
 	/*sqi just process cmd_select*/
     if(auto_explain_enabled()){
 		/* Enable per-node instrumentation iff log_analyze is required. */
@@ -201,7 +200,6 @@ void StatCollecter::ExplainOneQueryWithSlowWrapper(Query *query,
 					planduration;
 		BufferUsage bufusage_start,
 					bufusage;
-
 		if (es->buffers)
 			bufusage_start = pgBufferUsage;
 		INSTR_TIME_SET_CURRENT(planstart);
@@ -236,7 +234,7 @@ void StatCollecter::ExplainOneQueryWithSlowWrapper(Query *query,
 			eflags = 0;
 		else
 			eflags = EXEC_FLAG_EXPLAIN_ONLY;
-		
+			
 		es->format = ExplainFormat::EXPLAIN_FORMAT_TEXT;
 		QueryDesc  *queryDesc = CreateQueryDesc(plan, queryString,
 								InvalidSnapshot, InvalidSnapshot,
@@ -257,8 +255,6 @@ void StatCollecter::ExplainOneQueryWithSlowWrapper(Query *query,
 		ExplainCloseGroup("Query", NULL, true, es);
 	}
 }
-
-
 
 extern "C" void RegisterQueryIndex(){
 
@@ -288,7 +284,6 @@ extern "C" void RegisterQueryIndex(){
 	/**
 	 * TODO: here we should load history slow queries in redis into shared_index
 	 */
-
 	std::cout<<"begin building sqms logger..."<<std::endl;
 	found = false;
 	auto logger = (SqmsLogger*)ShmemInitStruct("SqmsLogger", sizeof(SqmsLogger), &found);
@@ -297,7 +292,6 @@ extern "C" void RegisterQueryIndex(){
 	}
 	std::cout<<"finsh building sqms logger..."<<std::endl;
 }
-
 
 extern "C" void StmtExecutorStart(QueryDesc *queryDesc, int eflags) {
     StatCollecter::StmtExecutorStartWrapper(queryDesc, eflags);

@@ -254,11 +254,12 @@ private:
     int output_ = 0;
     SMVector<int>inputs_;
     double time_;
+    /*hitorys,for node strategy*/
     SMVector<SMLevelManager*>historys_;
     SMMap<std::pair<int,int>,std::pair<int,double>,PairCompare> history_map_;
     /**
      * statistics for current node
-     * TODO: 2025-06-04 put node with high search_cnt_,match_cnt- into the top of the list
+     * TODO: put node with high search_cnt_,match_cnt- into the top of the list
      */
     std::atomic<int> insert_cnt_ = 0;
     std::atomic<int> search_cnt_ = 0;

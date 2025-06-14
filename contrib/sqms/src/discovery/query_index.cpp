@@ -20,7 +20,6 @@ bool HistoryQueryLevelTree::Remove(LevelManager* level_mgr,int l){
 
 bool HistoryQueryLevelTree::Search(LevelManager* level_mgr,int l){
     return  root_->Search(level_mgr,-1);
-
 }
 
 bool HistoryQueryLevelTree::Insert(NodeCollector* node_collector){

@@ -241,7 +241,6 @@ ExplainPrintSettings(ExplainState *es)
 	{
 		char	   *setting;
 		struct config_generic *conf = gucs[i];
-
 		if (i > 0)
 			appendStringInfoString(&str, ", ");
 
