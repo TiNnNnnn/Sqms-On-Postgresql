@@ -1093,10 +1093,9 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		FormatPropertyFloat("Plan Rows", NULL, plan->plan_rows,
 								 0, es);
 		FormatPropertyInteger("Plan Width", NULL, plan->plan_width,
-								   es);
-		hsp.estimate_plan_width = plan->plan_width;
+								   es);	
 	}
-
+    hsp.estimate_plan_width = plan->plan_width;
 	/*
 	 * We have to forcibly clean up the instrumentation state because we
 	 * haven't done ExecutorEnd yet.  This is pretty grotty ...

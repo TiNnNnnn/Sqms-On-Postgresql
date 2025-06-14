@@ -115,6 +115,9 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
                 if(node_match_enabled){
                     assert(node_manager);
                     for(const auto& node_collector : node_manager->GetNodeCollectorList()){
+
+
+
                         if(!shared_index->Insert(node_collector)){
                             logger_->Logger("slow","shared_index insert error in strategy 2");
                             exit(-1);
@@ -308,12 +311,12 @@ bool PlanStatFormat::ExplainQueryDesc(QueryDesc *qd,ExplainState *es){
 
             if(shared_index->Search(level_mgr.get(),1)){
                 std::string slow_query = level_mgr->GetSourceQuery();
-                append_str += "[Match History Slow Query]:" + slow_query + "\n";
+                append_str += "[Plan View Match]:" + slow_query + "\n";
                 /*unpack history planstate from slow view index*/
                 auto uhsps = PlanStatFormat::UnPackHistoryPlanState(level_mgr->GetHspsPackage(),level_mgr->GetHspsPackSize());
                 uhsps->sub_id = sub_idx;
                 appendStringInfoString(es->str, append_str.c_str());
-                PrintSlowPlan(es,qd,uhsps);
+                PrintSlowPlan(es,qd,uhsps,nullptr);
                 cancel = true;
                 break;
             }
@@ -321,14 +324,27 @@ bool PlanStatFormat::ExplainQueryDesc(QueryDesc *qd,ExplainState *es){
             ++sub_idx;
         }
     }
-
     if(!cancel && node_match_enabled){
+        auto top_p = sub_list[0];
+        SlowPlanStat *sps= new SlowPlanStat();
+        auto level_mgr = std::make_shared<LevelManager>(top_p,sps,logger_,"comming");
+        pf_context_1->SetStrategy(level_mgr);
+        pf_context_1->executeStrategy();
 
+        auto node_mgr = std::make_shared<NodeManager>(top_p,level_mgr,-1);
+        pf_context_2->SetStrategy(node_mgr);
+        pf_context_2->executeStrategy();
+        if(node_mgr->Search()){
+            cancel = true;
+            append_str += "[Node View Stitch]\n";
+            appendStringInfoString(es->str, append_str.c_str());
+            auto enode = node_mgr->ComputeExplainNodes(node_mgr->GetNodeRoot());
+            PrintSlowPlan(es,qd,nullptr,enode);
+        }
     }
-
-    if(!cancel)
+    if(!cancel){
         ExplainPrintPlan(es, qd);
-    
+    }
     std::cout<<"finish explain comming query..."<<std::endl;
     logger_->Logger("comming","finish explain comming query...");
 

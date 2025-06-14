@@ -665,23 +665,33 @@ public:
     LevelAggAndSortList* node_aggs_ = nullptr;
     /* total equivlences for sort keys */
     LevelAggAndSortList* node_sorts_ = nullptr;
+
     /* total sets for tables */
     LevelTblList* node_tbls_ = nullptr;
     const char * json_sub_plan = nullptr;
     std::vector<std::string> join_type_list;
+
     /*childs and parent of current node*/
     std::vector<NodeCollector*>childs_;
     NodeCollector* parent_ = nullptr;
+
     /**node execute info: inputs,output,time*/
     std::vector<int> inputs;
     int output = 0;
     double time = 0;
+    const uint8_t* hsps_pack = 0;
+    size_t hsps_pack_size = 0;
+
     /*type name of node*/
     std::string type_name;
+
     /**match cnt count for single matching process*/
     int match_cnt = 0;
     std::vector<int>output_list_;
     std::vector<int>time_list_;
+    std::vector<const uint8_t*> hsps_pack_list_;
+    std::vector<int>hsps_pack_size_list_;
+
     /*if set effictive for match node in shared_index*/
     bool set_effective_ = false;
     /**
@@ -700,6 +710,12 @@ public:
     /*unused variables*/
     size_t child_idx = -1;
     int pe_idx = -1;
+
+    /*for explaining*/
+    int node_id = -1;
+    int candidate_id = -1;
+    int pre_candidate_id = -1;
+    HistorySlowPlanStat* match_hsps_ = nullptr;
 };
 
 /**

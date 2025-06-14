@@ -4,7 +4,6 @@
 #include "catalog/pg_type.h"
 #include "commands/createas.h"
 #include "commands/defrem.h"
-//#include "commands/prepare.h"
 #include "executor/nodeHash.h"
 #include "foreign/fdwapi.h"
 #include "jit/jit.h"
@@ -43,7 +42,7 @@ static double elapsed_time(instr_time *starttime);
 static bool ExplainPreScanNode(PlanState *planstate, Bitmapset **rels_used);
 static void ExplainNodeWithSlow(PlanState *planstate, List *ancestors,
 						const char *relationship, const char *plan_name,
-						ExplainState *es,HistorySlowPlanStat* hsps,int* cur_sub_id);
+						ExplainState *es,HistorySlowPlanStat* hsps,int* cur_sub_id,NodeExplain* node_explain);
 static void show_plan_tlist(PlanState *planstate, List *ancestors,
 							ExplainState *es);
 static void show_expression(Node *node, const char *qlabel,
@@ -51,13 +50,16 @@ static void show_expression(Node *node, const char *qlabel,
 							bool useprefix, ExplainState *es);
 static void show_qual(List *qual, const char *qlabel,
 					  PlanState *planstate, List *ancestors,
-					  bool useprefix, ExplainState *es,HistorySlowPlanStat* hsps,int* cur_sub_id);
+					  bool useprefix, ExplainState *es,HistorySlowPlanStat* hsps,
+					  int* cur_sub_id,NodeExplain* node_explain);
 static void show_scan_qual(List *qual, const char *qlabel,
 						   PlanState *planstate, List *ancestors,
-						   ExplainState *es, HistorySlowPlanStat* hsps,int* cur_sub_id);
+						   ExplainState *es, HistorySlowPlanStat* hsps,
+						   int* cur_sub_id,NodeExplain* node_explain);
 static void show_upper_qual(List *qual, const char *qlabel,
 							PlanState *planstate, List *ancestors,
-							ExplainState *es,HistorySlowPlanStat* hsps,int* cur_sub_id);
+							ExplainState *es,HistorySlowPlanStat* hsps,
+							int* cur_sub_id,NodeExplain* node_explain);
 static void show_sort_keys(SortState *sortstate, List *ancestors,
 						   ExplainState *es);
 static void show_incremental_sort_keys(IncrementalSortState *incrsortstate,
@@ -105,12 +107,15 @@ static void ExplainTargetRel(Plan *plan, Index rti, ExplainState *es);
 static void show_modifytable_info(ModifyTableState *mtstate, List *ancestors,
 								  ExplainState *es);
 static void ExplainMemberNodes(PlanState **planstates, int nplans,
-							   List *ancestors, ExplainState *es, HistorySlowPlanStat* hsps,int* cur_sub_id);
+							   List *ancestors, ExplainState *es, HistorySlowPlanStat* hsps,
+							   int* cur_sub_id,NodeExplain* node_explain);
 static void ExplainMissingMembers(int nplans, int nchildren, ExplainState *es);
 static void ExplainSubPlans(List *plans, List *ancestors,
-							const char *relationship, ExplainState *es,HistorySlowPlanStat* hsps,int* cur_sub_id);
+							const char *relationship, ExplainState *es,
+							HistorySlowPlanStat* hsps,int* cur_sub_id,NodeExplain* node_explain);
 static void ExplainCustomChildren(CustomScanState *css,
-								  List *ancestors, ExplainState *es,HistorySlowPlanStat* hsps,int* cur_sub_id);
+								  List *ancestors, ExplainState *es,
+								  HistorySlowPlanStat* hsps,int* cur_sub_id,NodeExplain* node_explain);
 static ExplainWorkersState *ExplainCreateWorkersState(int num_workers);
 static void ExplainOpenWorker(int n, ExplainState *es);
 static void ExplainCloseWorker(int n, ExplainState *es);
@@ -129,7 +134,8 @@ static void ExplainJSONLineEnding(ExplainState *es);
 static void ExplainYAMLLineStarting(ExplainState *es);
 static void escape_yaml(StringInfo buf, const char *str);
 
-extern void PrintSlowPlan(ExplainState *es, QueryDesc *queryDesc, HistorySlowPlanStat* hsps){
+extern void PrintSlowPlan(ExplainState *es, QueryDesc *queryDesc, 
+					HistorySlowPlanStat* hsps, NodeExplain* node_explain){
 	Bitmapset  *rels_used = NULL; 
 	PlanState  *ps;
 
@@ -150,7 +156,7 @@ extern void PrintSlowPlan(ExplainState *es, QueryDesc *queryDesc, HistorySlowPla
 		es->hide_workers = true;
 	}
 	int cur_sub_idx = 0;
-	ExplainNodeWithSlow(ps, NIL, NULL, NULL, es, hsps,&cur_sub_idx);
+	ExplainNodeWithSlow(ps, NIL, NULL, NULL, es, hsps,&cur_sub_idx,node_explain);
 	/*
 	 * If requested, include information about GUC parameters with values that
 	 * don't match the built-in defaults.
@@ -517,7 +523,7 @@ ExplainPreScanNode(PlanState *planstate, Bitmapset **rels_used)
 static void
 ExplainNodeWithSlow(PlanState *planstate, List *ancestors,
 			const char *relationship, const char *plan_name,
-			ExplainState *es,HistorySlowPlanStat* hsps, int* cur_sub_id)
+			ExplainState *es,HistorySlowPlanStat* hsps, int* cur_sub_id,NodeExplain* node_explain)
 {
 	Plan	   *plan = planstate->plan;
 	const char *pname;			/* node type name for text output */
@@ -947,9 +953,16 @@ ExplainNodeWithSlow(PlanState *planstate, List *ancestors,
 							 plan->startup_cost, plan->total_cost,
 							 plan->plan_rows, plan->plan_width);
 			/*add history view's actual costs*/
-			if(hsps && *cur_sub_id >= hsps->sub_id)
+			if(hsps && *cur_sub_id >= hsps->sub_id){
 				appendStringInfo(es->str," | (history cost=%.2f..%.2f rows=%.0f width=%d)",
-					hsps->actual_start_up,hsps->actual_total,hsps->actual_rows,hsps->estimate_plan_width);
+									hsps->actual_start_up,hsps->actual_total,
+									hsps->actual_rows,plan->plan_width);
+			}else if(node_explain && node_explain->hsps_){
+				appendStringInfo(es->str," | (history cost=%.4f rows=%.0f width=%d)",
+									node_explain->hsps_->node_cost,
+									node_explain->hsps_->actual_rows,
+									plan->plan_width);
+			}
 		}
 		else
 		{
@@ -1108,26 +1121,26 @@ ExplainNodeWithSlow(PlanState *planstate, List *ancestors,
 	{
 		case T_IndexScan:
 			show_scan_qual(((IndexScan *) plan)->indexqualorig,
-						   "Index Cond", planstate, ancestors, es,hsps,cur_sub_id);
+						   "Index Cond", planstate, ancestors, es,hsps,cur_sub_id,node_explain);
 			if (((IndexScan *) plan)->indexqualorig)
 				show_instrumentation_count("Rows Removed by Index Recheck", 2,
 										   planstate, es);
 			show_scan_qual(((IndexScan *) plan)->indexorderbyorig,
-						   "Order By", planstate, ancestors, es,hsps,cur_sub_id);
-			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,hsps,cur_sub_id);
+						   "Order By", planstate, ancestors, es,hsps,cur_sub_id,node_explain);
+			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,hsps,cur_sub_id,node_explain);
 			if (plan->qual)
 				show_instrumentation_count("Rows Removed by Filter", 1,
 										   planstate, es);
 			break;
 		case T_IndexOnlyScan:
 			show_scan_qual(((IndexOnlyScan *) plan)->indexqual,
-						   "Index Cond", planstate, ancestors, es,hsps,cur_sub_id);
+						   "Index Cond", planstate, ancestors, es,hsps,cur_sub_id,node_explain);
 			if (((IndexOnlyScan *) plan)->recheckqual)
 				show_instrumentation_count("Rows Removed by Index Recheck", 2,
 										   planstate, es);
 			show_scan_qual(((IndexOnlyScan *) plan)->indexorderby,
-						   "Order By", planstate, ancestors, es,hsps,cur_sub_id);
-			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,hsps,cur_sub_id);
+						   "Order By", planstate, ancestors, es,hsps,cur_sub_id,node_explain);
+			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,hsps,cur_sub_id,node_explain);
 			if (plan->qual)
 				show_instrumentation_count("Rows Removed by Filter", 1,
 										   planstate, es);
@@ -1137,15 +1150,15 @@ ExplainNodeWithSlow(PlanState *planstate, List *ancestors,
 			break;
 		case T_BitmapIndexScan:
 			show_scan_qual(((BitmapIndexScan *) plan)->indexqualorig,
-						   "Index Cond", planstate, ancestors, es,hsps,cur_sub_id);
+						   "Index Cond", planstate, ancestors, es,hsps,cur_sub_id,node_explain);
 			break;
 		case T_BitmapHeapScan:
 			show_scan_qual(((BitmapHeapScan *) plan)->bitmapqualorig,
-						   "Recheck Cond", planstate, ancestors, es,hsps,cur_sub_id);
+						   "Recheck Cond", planstate, ancestors, es,hsps,cur_sub_id,node_explain);
 			if (((BitmapHeapScan *) plan)->bitmapqualorig)
 				show_instrumentation_count("Rows Removed by Index Recheck", 2,
 										   planstate, es);
-			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,hsps,cur_sub_id);
+			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,hsps,cur_sub_id,node_explain);
 			if (plan->qual)
 				show_instrumentation_count("Rows Removed by Filter", 1,
 										   planstate, es);
@@ -1163,7 +1176,7 @@ ExplainNodeWithSlow(PlanState *planstate, List *ancestors,
 		case T_NamedTuplestoreScan:
 		case T_WorkTableScan:
 		case T_SubqueryScan:
-			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,hsps,cur_sub_id);
+			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,hsps,cur_sub_id,node_explain);
 			if (plan->qual)
 				show_instrumentation_count("Rows Removed by Filter", 1,
 										   planstate, es);
@@ -1172,7 +1185,7 @@ ExplainNodeWithSlow(PlanState *planstate, List *ancestors,
 			{
 				Gather	   *gather = (Gather *) plan;
 
-				show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,hsps,cur_sub_id);
+				show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,hsps,cur_sub_id,node_explain);
 				if (plan->qual)
 					show_instrumentation_count("Rows Removed by Filter", 1,
 											   planstate, es);
@@ -1200,7 +1213,7 @@ ExplainNodeWithSlow(PlanState *planstate, List *ancestors,
 			{
 				GatherMerge *gm = (GatherMerge *) plan;
 
-				show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,hsps,cur_sub_id);
+				show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,hsps,cur_sub_id,node_explain);
 				if (plan->qual)
 					show_instrumentation_count("Rows Removed by Filter", 1,
 											   planstate, es);
@@ -1238,7 +1251,7 @@ ExplainNodeWithSlow(PlanState *planstate, List *ancestors,
 								"Function Call", planstate, ancestors,
 								es->verbose, es);
 			}
-			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,hsps,cur_sub_id);
+			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,hsps,cur_sub_id,node_explain);
 			if (plan->qual)
 				show_instrumentation_count("Rows Removed by Filter", 1,
 										   planstate, es);
@@ -1252,7 +1265,7 @@ ExplainNodeWithSlow(PlanState *planstate, List *ancestors,
 								"Table Function Call", planstate, ancestors,
 								es->verbose, es);
 			}
-			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,hsps,cur_sub_id);
+			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,hsps,cur_sub_id,node_explain);
 			if (plan->qual)
 				show_instrumentation_count("Rows Removed by Filter", 1,
 										   planstate, es);
@@ -1267,15 +1280,15 @@ ExplainNodeWithSlow(PlanState *planstate, List *ancestors,
 
 				if (list_length(tidquals) > 1)
 					tidquals = list_make1(make_orclause(tidquals));
-				show_scan_qual(tidquals, "TID Cond", planstate, ancestors, es,hsps,cur_sub_id);
-				show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,hsps,cur_sub_id);
+				show_scan_qual(tidquals, "TID Cond", planstate, ancestors, es,hsps,cur_sub_id,node_explain);
+				show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,hsps,cur_sub_id,node_explain);
 				if (plan->qual)
 					show_instrumentation_count("Rows Removed by Filter", 1,
 											   planstate, es);
 			}
 			break;
 		case T_ForeignScan:
-			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,hsps,cur_sub_id);
+			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,hsps,cur_sub_id,node_explain);
 			if (plan->qual)
 				show_instrumentation_count("Rows Removed by Filter", 1,
 										   planstate, es);
@@ -1285,7 +1298,7 @@ ExplainNodeWithSlow(PlanState *planstate, List *ancestors,
 			{
 				CustomScanState *css = (CustomScanState *) planstate;
 
-				show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,hsps,cur_sub_id);
+				show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,hsps,cur_sub_id,node_explain);
 				if (plan->qual)
 					show_instrumentation_count("Rows Removed by Filter", 1,
 											   planstate, es);
@@ -1295,44 +1308,44 @@ ExplainNodeWithSlow(PlanState *planstate, List *ancestors,
 			break;
 		case T_NestLoop:
 			show_upper_qual(((NestLoop *) plan)->join.joinqual,
-							"Join Filter", planstate, ancestors, es,hsps,cur_sub_id);
+							"Join Filter", planstate, ancestors, es,hsps,cur_sub_id,node_explain);
 			if (((NestLoop *) plan)->join.joinqual)
 				show_instrumentation_count("Rows Removed by Join Filter", 1,
 										   planstate, es);
-			show_upper_qual(plan->qual, "Filter", planstate, ancestors, es,hsps,cur_sub_id);
+			show_upper_qual(plan->qual, "Filter", planstate, ancestors, es,hsps,cur_sub_id,node_explain);
 			if (plan->qual)
 				show_instrumentation_count("Rows Removed by Filter", 2,
 										   planstate, es);
 			break;
 		case T_MergeJoin:
 			show_upper_qual(((MergeJoin *) plan)->mergeclauses,
-							"Merge Cond", planstate, ancestors, es,hsps,cur_sub_id);
+							"Merge Cond", planstate, ancestors, es,hsps,cur_sub_id,node_explain);
 			show_upper_qual(((MergeJoin *) plan)->join.joinqual,
-							"Join Filter", planstate, ancestors, es,hsps,cur_sub_id);
+							"Join Filter", planstate, ancestors, es,hsps,cur_sub_id,node_explain);
 			if (((MergeJoin *) plan)->join.joinqual)
 				show_instrumentation_count("Rows Removed by Join Filter", 1,
 										   planstate, es);
-			show_upper_qual(plan->qual, "Filter", planstate, ancestors, es,hsps,cur_sub_id);
+			show_upper_qual(plan->qual, "Filter", planstate, ancestors, es,hsps,cur_sub_id,node_explain);
 			if (plan->qual)
 				show_instrumentation_count("Rows Removed by Filter", 2,
 										   planstate, es);
 			break;
 		case T_HashJoin:
 			show_upper_qual(((HashJoin *) plan)->hashclauses,
-							"Hash Cond", planstate, ancestors, es,hsps,cur_sub_id);
+							"Hash Cond", planstate, ancestors, es,hsps,cur_sub_id,node_explain);
 			show_upper_qual(((HashJoin *) plan)->join.joinqual,
-							"Join Filter", planstate, ancestors, es,hsps,cur_sub_id);
+							"Join Filter", planstate, ancestors, es,hsps,cur_sub_id,node_explain);
 			if (((HashJoin *) plan)->join.joinqual)
 				show_instrumentation_count("Rows Removed by Join Filter", 1,
 										   planstate, es);
-			show_upper_qual(plan->qual, "Filter", planstate, ancestors, es,hsps,cur_sub_id);
+			show_upper_qual(plan->qual, "Filter", planstate, ancestors, es,hsps,cur_sub_id,node_explain);
 			if (plan->qual)
 				show_instrumentation_count("Rows Removed by Filter", 2,
 										   planstate, es);
 			break;
 		case T_Agg:
 			show_agg_keys(castNode(AggState, planstate), ancestors, es);
-			show_upper_qual(plan->qual, "Filter", planstate, ancestors, es,hsps,cur_sub_id);
+			show_upper_qual(plan->qual, "Filter", planstate, ancestors, es,hsps,cur_sub_id,node_explain);
 			show_hashagg_info((AggState *) planstate, es);
 			if (plan->qual)
 				show_instrumentation_count("Rows Removed by Filter", 1,
@@ -1340,7 +1353,7 @@ ExplainNodeWithSlow(PlanState *planstate, List *ancestors,
 			break;
 		case T_Group:
 			show_group_keys(castNode(GroupState, planstate), ancestors, es);
-			show_upper_qual(plan->qual, "Filter", planstate, ancestors, es,hsps,cur_sub_id);
+			show_upper_qual(plan->qual, "Filter", planstate, ancestors, es,hsps,cur_sub_id,node_explain);
 			if (plan->qual)
 				show_instrumentation_count("Rows Removed by Filter", 1,
 										   planstate, es);
@@ -1361,8 +1374,8 @@ ExplainNodeWithSlow(PlanState *planstate, List *ancestors,
 			break;
 		case T_Result:
 			show_upper_qual((List *) ((Result *) plan)->resconstantqual,
-							"One-Time Filter", planstate, ancestors, es,hsps,cur_sub_id);
-			show_upper_qual(plan->qual, "Filter", planstate, ancestors, es,hsps,cur_sub_id);
+							"One-Time Filter", planstate, ancestors, es,hsps,cur_sub_id,node_explain);
+			show_upper_qual(plan->qual, "Filter", planstate, ancestors, es,hsps,cur_sub_id,node_explain);
 
 			if (plan->qual)
 				show_instrumentation_count("Rows Removed by Filter", 1,
@@ -1480,9 +1493,14 @@ ExplainNodeWithSlow(PlanState *planstate, List *ancestors,
 	if (planstate->initPlan){
 		if(hsps){
 			assert(hsps->subplans);
-			ExplainSubPlans(planstate->initPlan, ancestors, "InitPlan", es,*(hsps->subplans),cur_sub_id);
+			ExplainSubPlans(planstate->initPlan, ancestors, "InitPlan", 
+				es,*(hsps->subplans),cur_sub_id,node_explain);
+		}else if(node_explain && node_explain->hsps_ && node_explain->hsps_->subplans){
+			ExplainSubPlans(planstate->initPlan, ancestors, "InitPlan", 
+				es,node_explain->hsps_->subplans,cur_sub_id,NULL);
 		}else{
-			ExplainSubPlans(planstate->initPlan, ancestors, "InitPlan", es, NULL,cur_sub_id);
+			ExplainSubPlans(planstate->initPlan, ancestors, "InitPlan",
+				 es, NULL,cur_sub_id,NULL);
 		}
 	}
 		
@@ -1493,11 +1511,15 @@ ExplainNodeWithSlow(PlanState *planstate, List *ancestors,
 			assert(hsps->childs && hsps->childs[0]);
 			++(*cur_sub_id);
 			ExplainNodeWithSlow(outerPlanState(planstate), ancestors,
-					"Outer", NULL, es,hsps->childs[0],cur_sub_id);
+					"Outer", NULL, es,hsps->childs[0],cur_sub_id,node_explain);
+		}else if(node_explain){
+			assert(node_explain->childs_ && node_explain->childs_[0]);
+			ExplainNodeWithSlow(outerPlanState(planstate), ancestors,
+					"Outer", NULL, es,NULL,cur_sub_id,node_explain->childs_[0]);
 		}else{
 			++(*cur_sub_id);
 			ExplainNodeWithSlow(outerPlanState(planstate), ancestors,
-								"Outer", NULL, es,NULL,cur_sub_id);
+								"Outer", NULL, es,NULL,cur_sub_id,NULL);
 		}
 		
 	}
@@ -1508,11 +1530,15 @@ ExplainNodeWithSlow(PlanState *planstate, List *ancestors,
 			assert(hsps->childs && hsps->childs[1]);
 			++(*cur_sub_id);
 			ExplainNodeWithSlow(innerPlanState(planstate), ancestors,
-					"Inner", NULL, es,hsps->childs[1],cur_sub_id);
+					"Inner", NULL, es,hsps->childs[1],cur_sub_id,node_explain);
+		}else if(node_explain){
+			assert(node_explain->childs_ && node_explain->childs_[1]);
+			ExplainNodeWithSlow(innerPlanState(planstate), ancestors,
+					"Inner", NULL, es,NULL,cur_sub_id,node_explain->childs_[1]);
 		}else{
 			++(*cur_sub_id);
 			ExplainNodeWithSlow(innerPlanState(planstate), ancestors,
-					"Inner", NULL, es,NULL,cur_sub_id);
+					"Inner", NULL, es,NULL,cur_sub_id,NULL);
 		}
 	}
 
@@ -1522,35 +1548,35 @@ ExplainNodeWithSlow(PlanState *planstate, List *ancestors,
 		case T_ModifyTable:
 			ExplainMemberNodes(((ModifyTableState *) planstate)->mt_plans,
 							   ((ModifyTableState *) planstate)->mt_nplans,
-							   ancestors, es,hsps,cur_sub_id);
+							   ancestors, es,hsps,cur_sub_id,node_explain);
 			break;
 		case T_Append:
 			ExplainMemberNodes(((AppendState *) planstate)->appendplans,
 							   ((AppendState *) planstate)->as_nplans,
-							   ancestors, es,hsps,cur_sub_id);
+							   ancestors, es,hsps,cur_sub_id,node_explain);
 			break;
 		case T_MergeAppend:
 			ExplainMemberNodes(((MergeAppendState *) planstate)->mergeplans,
 							   ((MergeAppendState *) planstate)->ms_nplans,
-							   ancestors, es,hsps,cur_sub_id);
+							   ancestors, es,hsps,cur_sub_id,node_explain);
 			break;
 		case T_BitmapAnd:
 			ExplainMemberNodes(((BitmapAndState *) planstate)->bitmapplans,
 							   ((BitmapAndState *) planstate)->nplans,
-							   ancestors, es,hsps,cur_sub_id);
+							   ancestors, es,hsps,cur_sub_id,node_explain);
 			break;
 		case T_BitmapOr:
 			ExplainMemberNodes(((BitmapOrState *) planstate)->bitmapplans,
 							   ((BitmapOrState *) planstate)->nplans,
-							   ancestors, es,hsps,cur_sub_id);
+							   ancestors, es,hsps,cur_sub_id,node_explain);
 			break;
 		case T_SubqueryScan:
 			ExplainNodeWithSlow(((SubqueryScanState *) planstate)->subplan, ancestors,
-						"Subquery", NULL, es,hsps,cur_sub_id);
+						"Subquery", NULL, es,hsps,cur_sub_id,node_explain);
 			break;
 		case T_CustomScan:
 			ExplainCustomChildren((CustomScanState *) planstate,
-								  ancestors, es,hsps,cur_sub_id);
+								  ancestors, es,hsps,cur_sub_id,node_explain);
 			break;
 		default:
 			break;
@@ -1560,9 +1586,14 @@ ExplainNodeWithSlow(PlanState *planstate, List *ancestors,
 	if (planstate->subPlan){
 		if(hsps){
 			assert(hsps->subplans);
-			ExplainSubPlans(planstate->subPlan, ancestors, "SubPlan", es,*(hsps->subplans),cur_sub_id);
+			ExplainSubPlans(planstate->subPlan, ancestors, "SubPlan", 
+				es,*(hsps->subplans),cur_sub_id,node_explain);
+		}else if(node_explain && node_explain->hsps_ && node_explain->hsps_->subplans){
+			ExplainSubPlans(planstate->subPlan, ancestors, "SubPlan", 
+				es,node_explain->hsps_->subplans,cur_sub_id,NULL);
 		}else{
-			ExplainSubPlans(planstate->subPlan, ancestors, "SubPlan", es,NULL,cur_sub_id);
+			ExplainSubPlans(planstate->subPlan, ancestors, "SubPlan",
+				 es,NULL,cur_sub_id,NULL);
 		}
 		
 	}
@@ -1670,7 +1701,7 @@ show_expression(Node *node, const char *qlabel,
 static void
 show_qual(List *qual, const char *qlabel,
 		  PlanState *planstate, List *ancestors,
-		  bool useprefix, ExplainState *es,HistorySlowPlanStat* hsps,int* cur_sub_id)
+		  bool useprefix, ExplainState *es,HistorySlowPlanStat* hsps,int* cur_sub_id,NodeExplain* node_explain)
 {
 	Node	   *node;
 
@@ -1683,8 +1714,21 @@ show_qual(List *qual, const char *qlabel,
 
 	/* And show it */
 	show_expression(node, qlabel, planstate, ancestors, useprefix, es);
-	if(hsps && hsps->exprstr && *cur_sub_id >= hsps->sub_id)
-		appendStringInfo(es->str," | History %s: ( %s )", qlabel,hsps->exprstr);
+	if(hsps && hsps->exprstr && *cur_sub_id >= hsps->sub_id){
+		int len = es->str->len;
+		if (len > 0 && es->str->data[len - 1] == '\n') {
+			es->str->data[len - 1] = '\0';
+			es->str->len -= 1;
+		}
+		appendStringInfo(es->str," | History %s: %s", qlabel,hsps->exprstr);
+	}else if(node_explain && node_explain->hsps_){
+		int len = es->str->len;
+		if (len > 0 && es->str->data[len - 1] == '\n') {
+			es->str->data[len - 1] = '\0';
+			es->str->len -= 1;
+		}
+		appendStringInfo(es->str," | History %s: %s", qlabel,node_explain->hsps_->exprstr);
+	}
 }
 
 /*
@@ -1693,14 +1737,12 @@ show_qual(List *qual, const char *qlabel,
 static void
 show_scan_qual(List *qual, const char *qlabel,
 			   PlanState *planstate, List *ancestors,
-			   ExplainState *es, HistorySlowPlanStat* hsps,int *cur_sub_id)
+			   ExplainState *es, HistorySlowPlanStat* hsps,int *cur_sub_id,NodeExplain* node_explain)
 {
 	bool		useprefix;
 
 	useprefix = (IsA(planstate->plan, SubqueryScan) || es->verbose);
-	show_qual(qual, qlabel, planstate, ancestors, useprefix, es,hsps,cur_sub_id);
-	// if(hsps)
-	// 	appendStringInfo(es->str," | History %s: ( %s )", qlabel,hsps->exprstr);
+	show_qual(qual, qlabel, planstate, ancestors, useprefix, es,hsps,cur_sub_id,node_explain);
 }
 
 /*
@@ -1709,12 +1751,12 @@ show_scan_qual(List *qual, const char *qlabel,
 static void
 show_upper_qual(List *qual, const char *qlabel,
 				PlanState *planstate, List *ancestors,
-				ExplainState *es,HistorySlowPlanStat* hsps,int *cur_sub_id)
+				ExplainState *es,HistorySlowPlanStat* hsps,int *cur_sub_id,NodeExplain* node_explain)
 {
 	bool		useprefix;
 
 	useprefix = (list_length(es->rtable) > 1 || es->verbose);
-	show_qual(qual, qlabel, planstate, ancestors, useprefix, es,hsps,cur_sub_id);
+	show_qual(qual, qlabel, planstate, ancestors, useprefix, es,hsps,cur_sub_id,node_explain);
 }
 
 /*
@@ -3262,13 +3304,14 @@ ExplainTargetRel(Plan *plan, Index rti, ExplainState *es)
  */
 static void
 ExplainMemberNodes(PlanState **planstates, int nplans,
-				   List *ancestors, ExplainState *es,HistorySlowPlanStat* hsps,int *cur_sub_id)
+				   List *ancestors, ExplainState *es,
+				   HistorySlowPlanStat* hsps,int *cur_sub_id,NodeExplain* node_explain)
 {
 	int			j;
 
 	for (j = 0; j < nplans; j++)
 		ExplainNodeWithSlow(planstates[j], ancestors,
-					"Member", NULL, es, hsps,cur_sub_id);
+					"Member", NULL, es, hsps,cur_sub_id,node_explain);
 }
 
 /*
@@ -3294,7 +3337,8 @@ ExplainMissingMembers(int nplans, int nchildren, ExplainState *es)
  */
 static void
 ExplainSubPlans(List *plans, List *ancestors,
-				const char *relationship, ExplainState *es,HistorySlowPlanStat* hsps,int *cur_sub_id)
+				const char *relationship, ExplainState *es,
+				HistorySlowPlanStat* hsps,int *cur_sub_id,NodeExplain* node_explain)
 {
 	ListCell   *lst;
 
@@ -3324,9 +3368,8 @@ ExplainSubPlans(List *plans, List *ancestors,
 		 * parameters.
 		 */
 		ancestors = lcons(sp, ancestors);
-
 		ExplainNodeWithSlow(sps->planstate, ancestors,
-					relationship, sp->plan_name, es, hsps,cur_sub_id);
+					relationship, sp->plan_name, es, hsps,cur_sub_id,node_explain);
 
 		ancestors = list_delete_first(ancestors);
 	}
@@ -3336,14 +3379,15 @@ ExplainSubPlans(List *plans, List *ancestors,
  * Explain a list of children of a CustomScan.
  */
 static void
-ExplainCustomChildren(CustomScanState *css, List *ancestors, ExplainState *es,HistorySlowPlanStat* hsps,int *cur_sub_id)
+ExplainCustomChildren(CustomScanState *css, List *ancestors, ExplainState *es,
+	HistorySlowPlanStat* hsps,int *cur_sub_id,NodeExplain* node_explain)
 {
 	ListCell   *cell;
 	const char *label =
 	(list_length(css->custom_ps) != 1 ? "children" : "child");
 
 	foreach(cell, css->custom_ps)
-		ExplainNodeWithSlow((PlanState *) lfirst(cell), ancestors, label, NULL, es,hsps,cur_sub_id);
+		ExplainNodeWithSlow((PlanState *) lfirst(cell), ancestors, label, NULL, es,hsps,cur_sub_id,node_explain);
 }
 
 /*

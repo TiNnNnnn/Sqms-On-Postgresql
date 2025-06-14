@@ -4,6 +4,7 @@
 #include <condition_variable>
 #include <chrono>
 #include <algorithm>
+#include "collect/explain_slow.h"
 
 NodeManager::NodeManager(HistorySlowPlanStat* hsps,std::shared_ptr<LevelManager> level_mgr,pid_t pid)
 : hsps_(hsps),level_mgr_(level_mgr),pool_(std::make_shared<ThreadPool>(10,true)),pid_(pid){
@@ -14,6 +15,8 @@ NodeManager::NodeManager(HistorySlowPlanStat* hsps,std::shared_ptr<LevelManager>
     found = false;
     shared_index_ = (HistoryQueryLevelTree*)ShmemInitStruct(shared_index_name, sizeof(HistoryQueryLevelTree), &found);
     assert(shared_index_ && found);
+
+    root_ = level_mgr_->GetNodeCollector()[hsps];
 }
 
 bool NodeManager::Format(){
@@ -26,28 +29,19 @@ bool NodeManager::PrintPredEquivlences(){
 }
 
 bool NodeManager::SearchInternal(NodeCollector *node,double total_time,int finish_node_num,LevelOrderIterator* iter){
-    assert(node);
-
-   std::string type_str;
-   std::string input_str;
-   for(const auto& ctype: node->childs_){
-        type_str += ctype->type_name + ",";
-        input_str += std::to_string(ctype->output) + ",";
-   }
-   //logger_->Logger("comming",("node type: "+node->type_name + ", child_types: "+type_str).c_str());
-   //logger_->Logger("comming",("node type: "+node->type_name + ", child ouputs: "+ input_str).c_str());
-
+   assert(node);
    if(shared_index_->Search(node) || node->match_cnt){
-        //logger_->Logger("comming","match success for node");
         for(size_t i = 0; i < node->output_list_.size();++i){    
             total_time += node->time_list_[i];
             finish_node_num++;
+            node->pre_candidate_id = node->candidate_id;
+            node->candidate_id = i;
             if(node->parent_){
                 node->parent_->inputs[node->child_idx] = node->output_list_[i];
             }
-            
             if(total_time >= query_min_duration && finish_node_num >= node_num_/2){
-                CancelQuery(pid_);
+                if(pid_ != -1)
+                    CancelQuery(pid_);
                 return true;
             }else{
                 if(!iter->hasNext()){
@@ -55,18 +49,19 @@ bool NodeManager::SearchInternal(NodeCollector *node,double total_time,int finis
                 }
                 auto cur = iter->next();
                 int ret = SearchInternal(cur, total_time, finish_node_num,iter);
-                iter->prev();
-                total_time -= node->time_list_[i];
-                finish_node_num--;
                 if(ret){
                     return true;
+                }else{
+                    iter->prev();
+                    total_time -= node->time_list_[i];
+                    finish_node_num--;
+                    node->candidate_id = node->pre_candidate_id;
                 }
             }
         }
         return false;
     }else{ 
         std::cout<<"[comming]match failed for node"<<std::endl;
-        //logger_->Logger("comming","match failed for node");
         return false;
     }    
    return false;
@@ -77,6 +72,7 @@ bool NodeManager::Search(){
     PlanInit(hsps_);
     double total_time(0);
     int finish_node_num = 0;
+    int cur_idx = 0;
     LevelOrderIterator iter(level_collector_);
     return SearchInternal(iter.next(), total_time, finish_node_num,&iter);
 }
@@ -283,12 +279,12 @@ bool NodeManager::Search(){
 void NodeManager::ComputeTotalNodes(HistorySlowPlanStat* hsps){
     assert(hsps);
     auto node_collector = level_mgr_->GetNodeCollector()[hsps];
-
     node_collector->json_sub_plan = hsps->canonical_node_json_plan;
     node_collector->time = hsps->actual_total;
     node_collector->output = hsps->actual_rows;
     node_collector->inputs.resize(0);
     node_collector->type_name = std::string(hsps->node_type);
+    node_collector->hsps_pack = PlanStatFormat::PackHistoryPlanState(hsps,node_collector->hsps_pack_size);
 
     if(NodeTag(hsps->node_tag) == T_NestLoop 
 		|| NodeTag(hsps->node_tag) == T_MergeJoin 
@@ -297,6 +293,7 @@ void NodeManager::ComputeTotalNodes(HistorySlowPlanStat* hsps){
 		node_collector->join_type_list.push_back(hsps->join_type);
 	}
 
+    node_id_list_.push_back(node_collector_list_.size());
     node_collector_list_.push_back(node_collector);
     for(size_t i = 0; i< hsps->n_childs; ++i){
         auto child_hsps = hsps->childs[i];
@@ -307,6 +304,37 @@ void NodeManager::ComputeTotalNodes(HistorySlowPlanStat* hsps){
         node_collector->childs_.push_back(child_node_collector);
         ComputeTotalNodes(child_hsps);
     }
+}
+
+NodeExplain* NodeManager::ComputeExplainNodes(NodeCollector* node_collector){
+    assert(node_collector);
+    int cid = node_collector->candidate_id;
+    if(cid != -1){
+        auto pack = node_collector->hsps_pack_list_[cid];
+        auto pack_size = node_collector->hsps_pack_size_list_[cid];
+        auto sub_hsps = PlanStatFormat::UnPackHistoryPlanState(pack,pack_size);
+        if(!sub_hsps){
+            std::cout<<"ComputeExplainNodes: PlanStatFormat::UnPackHistoryPlanState error"<<std::endl;
+            exit(-1);
+        }
+        node_collector->match_hsps_ = sub_hsps;
+    }else{
+        node_collector->match_hsps_ = nullptr;
+    }
+    /**
+     * NodeCollector is a cpp style class, we should convert it
+     * into NodeExplain, a c styple struct.
+     */
+    NodeExplain* enode = (NodeExplain*)malloc(sizeof(NodeExplain));
+    enode->hsps_ = node_collector->match_hsps_;
+    
+    int child_count = node_collector->childs_.size();
+    enode->childs_ = (NodeExplain**)malloc(sizeof(NodeExplain*) * child_count);
+    for (size_t i = 0; i < child_count; ++i) {
+        NodeCollector* child = node_collector->childs_[i];
+        enode->childs_[i] = ComputeExplainNodes(child);
+    }
+    return enode;
 }
 
 /**
@@ -357,9 +385,11 @@ void NodeManager::PlanInit(HistorySlowPlanStat* hsps){
     std::vector<NodeCollector *>tmp_levels;
 
     levels.push_back(node_collector);
+    int idx = 0;
     while(levels.size()){
         size_t sz = levels.size();
         for(size_t i=0;i<sz;i++){
+            levels[i]->node_id = idx++;
             for(const auto& child : levels[i]->childs_){
                 tmp_levels.push_back(child);
             }

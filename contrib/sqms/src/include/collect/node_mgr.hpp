@@ -51,22 +51,30 @@ public:
     
     bool Search();
     std::vector<NodeCollector*>& GetNodeCollectorList(){return node_collector_list_;}
+    NodeExplain* ComputeExplainNodes(NodeCollector* node_collector);
+    NodeCollector* GetNodeRoot(){return root_;}
 private:
     void ComputeTotalNodes(HistorySlowPlanStat* hsps);
     void PlanPartition(HistorySlowPlanStat* hsps);
     void PlanInit(HistorySlowPlanStat* hsps);
     bool CancelQuery(pid_t pid);
     bool SearchInternal(NodeCollector *node,double total_time,int finish_node_num,LevelOrderIterator* iter);
+    
 private:
     int branch_num_;
     HistorySlowPlanStat* hsps_ = nullptr;
+    NodeCollector* root_;
     std::shared_ptr<LevelManager> level_mgr_ = nullptr;
 
     std::vector<NodeCollector*> node_collector_list_;
+    std::vector<int>node_id_list_;
     std::vector<std::vector<NodeCollector *>> level_collector_;
+    std::vector<std::vector<int>> level_collector_ids_;
     std::vector<std::vector<NodeCollector*>>partition_list;
     std::unordered_map<NodeCollector*,int>dependencies_;
     std::shared_ptr<ThreadPool> pool_;
+    /*for expalin,first is sub id ,second is candidate id */
+    std::vector<std::pair<int,int>> match_list_;
     size_t pool_size_ = 10;
 
     SqmsLogger* logger_;

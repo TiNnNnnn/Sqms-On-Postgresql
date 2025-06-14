@@ -7,6 +7,13 @@
 #include "common/config.h"
 #include "utils/ruleutils.h"
 
-extern void PrintSlowPlan(ExplainState *es, QueryDesc *queryDesc, HistorySlowPlanStat* hsps);
+
+typedef struct NodeExplain{
+    HistorySlowPlanStat* hsps_;
+    struct NodeExplain** childs_;
+}NodeExplain;
+
+
+extern void PrintSlowPlan(ExplainState *es, QueryDesc *queryDesc, HistorySlowPlanStat* hsps,NodeExplain* node_explain);
 
 

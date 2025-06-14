@@ -1055,7 +1055,12 @@ bool LeafStrategy::Insert(NodeCollector* node_collector){
         elog(ERROR, "LeafStrategy::Insert: input size is not 0,1 or 2");
         return false;
     }
-    history_map_[input_pair] = {node_collector->output,node_collector->time};
+    
+    NodeInfo* new_node_info = (NodeInfo*)ShmemAlloc(sizeof(NodeInfo));
+    assert(new_node_info);
+    new (new_node_info) NodeInfo(node_collector->output,
+        node_collector->time,node_collector->hsps_pack_size,node_collector->hsps_pack);
+    history_map_[input_pair] = new_node_info;
 
     inputs_.resize(0);
     for(const auto& in : node_collector->inputs){
@@ -1104,9 +1109,11 @@ bool LeafStrategy::Search(NodeCollector* node_collector){
          * however, i can't proof this is a good idea,it just seems
          * like not bad while running.
          **/
-        if(node_collector->output < his.second.first){
-            node_collector->output = his.second.first;
-            node_collector->time = his.second.second;
+        if(node_collector->output < his.second->output_){
+            node_collector->output = his.second->output_;
+            node_collector->time = his.second->time_;
+            node_collector->hsps_pack = his.second->pack_ptr_;
+            node_collector->hsps_pack_size = his.second->pack_size_;
         }
     }
 
@@ -1130,7 +1137,7 @@ bool LeafStrategy::Search(NodeCollector* node_collector){
          * it means this history scan is not effective
          */
         for(const auto& his : history_map_){
-           if(node_collector->scan_output <= his.second.first*0.9
+           if(node_collector->scan_output <= his.second->output_ * 0.9
             /*&& node_collector->scan_time < his.second.second*/
             ){
                 node_collector->scan_view_decrease_ = true;
@@ -1146,6 +1153,8 @@ bool LeafStrategy::Search(NodeCollector* node_collector){
     if(node_collector->match_cnt < node_search_topk){
         node_collector->output_list_.push_back(node_collector->output);
         node_collector->time_list_.push_back(node_collector->time);
+        node_collector->hsps_pack_list_.push_back(node_collector->hsps_pack);
+        node_collector->hsps_pack_size_list_.push_back(node_collector->hsps_pack_size);
         return false;
     }
     return true;

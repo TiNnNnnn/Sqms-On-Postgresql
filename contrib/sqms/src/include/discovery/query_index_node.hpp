@@ -246,6 +246,17 @@ private:
     
     bool Match(LevelPredEquivlences* dst_lpes, SMLevelPredEquivlences* lpes);
     bool SuperSet(SMPredEquivlence* dst_pe,PredEquivlence* pe);
+
+private:
+    class NodeInfo{
+    public:
+        NodeInfo(int out,double t,double sz,const uint8_t* ptr)
+            :output_(out),time_(t),pack_size_(sz),pack_ptr_(ptr){}
+        int output_;
+        double time_;
+        int pack_size_;
+        const uint8_t* pack_ptr_;
+    };
 private:
     std::shared_mutex rw_mutex_;
     /*for plan level matching*/
@@ -256,7 +267,7 @@ private:
     double time_;
     /*hitorys,for node strategy*/
     SMVector<SMLevelManager*>historys_;
-    SMMap<std::pair<int,int>,std::pair<int,double>,PairCompare> history_map_;
+    SMMap<std::pair<int,int>,NodeInfo*,PairCompare> history_map_;
     /**
      * statistics for current node
      * TODO: put node with high search_cnt_,match_cnt- into the top of the list
