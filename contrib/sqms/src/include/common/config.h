@@ -6,16 +6,6 @@
 /* GUC variables */
 extern int	query_min_duration;
 extern double late_tolerance;
-//static bool stat_verbose = false;
-//extern bool stat_buffers;
-//extern bool stat_wal ;
-//static bool stat_triggers = false;
-//static bool stat_timing = true;
-//static bool statsettings = false;
-//static int	stat_format = EXPLAIN_FORMAT_JSON;
-//extern bool stat_nested_statements;
-//extern double stat_sample_rate;
-//extern constexpr size_t bit_map_size;
 
 #define bit_map_size 100
 #define LOWER_LIMIT "SQMS_LOW_LIMIT"
@@ -36,13 +26,24 @@ extern bool excavate_enabled;
 extern bool plan_match_enabled;
 /*if enable to use node phyiscla view stitch metod to match slow plans*/
 extern bool node_match_enabled;
+/*gc params*/
 extern bool collect_scans_enabled;
-
+/*baseline strategy params, only for test*/
+extern bool plan_equal_enabled;
+/**
+ * if enable to prune constants from equal predicates
+ * For System Secutrity,we don't open this prams to users;
+ **/
+extern bool prune_constants_enabled;
+/*unused param,max msg size for plan storaging*/
 extern const int max_msg_size;
+/*share mem size*/
 extern const size_t shared_mem_size;
+/*top k node search for node strategy*/
 extern const int node_search_topk;
 
 extern const char* queue_name;
 extern const char* shared_index_name;
 extern const char* scan_index_name;
+extern const char* plan_hash_table_name;
 

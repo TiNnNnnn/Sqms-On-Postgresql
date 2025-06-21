@@ -1583,8 +1583,10 @@ PredEquivlence::PredEquivlence(Quals* qual,bool is_not){
 			set_.insert(get_pure_var(qual->right));
 		}break;
 		case PType::JOIN_RANGE:{
-			/*we should process join range specially,may be we should seprate join_range from common
-			predicate, and put it into redusidual predicates*/
+			/**
+			 * FIXME: we should process join range specially,may be we should seprate join_range from common
+			 * predicate, and put it into redusidual predicates
+			*/
 			set_.insert(get_pure_var(qual->left));
 			auto op = qual->op;
 			range->SetPredVarType(var_type);
@@ -1613,11 +1615,27 @@ PredEquivlence::PredEquivlence(Quals* qual,bool is_not){
 			join_range_ = true;
 		}break;
 		case PType::EQUAL:{
+			/**
+			 * TODO: Prune constants from equality predicates: 
+			 * Prunes constants from table scan partitions, select expressions and
+			 * specific constants from filters. Here we prune constants in
+			 * equality predicates, for example WHERE id = 128 is canonicalized to 
+			 * WHERE id = 'X'. This strategy is less conservative
+			 * than the above ones as it assumes a uniform distribution
+			 * for all id values, and may produce incorrect stats if that
+			 * is not the case and historical stats got recorded for values
+			 * with different distribution from the current ones.
+ 			 * */
 			set_.insert(get_pure_var(qual->left));
 			range->SetPredType(PType::RANGE);
 			range->SetPredVarType(var_type);
-			range->SetLowerLimit(get_pure_var(qual->right));
-			range->SetUpperLimit(get_pure_var(qual->right));
+			if(prune_constants_enabled){
+				range->SetLowerLimit("$");
+				range->SetUpperLimit("$");	
+			}else{
+				range->SetLowerLimit(get_pure_var(qual->right));
+				range->SetUpperLimit(get_pure_var(qual->right));
+			}
 			range->SetBoundaryConstraint(std::make_pair(true,true));
 			ranges_.insert(range);
 		}break;
@@ -1627,16 +1645,21 @@ PredEquivlence::PredEquivlence(Quals* qual,bool is_not){
 			if(!strcmp(op,"!=") or !strcmp(op,"<>")){
 				range->SetPredType(PType::NOT_EQUAL);
 				range->SetPredVarType(var_type);
-				range->SetLowerLimit(get_pure_var(qual->right));
-				range->SetUpperLimit(get_pure_var(qual->right));
+				if(prune_constants_enabled){
+					range->SetLowerLimit("$");
+					range->SetUpperLimit("$");
+				}else{
+					range->SetLowerLimit(get_pure_var(qual->right));
+					range->SetUpperLimit(get_pure_var(qual->right));
+				}
 			}else if(!strcmp(op,"!~~")){
+				/**
+				 * TODO: not implement: regular expression check
+				*/
 				range->SetPredType(PType::NOT_EQUAL);
 				range->SetPredVarType(var_type);
 				range->SetLowerLimit(get_pure_var(qual->right));
 				range->SetUpperLimit(get_pure_var(qual->right));
-				/**
-				 * TODO: not implement: regular expression check
-				*/
 			}
 			ranges_.insert(range);
 		}break;

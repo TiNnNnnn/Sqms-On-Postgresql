@@ -60,7 +60,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
             exit(-1);
         }
         if(slow && msec >= query_min_duration){
-            if(!plan_match_enabled && !node_match_enabled){
+            if(!plan_match_enabled && !node_match_enabled && !plan_equal_enabled){
                 elog(ERROR, "plan_match_enabled and node_match_enabled are both false, so we will not process slow query");
                 assert(!plan_match_enabled && !node_match_enabled);
             }
@@ -82,9 +82,19 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
 
             /*2. put slow subplans into slow plan index*/
             for(const auto& p : list){
+                if(plan_equal_enabled){
+                    assert(!node_match_enabled && !plan_match_enabled);
+                    bool found = true;
+                    auto plan_map = (LevelHashStrategy*)ShmemInitStruct(plan_hash_table_name, sizeof(LevelHashStrategy), &found);
+                    if(!found || !plan_map){
+                        std::cerr<<"plan map not exist!"<<std::endl;
+                        exit(-1);
+                    }
+                    std::cout<<"slow json_plan: \n"<<p->json_plan<<std::endl;
+                    plan_map->Insert(p->json_plan);
+                }
                 /*format strategy 1*/
                 SlowPlanStat *sps= new SlowPlanStat();
-                
                 auto level_mgr = std::make_shared<LevelManager>(p,sps,logger_,"slow");
                 level_mgr->SetSourceQuery(qd->sourceText);
                 pf_context_1->SetStrategy(level_mgr);
@@ -115,9 +125,6 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
                 if(node_match_enabled){
                     assert(node_manager);
                     for(const auto& node_collector : node_manager->GetNodeCollectorList()){
-
-
-
                         if(!shared_index->Insert(node_collector)){
                             logger_->Logger("slow","shared_index insert error in strategy 2");
                             exit(-1);
@@ -151,7 +158,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
             PlanFormatContext* pf_context_1 = new PlanFormatContext();
             PlanFormatContext* pf_context_2 = new PlanFormatContext();
 
-            if(plan_match_enabled){
+            if(plan_match_enabled || plan_equal_enabled){
                 std::cout<<"begin plan match..."<<std::endl;
                 for(const auto& p : sub_list){
                 /**
@@ -170,6 +177,21 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
                     //     std::cerr<<"history_slow_plan_stat__unpack failed in thered: "<<ThreadPool::GetTid()<<std::endl;
                     // }
                     logger_->Logger("comming",("**********sub_query ["+std::to_string(sub_idx)+"]***************").c_str());
+
+                    if(plan_equal_enabled){
+                        assert(!node_match_enabled && !plan_match_enabled );
+                        bool found = true;
+                        auto plan_map = (LevelHashStrategy*)ShmemInitStruct(plan_hash_table_name, sizeof(LevelHashStrategy), &found);
+                        if(!found || !plan_map){
+                            std::cerr<<"plan map not exist!"<<std::endl;
+                            exit(-1);
+                        }
+                        std::cout<<"comming json_plan: \n"<<p->json_plan<<std::endl;
+                        if(plan_map->Search(p->json_plan)){
+                            CancelQuery(pid);
+                        }
+                    }
+
                     SlowPlanStat *sps= new SlowPlanStat();
                     auto level_mgr = std::make_shared<LevelManager>(p,sps,logger_,"comming");
                     pf_context_1->SetStrategy(level_mgr);

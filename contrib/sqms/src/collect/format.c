@@ -1086,14 +1086,14 @@ ExplainNode(PlanState *planstate, List *ancestors,
 
 	if (es->costs)
 	{
-		FormatPropertyFloat("Startup Cost", NULL, plan->startup_cost,
-								 2, es);
-		FormatPropertyFloat("Total Cost", NULL, plan->total_cost,
-								 2, es);
-		FormatPropertyFloat("Plan Rows", NULL, plan->plan_rows,
-								 0, es);
-		FormatPropertyInteger("Plan Width", NULL, plan->plan_width,
-								   es);	
+		// FormatPropertyFloat("Startup Cost", NULL, plan->startup_cost,
+		// 						 2, es);
+		// FormatPropertyFloat("Total Cost", NULL, plan->total_cost,
+		// 						 2, es);
+		// FormatPropertyFloat("Plan Rows", NULL, plan->plan_rows,
+		// 						 0, es);
+		// FormatPropertyInteger("Plan Width", NULL, plan->plan_width,
+		// 						   es);	
 	}
     hsp.estimate_plan_width = plan->plan_width;
 	/*
@@ -1119,17 +1119,17 @@ ExplainNode(PlanState *planstate, List *ancestors,
 
 		if (es->timing)
 		{
-			FormatPropertyFloat("Actual Startup Time", "s", startup_ms,
-									 3, es);
+			//FormatPropertyFloat("Actual Startup Time", "s", startup_ms,
+			//						 3, es);
 			hsp.actual_start_up = startup_ms;
-			FormatPropertyFloat("Actual Total Time", "s", total_ms,
-									 3, es);
+			//FormatPropertyFloat("Actual Total Time", "s", total_ms,
+			//						 3, es);
             cumulate_cost += total_ms;
 			subquery_cost += total_ms;
 		}
-		FormatPropertyFloat("Actual Rows", NULL, rows, 0, es);
+		//FormatPropertyFloat("Actual Rows", NULL, rows, 0, es);
 		hsp.actual_rows = rows;
-		FormatPropertyFloat("Actual Loops", NULL, nloops, 0, es);
+		//FormatPropertyFloat("Actual Loops", NULL, nloops, 0, es);
 		hsp.actual_nloops = nloops;
 	}
 
@@ -1155,17 +1155,17 @@ ExplainNode(PlanState *planstate, List *ancestors,
 			ExplainOpenWorker(n, es);
 			if (es->timing)
 			{
-				FormatPropertyFloat("Actual Startup Time", "ms",
-										 startup_ms, 3, es);
-				FormatPropertyFloat("Actual Total Time", "ms",
-										 total_ms, 3, es);
+				// FormatPropertyFloat("Actual Startup Time", "ms",
+				// 						 startup_ms, 3, es);
+				// FormatPropertyFloat("Actual Total Time", "ms",
+				// 						 total_ms, 3, es);
 				hsp.actual_start_up = startup_ms;
 			}
             cumulate_cost = Max(total_ms,cumulate_cost);
 			subquery_cost = Max(total_ms,subquery_cost);
-			FormatPropertyFloat("Actual Rows", NULL, rows, 0, es);
+			//FormatPropertyFloat("Actual Rows", NULL, rows, 0, es);
 			hsp.actual_rows = rows;
-			FormatPropertyFloat("Actual Loops", NULL, nloops, 0, es);
+			//FormatPropertyFloat("Actual Loops", NULL, nloops, 0, es);
 			hsp.actual_nloops = nloops;
 			ExplainCloseWorker(n, es);
 		}
@@ -1200,36 +1200,31 @@ ExplainNode(PlanState *planstate, List *ancestors,
 			hsp.cur_expr_tag = PRED_TYPE_TAG__INDEX_COND;
 			show_scan_qual(((IndexScan *) plan)->indexqualorig,
 						   "Index Cond", planstate, ancestors, es,&hsp);
-			if (((IndexScan *) plan)->indexqualorig)
-				show_instrumentation_count("Rows Removed by Index Recheck", 2,
-										   planstate, es);
+			// if (((IndexScan *) plan)->indexqualorig)
+			// 	show_instrumentation_count("Rows Removed by Index Recheck", 2,planstate, es);
 			hsp.cur_expr_tag = PRED_TYPE_TAG__ORDER_BY;
 			show_scan_qual(((IndexScan *) plan)->indexorderbyorig,
 						   "Order By", planstate, ancestors, es,&hsp);
 			hsp.cur_expr_tag = PRED_TYPE_TAG__FILTER;
 			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
-			if (plan->qual)
-				show_instrumentation_count("Rows Removed by Filter", 1,
-										   planstate, es);
+			// if (plan->qual)
+			// 	show_instrumentation_count("Rows Removed by Filter", 1,planstate, es);
 			break;
 		case T_IndexOnlyScan:
 			hsp.cur_expr_tag = PRED_TYPE_TAG__INDEX_COND;
 			show_scan_qual(((IndexOnlyScan *) plan)->indexqual,
 						   "Index Cond", planstate, ancestors, es,&hsp);
-			if (((IndexOnlyScan *) plan)->recheckqual)
-				show_instrumentation_count("Rows Removed by Index Recheck", 2,
-										   planstate, es);
+			// if (((IndexOnlyScan *) plan)->recheckqual)
+			// 	show_instrumentation_count("Rows Removed by Index Recheck", 2,planstate, es);
 			hsp.cur_expr_tag = PRED_TYPE_TAG__ORDER_BY;
 			show_scan_qual(((IndexOnlyScan *) plan)->indexorderby,
 						   "Order By", planstate, ancestors, es,&hsp);
 			hsp.cur_expr_tag = PRED_TYPE_TAG__FILTER;
 			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
-			if (plan->qual)
-				show_instrumentation_count("Rows Removed by Filter", 1,
-										   planstate, es);
-			if (es->analyze)
-				FormatPropertyFloat("Heap Fetches", NULL,
-									 planstate->instrument->ntuples2, 0, es);
+			// if (plan->qual)
+			// 	show_instrumentation_count("Rows Removed by Filter", 1,planstate, es);
+			// if (es->analyze)
+			// 	FormatPropertyFloat("Heap Fetches", NULL,planstate->instrument->ntuples2, 0, es);
 			break;
 		case T_BitmapIndexScan:
 			show_scan_qual(((BitmapIndexScan *) plan)->indexqualorig,
@@ -1240,14 +1235,12 @@ ExplainNode(PlanState *planstate, List *ancestors,
 			hsp.cur_expr_tag = PRED_TYPE_TAG__RECHECK_COND;
 			show_scan_qual(((BitmapHeapScan *) plan)->bitmapqualorig,
 						   "Recheck Cond", planstate, ancestors, es,&hsp);
-			if (((BitmapHeapScan *) plan)->bitmapqualorig)
-				show_instrumentation_count("Rows Removed by Index Recheck", 2,
-										   planstate, es);
+			// if (((BitmapHeapScan *) plan)->bitmapqualorig)
+			// 	show_instrumentation_count("Rows Removed by Index Recheck", 2,planstate, es);
 			hsp.cur_expr_tag = PRED_TYPE_TAG__FILTER;
 			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
-			if (plan->qual)
-				show_instrumentation_count("Rows Removed by Filter", 1,
-										   planstate, es);
+			// if (plan->qual)
+			// 	show_instrumentation_count("Rows Removed by Filter", 1,planstate, es);
 			if (es->analyze)
 				show_tidbitmap_info((BitmapHeapScanState *) planstate, es);
 			hsp.cur_expr_tag = PRED_TYPE_TAG__NONE;
@@ -1265,9 +1258,8 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		case T_SubqueryScan:
 			hsp.cur_expr_tag = PRED_TYPE_TAG__FILTER;
 			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
-			if (plan->qual)
-				show_instrumentation_count("Rows Removed by Filter", 1,
-										   planstate, es);
+			// if (plan->qual)
+			// 	show_instrumentation_count("Rows Removed by Filter", 1,planstate, es);
 			hsp.cur_expr_tag = PRED_TYPE_TAG__NONE;
 			break;
 		case T_Gather:
@@ -1276,9 +1268,8 @@ ExplainNode(PlanState *planstate, List *ancestors,
 
 				hsp.cur_expr_tag = PRED_TYPE_TAG__FILTER;
 				show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
-				if (plan->qual)
-					show_instrumentation_count("Rows Removed by Filter", 1,
-											   planstate, es);
+				// if (plan->qual)
+				// 	show_instrumentation_count("Rows Removed by Filter", 1,planstate, es);
 				FormatPropertyInteger("Workers Planned", NULL,
 									   gather->num_workers, es);
 
@@ -1306,9 +1297,8 @@ ExplainNode(PlanState *planstate, List *ancestors,
 
 				hsp.cur_expr_tag = PRED_TYPE_TAG__FILTER;
 				show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
-				if (plan->qual)
-					show_instrumentation_count("Rows Removed by Filter", 1,
-											   planstate, es);
+				// if (plan->qual)
+				// 	show_instrumentation_count("Rows Removed by Filter", 1,planstate, es);
 				FormatPropertyInteger("Workers Planned", NULL,
 									   gm->num_workers, es);
 
@@ -1346,9 +1336,9 @@ ExplainNode(PlanState *planstate, List *ancestors,
 			}
 			hsp.cur_expr_tag = PRED_TYPE_TAG__FILTER;
 			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
-			if (plan->qual)
-				show_instrumentation_count("Rows Removed by Filter", 1,
-										   planstate, es);
+			// if (plan->qual)
+			// 	show_instrumentation_count("Rows Removed by Filter", 1,
+			// 							   planstate, es);
 			hsp.cur_expr_tag = PRED_TYPE_TAG__NONE;
 			break;
 		case T_TableFuncScan:
@@ -1362,9 +1352,8 @@ ExplainNode(PlanState *planstate, List *ancestors,
 			}
 			hsp.cur_expr_tag = PRED_TYPE_TAG__FILTER;
 			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
-			if (plan->qual)
-				show_instrumentation_count("Rows Removed by Filter", 1,
-										   planstate, es);
+			// if (plan->qual)
+			// 	show_instrumentation_count("Rows Removed by Filter", 1,planstate, es);
 			hsp.cur_expr_tag = PRED_TYPE_TAG__NONE;
 			break;
 		case T_TidScan:
@@ -1380,18 +1369,18 @@ ExplainNode(PlanState *planstate, List *ancestors,
 				show_scan_qual(tidquals, "TID Cond", planstate, ancestors, es,&hsp);
 				hsp.cur_expr_tag = PRED_TYPE_TAG__FILTER;
 				show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
-				if (plan->qual)
-					show_instrumentation_count("Rows Removed by Filter", 1,
-											   planstate, es);
+				// if (plan->qual)
+				// 	show_instrumentation_count("Rows Removed by Filter", 1,
+				// 							   planstate, es);
 				hsp.cur_expr_tag = PRED_TYPE_TAG__NONE;
 			}
 			break;
 		case T_ForeignScan:
 			hsp.cur_expr_tag = PRED_TYPE_TAG__FILTER;
 			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
-			if (plan->qual)
-				show_instrumentation_count("Rows Removed by Filter", 1,
-										   planstate, es);
+			// if (plan->qual)
+			// 	show_instrumentation_count("Rows Removed by Filter", 1,
+			// 							   planstate, es);
 			show_foreignscan_info((ForeignScanState *) planstate, es);
 			hsp.cur_expr_tag = PRED_TYPE_TAG__NONE;
 			break;
@@ -1400,9 +1389,9 @@ ExplainNode(PlanState *planstate, List *ancestors,
 				CustomScanState *css = (CustomScanState *) planstate;
 				hsp.cur_expr_tag = PRED_TYPE_TAG__FILTER;
 				show_scan_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
-				if (plan->qual)
-					show_instrumentation_count("Rows Removed by Filter", 1,
-											   planstate, es);
+				// if (plan->qual)
+				// 	show_instrumentation_count("Rows Removed by Filter", 1,
+				// 							   planstate, es);
 				if (css->methods->ExplainCustomScan)
 					css->methods->ExplainCustomScan(css, ancestors, es);
 				hsp.cur_expr_tag = PRED_TYPE_TAG__NONE;
@@ -1412,14 +1401,14 @@ ExplainNode(PlanState *planstate, List *ancestors,
 			hsp.cur_expr_tag = PRED_TYPE_TAG__JOIN_FILTER;
 			show_upper_qual(((NestLoop *) plan)->join.joinqual,
 							"Join Filter", planstate, ancestors, es,&hsp);
-			if (((NestLoop *) plan)->join.joinqual)
-				show_instrumentation_count("Rows Removed by Join Filter", 1,
-										   planstate, es);
+			// if (((NestLoop *) plan)->join.joinqual)
+			// 	show_instrumentation_count("Rows Removed by Join Filter", 1,
+			// 							   planstate, es);
 			hsp.cur_expr_tag = PRED_TYPE_TAG__FILTER;	
 			show_upper_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
-			if (plan->qual)
-				show_instrumentation_count("Rows Removed by Filter", 2,
-										   planstate, es);
+			// if (plan->qual)
+			// 	show_instrumentation_count("Rows Removed by Filter", 2,
+			// 							   planstate, es);
 			hsp.cur_expr_tag = PRED_TYPE_TAG__NONE;
 			break;
 		case T_MergeJoin:
@@ -1429,14 +1418,14 @@ ExplainNode(PlanState *planstate, List *ancestors,
 			hsp.cur_expr_tag = PRED_TYPE_TAG__JOIN_FILTER;
 			show_upper_qual(((MergeJoin *) plan)->join.joinqual,
 							"Join Filter", planstate, ancestors, es,&hsp);
-			if (((MergeJoin *) plan)->join.joinqual)
-				show_instrumentation_count("Rows Removed by Join Filter", 1,
-										   planstate, es);
+			// if (((MergeJoin *) plan)->join.joinqual)
+			// 	show_instrumentation_count("Rows Removed by Join Filter", 1,
+			// 							   planstate, es);
 			hsp.cur_expr_tag = PRED_TYPE_TAG__FILTER;							   
 			show_upper_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
-			if (plan->qual)
-				show_instrumentation_count("Rows Removed by Filter", 2,
-										   planstate, es);
+			// if (plan->qual)
+			// 	show_instrumentation_count("Rows Removed by Filter", 2,
+			// 							   planstate, es);
 			hsp.cur_expr_tag = PRED_TYPE_TAG__NONE;
 			break;
 		case T_HashJoin:{
@@ -1446,14 +1435,14 @@ ExplainNode(PlanState *planstate, List *ancestors,
 			hsp.cur_expr_tag = PRED_TYPE_TAG__JOIN_FILTER;
 			show_upper_qual(((HashJoin *) plan)->join.joinqual,
 							"Join Filter", planstate, ancestors, es,&hsp);
-			if (((HashJoin *) plan)->join.joinqual)
-				show_instrumentation_count("Rows Removed by Join Filter", 1,
-										   planstate, es);
+			// if (((HashJoin *) plan)->join.joinqual)
+			// 	show_instrumentation_count("Rows Removed by Join Filter", 1,
+			// 							   planstate, es);
 			hsp.cur_expr_tag = PRED_TYPE_TAG__FILTER;
 			show_upper_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
-			if (plan->qual)
-				show_instrumentation_count("Rows Removed by Filter", 2,
-										   planstate, es);
+			// if (plan->qual)
+			// 	show_instrumentation_count("Rows Removed by Filter", 2,
+			// 							   planstate, es);
 			hsp.cur_expr_tag = PRED_TYPE_TAG__NONE;
 			}break;
 		case T_Agg:
@@ -1461,18 +1450,18 @@ ExplainNode(PlanState *planstate, List *ancestors,
 			hsp.cur_expr_tag = PRED_TYPE_TAG__FILTER;
 			show_upper_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
 			show_hashagg_info((AggState *) planstate, es);
-			if (plan->qual)
-				show_instrumentation_count("Rows Removed by Filter", 1,
-										   planstate, es);
+			// if (plan->qual)
+			// 	show_instrumentation_count("Rows Removed by Filter", 1,
+			// 							   planstate, es);
 			hsp.cur_expr_tag = PRED_TYPE_TAG__NONE;
 			break;
 		case T_Group:
 			show_group_keys(castNode(GroupState, planstate), ancestors, es,&hsp);
 			hsp.cur_expr_tag = PRED_TYPE_TAG__FILTER;
 			show_upper_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
-			if (plan->qual)
-				show_instrumentation_count("Rows Removed by Filter", 1,
-										   planstate, es);
+			// if (plan->qual)
+			// 	show_instrumentation_count("Rows Removed by Filter", 1,
+			// 							   planstate, es);
 			hsp.cur_expr_tag = PRED_TYPE_TAG__NONE;
 			break;
 		case T_Sort:
@@ -1495,9 +1484,9 @@ ExplainNode(PlanState *planstate, List *ancestors,
 							"One-Time Filter", planstate, ancestors, es,&hsp);
 			hsp.cur_expr_tag = PRED_TYPE_TAG__FILTER;
 			show_upper_qual(plan->qual, "Filter", planstate, ancestors, es,&hsp);
-			if (plan->qual)
-				show_instrumentation_count("Rows Removed by Filter", 1,
-										   planstate, es);
+			// if (plan->qual)
+			// 	show_instrumentation_count("Rows Removed by Filter", 1,
+			// 							   planstate, es);
 			hsp.cur_expr_tag = PRED_TYPE_TAG__NONE;
 			break;
 		case T_ModifyTable:
@@ -3364,7 +3353,7 @@ show_modifytable_info(ModifyTableState *mtstate, List *ancestors,
 		{
 			show_upper_qual((List *) node->onConflictWhere, "Conflict Filter",
 							&mtstate->ps, ancestors, es, &hsp);
-			show_instrumentation_count("Rows Removed by Conflict Filter", 1, &mtstate->ps, es);
+			//show_instrumentation_count("Rows Removed by Conflict Filter", 1, &mtstate->ps, es);
 		}
 
 		/* EXPLAIN ANALYZE display of actual outcome for each tuple proposed */

@@ -1,8 +1,8 @@
 #include "collect/stat_collect.hpp"
 #include "collect/stat_format.hpp"
 #include <threads.h>
-#include <sys/file.h>  // for flock
-#include <time.h>      // for time functions
+#include <sys/file.h> 
+#include <time.h>     
 #include "utils/dsa.h"
 #include "utils/snapmgr.h"
 #include "commands/explain.h"
@@ -99,7 +99,28 @@ extern "C" {
 							GUC_UNIT_MS,
 							NULL,
 							NULL,
-							NULL);							 
+							NULL);
+		DefineCustomBoolVariable("sqms.plan_equal_enabled",
+									"Wether using plan equal match method",
+									"Wether using plan equal match method",
+									&plan_equal_enabled,
+									false,
+									PGC_SUSET,
+									GUC_UNIT_MS,
+									NULL,
+									NULL,
+									NULL);		
+		DefineCustomBoolVariable("sqms.prune_constants_enabled",
+									"Wether pruning constants in equal predicate",
+									"Wether pruning constants in equal predicate",
+									&prune_constants_enabled,
+									false,
+									PGC_SUSET,
+									GUC_UNIT_MS,
+									NULL,
+									NULL,
+									NULL);	
+
         prev_ExecutorStart = ExecutorStart_hook;
         ExecutorStart_hook = StmtExecutorStart;
 
@@ -332,6 +353,16 @@ extern "C" void RegisterQueryIndex(){
 		new (scan_index) HistoryQueryLevelTree(1);
 	}
 
+	/*plan hash table is a baseline method for slow match*/
+	found = true;
+	auto plan_hash_table = (LevelHashStrategy*)ShmemInitStruct(plan_hash_table_name,sizeof(LevelHashStrategy),&found);
+	if(!plan_hash_table){
+		elog(ERROR, "Failed to allocate shared memory for plan_hash_table.");
+		return;
+	}
+	if(!found){
+		new (plan_hash_table) LevelHashStrategy(0);
+	}
 	/**
 	 * TODO: here we should load history slow queries in redis into shared_index
 	 */

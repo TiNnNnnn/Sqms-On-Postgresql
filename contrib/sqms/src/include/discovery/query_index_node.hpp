@@ -80,6 +80,11 @@ public:
     bool Remove(NodeCollector* node_collector);
     bool Search(NodeCollector* node_collector);
 
+    /**baseline test interface, levelhashstrategy 
+     * will be used as only a hash table */
+    bool Insert(const std::string& plan);
+    bool Search(const std::string& plan);
+
 private:
     SMConcurrentHashMap<SMString,HistoryQueryIndexNode*>set_map_;
 };

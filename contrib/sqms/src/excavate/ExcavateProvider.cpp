@@ -13,29 +13,34 @@ bool CostBasedExcavateStrategy::excavate(std::vector<HistorySlowPlanStat*>& list
         q.pop();
         size_t child_num = node->n_childs;
         size_t cnt = 0;
-        if(node->sub_cost >= t){
-            /**
-             * TODO: 12-04 We need to handle the subquery operator specifically
-             */
-            for(size_t i = 0;i<child_num;i++){
-                if(node->childs[i] && node->childs[i]->sub_cost < t){
-                    cnt++;
-                }
-            }
-        }
-        if(cnt == child_num){
-            /**
-             * all childs's sub_cost are smaller than threshold,and the
-             * current root's sub_cost is larger than threshold, so we
-             * can regard the sub tree as a slow sub query
-            */
+        if(node->sub_cost >= t && node->n_childs){
             list.push_back(node);
-        }else{
-            for(size_t i = 0; i<node->n_childs; i++){
-                if(!node->childs[i])continue;
-                q.push(node->childs[i]);
-            }
         }
+        for(size_t i = 0; i<node->n_childs; i++){
+            q.push(node->childs[i]);
+        }
+        // if(node->sub_cost >= t){
+        //     /**
+        //      * TODO: 12-04 We need to handle the subquery operator specifically
+        //      */
+        //     for(size_t i = 0;i<child_num;i++){
+        //         if(node->childs[i]->sub_cost < t){
+        //             cnt++;
+        //         }
+        //     }
+        // }
+        // if(cnt == child_num){
+        //     /**
+        //      * all childs's sub_cost are smaller than threshold,and the
+        //      * current root's sub_cost is larger than threshold, so we
+        //      * can regard the sub tree as a slow sub query
+        //     */
+        //     list.push_back(node);
+        // }else{
+        //     for(size_t i = 0; i<node->n_childs; i++){
+        //             q.push(node->childs[i]);
+        //     }
+        // }
     }
     return true;
 } 

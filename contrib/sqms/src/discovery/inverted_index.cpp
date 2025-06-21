@@ -373,9 +373,9 @@ RangeInvertedIndex::RangeInvertedIndex(){
 }
 
 RangeInvertedIndex::~RangeInvertedIndex(){
-//    assert(area_);
-//    dsa_detach(area_);
-//    elog(LOG, "DSA detach successfully in range inverted index");
+    //    assert(area_);
+    //    dsa_detach(area_);
+    //    elog(LOG, "DSA detach successfully in range inverted index");
 }
 
 void RangeInvertedIndex::Insert(LevelPredEquivlences* lpes){

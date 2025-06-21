@@ -39,9 +39,8 @@ bool NodeManager::SearchInternal(NodeCollector *node,double total_time,int finis
             if(node->parent_){
                 node->parent_->inputs[node->child_idx] = node->output_list_[i];
             }
-            if(total_time >= query_min_duration && finish_node_num >= node_num_/2){
-                if(pid_ != -1)
-                    CancelQuery(pid_);
+            if(total_time >= query_min_duration && finish_node_num >= 1){
+                CancelQuery(pid_);
                 return true;
             }else{
                 if(!iter->hasNext()){
@@ -49,13 +48,12 @@ bool NodeManager::SearchInternal(NodeCollector *node,double total_time,int finis
                 }
                 auto cur = iter->next();
                 int ret = SearchInternal(cur, total_time, finish_node_num,iter);
+                iter->prev();
+                total_time -= node->time_list_[i];
+                finish_node_num--;
+                node->candidate_id = node->pre_candidate_id;
                 if(ret){
                     return true;
-                }else{
-                    iter->prev();
-                    total_time -= node->time_list_[i];
-                    finish_node_num--;
-                    node->candidate_id = node->pre_candidate_id;
                 }
             }
         }
@@ -408,7 +406,7 @@ bool NodeManager::CancelQuery(pid_t pid){
     Datum result = DirectFunctionCall1(pg_cancel_backend, arg);
     bool success = DatumGetBool(result);
     if(success){
-        elog(LOG,"Node View Stitch Match] cancel query success...");
+        elog(LOG,"[Node View Stitch Match] cancel query success...");
         logger_->Logger("comming","[Node View Stitch Match] cancel query success...");
         return true;
     } else {

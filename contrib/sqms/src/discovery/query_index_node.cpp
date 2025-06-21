@@ -63,15 +63,9 @@ bool LevelHashStrategy::Insert(NodeCollector* node_collector){
 
     SMConcurrentHashMap<SMString,HistoryQueryIndexNode*>::const_accessor acc;
     if(set_map_.find(acc ,json_sub_plan)){
-        if(node_collector->type_name == "Hash"){
-            std::cout << "haha" << std::endl;
-        }
         auto child = acc->second;
         return child->Insert(node_collector);
     }else{
-        if(node_collector->type_name == "Hash"){
-            std::cout << "hehe" << std::endl;
-        }
         /*create a new child node*/
         size_t next_level = FindNextInsertLevel(node_collector,1);
         HistoryQueryIndexNode* new_idx_node = (HistoryQueryIndexNode*)ShmemAlloc(sizeof(HistoryQueryIndexNode));
@@ -83,7 +77,6 @@ bool LevelHashStrategy::Insert(NodeCollector* node_collector){
         if(!new_idx_node->Insert(node_collector)){
             return false;
         }
-        /*update cur level index*/
         set_map_.insert(std::make_pair(json_sub_plan,new_idx_node));
     }
     return true;
@@ -101,10 +94,18 @@ bool LevelHashStrategy::Search(NodeCollector* node_collector){
         auto child = acc->second;
         return child->Serach(node_collector);
     }else{
-        //elog(INFO, "search failed in hash steategy");
         return false;
     }
     return false;
+}
+
+bool LevelHashStrategy::Insert(const std::string& plan){
+    return set_map_.insert(std::make_pair(SMString(plan),nullptr));
+}
+
+bool LevelHashStrategy::Search(const std::string& plan){
+    SMConcurrentHashMap<SMString,HistoryQueryIndexNode*>::const_accessor acc;
+    return set_map_.find(acc,SMString(plan));
 }
 
 bool LevelScalingStrategy::Insert(LevelManager* level_mgr){
@@ -1184,7 +1185,9 @@ bool LeafStrategy::SerachAgg(LevelManager* level_mgr,int h,int id){
             break;
         }
     }
-    assert(sort_idx != -1);
+    if(sort_idx == -1){
+        return false;
+    }
     auto src_ls_eqs = src_aggs->GetLevelAggList()[sort_idx]->GetLevelAggSets();
     std::unordered_set<AggAndSortEquivlence *>states;
 
@@ -1231,7 +1234,9 @@ bool LeafStrategy::SerachSort(LevelManager* level_mgr,int h,int id){
             break;
         }
     }
-    assert(sort_idx != -1);
+    if(sort_idx == -1){
+        return false;
+    }
     auto src_ls_eqs = src_sorts->GetLevelAggList()[sort_idx]->GetLevelAggSets();
     std::unordered_set<AggAndSortEquivlence *>states;
 
