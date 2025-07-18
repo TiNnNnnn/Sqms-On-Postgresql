@@ -1628,11 +1628,12 @@ PredEquivlence::PredEquivlence(Quals* qual,bool is_not){
  			 * */
 			set_.insert(get_pure_var(qual->left));
 			range->SetPredType(PType::RANGE);
-			range->SetPredVarType(var_type);
 			if(prune_constants_enabled){
+				range->SetPredVarType(VarType::STRING);
 				range->SetLowerLimit("$");
 				range->SetUpperLimit("$");	
 			}else{
+				range->SetPredVarType(var_type);
 				range->SetLowerLimit(get_pure_var(qual->right));
 				range->SetUpperLimit(get_pure_var(qual->right));
 			}
@@ -1644,11 +1645,12 @@ PredEquivlence::PredEquivlence(Quals* qual,bool is_not){
 			auto op = qual->op;
 			if(!strcmp(op,"!=") or !strcmp(op,"<>")){
 				range->SetPredType(PType::NOT_EQUAL);
-				range->SetPredVarType(var_type);
 				if(prune_constants_enabled){
+					range->SetPredVarType(VarType::STRING);
 					range->SetLowerLimit("$");
 					range->SetUpperLimit("$");
 				}else{
+					range->SetPredVarType(var_type);
 					range->SetLowerLimit(get_pure_var(qual->right));
 					range->SetUpperLimit(get_pure_var(qual->right));
 				}
