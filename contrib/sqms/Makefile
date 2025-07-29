@@ -1,5 +1,4 @@
 MODULE_big = sqms
-
 OBJS = \
     $(WIN32RES) \
     src/common/config.o \
@@ -21,13 +20,14 @@ OBJS = \
     src/discovery/query_index.o \
     src/discovery/sm_level_mgr.o \
     src/discovery/inverted_index.o \
+    src/collect/explain_slow.o \
 
-#src/discovery/levels.o\ 
-
+CURRENT_DIR := $(shell pwd)
+$(info CURRENT_DIR = $(CURRENT_DIR))
 
 SHLIB_LINK_INTERNAL = $(libpq) -lstdc++ -lprotobuf -lprotobuf-c -L/usr/local/lib -lhiredis -luv -lstdc++ -L/usr/lib/x86_64-linux-gnu -ltbb 
-CFLAGS += -std=c11 -I/home/yyk/Sqms-On-Postgresql/contrib/sqms/src/include -I/usr/local/include 
-PG_CPPFLAGS = -std=c++17 -fPIC -I$(libpq_srcdir) -I/home/yyk/Sqms-On-Postgresql/contrib/sqms/src/include 
+CFLAGS += -std=c11  -I/usr/local/include 
+PG_CPPFLAGS = -std=c++17 -fPIC -I$(libpq_srcdir) -I$(CURRENT_DIR)/src/include
 
 # pg extend config 
 EXTENSION = sqms
@@ -44,12 +44,3 @@ CC = gcc
 PG_CONFIG = pg_config
 PGXS := $(shell $(PG_CONFIG) --pgxs)
 include $(PGXS)
-
-#support make clean
-.PHONY:clean
-clean:
-	rm -rf /home/yyk/Sqms-On-Postgresql/contrib/sqms/*.o *.so
-	rm -rf /home/yyk/Sqms-On-Postgresql/contrib/sqms/src/collect/*.o *.so
-	rm -rf /home/yyk/Sqms-On-Postgresql/contrib/sqms/src/discovery/*.o *.so
-	rm -rf /home/yyk/Sqms-On-Postgresql/contrib/sqms/src/excavate/*.o *.so
-	rm -rf /home/yyk/Sqms-On-Postgresql/contrib/sqms/src/storage/*.o *.so
