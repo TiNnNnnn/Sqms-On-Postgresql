@@ -44,7 +44,7 @@
 #define BLCKSZ 8192
 
 /* Saved arguments from configure */
-#define CONFIGURE_ARGS " '--prefix=/home/yyk/postgresql-13.10/' '--enable-debug'"
+#define CONFIGURE_ARGS " '--prefix=/home/hyh/postgresql-13.10/' '--enable-debug'"
 
 /* Define to the default TCP port number on which the server listens and to
    which clients will try to connect. This can be overridden at run-time, but

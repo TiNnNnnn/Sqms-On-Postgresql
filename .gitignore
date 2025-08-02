@@ -36,6 +36,7 @@ bin/
 data/
 log/
 .vscode/
+sqms_env/
 
 # Local excludes in root directory
 /GNUmakefile

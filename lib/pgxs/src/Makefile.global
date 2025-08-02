@@ -61,8 +61,8 @@ endif
 endif
 else # not PGXS
 vpath_build = no
-abs_top_builddir = /home/yyk/postgresql-13.10
-abs_top_srcdir = /home/yyk/postgresql-13.10
+abs_top_builddir = /home/hyh/postgresql-13.10
+abs_top_srcdir = /home/hyh/postgresql-13.10
 
 ifneq ($(vpath_build),yes)
 top_srcdir = $(top_builddir)
@@ -94,7 +94,7 @@ ifndef PGXS
 # Note that prefix, exec_prefix, and datarootdir aren't defined in a PGXS build;
 # makefiles may only use the derived variables such as bindir.
 
-prefix := /home/yyk/postgresql-13.10
+prefix := /home/hyh/postgresql-13.10
 exec_prefix := ${prefix}
 datarootdir := ${prefix}/share
 

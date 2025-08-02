@@ -28,13 +28,13 @@ DB_CONFIG = {
 SQL_DIR = "./tpch_query"
 OUTPUT_DIR = "./qppnet/data/pgdata"
 # data dir after split
-BATCH_DIR = "/home/yyk/Sqms-On-Postgresql/contrib/sqms/test2/tbl_batches"       
+BATCH_DIR = "/home/hyh/Sqms-On-Postgresql/contrib/sqms/test2/tbl_batches"       
 # create table file
-CREATE_FILE = "/home/yyk/Sqms-On-Postgresql/contrib/sqms/test2/tpch-create.sql"   
-PKEYS_FILE = "/home/yyk/Sqms-On-Postgresql/contrib/sqms/test2/tpch-pkeys.sql"
-FKEYS_FILE = "/home/yyk/Sqms-On-Postgresql/contrib/sqms/test2/tpch-alter.sql"
-CREATE_IDX_FILE = "/home/yyk/Sqms-On-Postgresql/contrib/sqms/test2/tpch-index.sql"
-DROP_IDX_FILE = "/home/yyk/Sqms-On-Postgresql/contrib/sqms/test2/tpch-index-drop.sql"
+CREATE_FILE = "/home/hyh/Sqms-On-Postgresql/contrib/sqms/test2/tpch-create.sql"   
+PKEYS_FILE = "/home/hyh/Sqms-On-Postgresql/contrib/sqms/test2/tpch-pkeys.sql"
+FKEYS_FILE = "/home/hyh/Sqms-On-Postgresql/contrib/sqms/test2/tpch-alter.sql"
+CREATE_IDX_FILE = "/home/hyh/Sqms-On-Postgresql/contrib/sqms/test2/tpch-index.sql"
+DROP_IDX_FILE = "/home/hyh/Sqms-On-Postgresql/contrib/sqms/test2/tpch-index-drop.sql"
 
 def classify_sql_statements(raw_sql):
     """

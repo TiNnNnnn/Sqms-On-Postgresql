@@ -278,4 +278,4 @@ def plot_grouped_bar_chart(output_path):
 
 if __name__ == "__main__":
     plot_grouped_bar_chart("output/compare_accuracy")
-    #plot_from_excel("/home/yyk/Sqms-On-Postgresql/contrib/sqms/test2/output/20250616_105812_without_excavate/query_batch_time.xlsx","output/core_subquery_compare.png")
+    #plot_from_excel("/home/hyh/Sqms-On-Postgresql/contrib/sqms/test2/output/20250616_105812_without_excavate/query_batch_time.xlsx","output/core_subquery_compare.png")
