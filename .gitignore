@@ -37,6 +37,9 @@ data/
 log/
 .vscode/
 sqms_env/
+lib/
+include/
+share/postgresql/contrib/
 
 # Local excludes in root directory
 /GNUmakefile
