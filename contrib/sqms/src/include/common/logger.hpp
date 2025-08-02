@@ -89,6 +89,6 @@ public:
 private:
     std::mutex mutex_;
     TaggedFileSink* tagged_sink_;
-    SMString log_dir = "/home/yyk/Sqms-On-Postgresql/log";
+    SMString log_dir = "/home/hyh/Sqms-On-Postgresql/log";
     SMMap<SMString, spdlog::logger*> log_files_;
 };
