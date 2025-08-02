@@ -61,8 +61,8 @@ endif
 endif
 else # not PGXS
 vpath_build = no
-abs_top_builddir = /home/yyk/Sqms-On-Postgresql
-abs_top_srcdir = /home/yyk/Sqms-On-Postgresql
+abs_top_builddir = /home/hyh/Sqms-On-Postgresql
+abs_top_srcdir = /home/hyh/Sqms-On-Postgresql
 
 ifneq ($(vpath_build),yes)
 top_srcdir = $(top_builddir)
@@ -94,7 +94,7 @@ ifndef PGXS
 # Note that prefix, exec_prefix, and datarootdir aren't defined in a PGXS build;
 # makefiles may only use the derived variables such as bindir.
 
-prefix := /home/yyk/Sqms-On-Postgresql
+prefix := /home/hyh/Sqms-On-Postgresql
 exec_prefix := ${prefix}
 datarootdir := ${prefix}/share
 
@@ -339,7 +339,7 @@ perl_embed_ldflags	=
 
 # Miscellaneous
 
-AWK	= mawk
+AWK	= gawk
 LN_S	= ln -s
 MSGFMT  = 
 MSGFMT_FLAGS = 
@@ -483,7 +483,7 @@ endif
 
 # Installation.
 
-install_bin = /usr/bin/install -c
+install_bin = /usr/local/bin/ginstall -c
 install_sh = $(SHELL) $(top_srcdir)/config/install-sh -c
 INSTALL = $(if $(use_install_sh),$(install_sh),$(if $(install_bin),$(install_bin),$(install_sh)))
 

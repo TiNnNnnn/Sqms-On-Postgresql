@@ -126,16 +126,16 @@ SELECT name(high_pay()) AS overpaid;
 -----------------------------
 
 CREATE FUNCTION add_one(integer) RETURNS integer
-   AS '/home/yyk/PGDev/postgresql-12-4/src/tutorial/funcs' LANGUAGE C;
+   AS '/home/hyh/PGDev/postgresql-12-4/src/tutorial/funcs' LANGUAGE C;
 
 CREATE FUNCTION makepoint(point, point) RETURNS point
-   AS '/home/yyk/PGDev/postgresql-12-4/src/tutorial/funcs' LANGUAGE C;
+   AS '/home/hyh/PGDev/postgresql-12-4/src/tutorial/funcs' LANGUAGE C;
 
 CREATE FUNCTION copytext(text) RETURNS text
-   AS '/home/yyk/PGDev/postgresql-12-4/src/tutorial/funcs' LANGUAGE C;
+   AS '/home/hyh/PGDev/postgresql-12-4/src/tutorial/funcs' LANGUAGE C;
 
 CREATE FUNCTION c_overpaid(EMP, integer) RETURNS boolean
-   AS '/home/yyk/PGDev/postgresql-12-4/src/tutorial/funcs' LANGUAGE C;
+   AS '/home/hyh/PGDev/postgresql-12-4/src/tutorial/funcs' LANGUAGE C;
 
 SELECT add_one(3) AS four;
 

@@ -44,7 +44,7 @@
 #define BLCKSZ 8192
 
 /* Saved arguments from configure */
-#define CONFIGURE_ARGS " '--prefix=/home/yyk/Sqms-On-Postgresql/' '--enable-debug'"
+#define CONFIGURE_ARGS " '--prefix=/home/hyh/Sqms-On-Postgresql' '--enable-debug'"
 
 /* Define to the default TCP port number on which the server listens and to
    which clients will try to connect. This can be overridden at run-time, but

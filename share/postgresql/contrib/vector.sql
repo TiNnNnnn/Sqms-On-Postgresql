@@ -1,9 +1,9 @@
 CREATE FUNCTION vector_in(cstring) RETURNS vector
-   AS '/home/yyk/PGDev/postgresql-12-4/src/tutorial/vector'
+   AS '/home/hyh/PGDev/postgresql-12-4/src/tutorial/vector'
    LANGUAGE C IMMUTABLE STRICT;
 
 CREATE FUNCTION vector_out(vector) RETURNS cstring
-   AS '/home/yyk/PGDev/postgresql-12-4/src/tutorial/vector'
+   AS '/home/hyh/PGDev/postgresql-12-4/src/tutorial/vector'
    LANGUAGE C IMMUTABLE STRICT;
 
 CREATE TYPE vector (
@@ -13,19 +13,19 @@ CREATE TYPE vector (
 );
 
 CREATE FUNCTION vector_dimension(vector) RETURNS integer
-   AS '/home/yyk/PGDev/postgresql-12-4/src/tutorial/vector'
+   AS '/home/hyh/PGDev/postgresql-12-4/src/tutorial/vector'
    LANGUAGE C IMMUTABLE STRICT;
 
 CREATE FUNCTION vector_distance(vector, vector) RETURNS float4
-   AS '/home/yyk/PGDev/postgresql-12-4/src/tutorial/vector'
+   AS '/home/hyh/PGDev/postgresql-12-4/src/tutorial/vector'
    LANGUAGE C IMMUTABLE STRICT;
 
 CREATE FUNCTION vector_add(vector, vector) RETURNS vector
-   AS '/home/yyk/PGDev/postgresql-12-4/src/tutorial/vector'
+   AS '/home/hyh/PGDev/postgresql-12-4/src/tutorial/vector'
    LANGUAGE C IMMUTABLE STRICT;
 
 CREATE FUNCTION vector_sub(vector, vector) RETURNS vector
-   AS '/home/yyk/PGDev/postgresql-12-4/src/tutorial/vector'
+   AS '/home/hyh/PGDev/postgresql-12-4/src/tutorial/vector'
    LANGUAGE C IMMUTABLE STRICT;
 
 CREATE OPERATOR <#> (
