@@ -22,6 +22,7 @@ bool node_match_enabled = true;
 bool collect_scans_enabled = false;
 bool plan_equal_enabled = false;
 bool prune_constants_enabled = false;
+char *sqms_log_directory = NULL;
 
 const char* redis_host = "127.0.0.1";
 const char* shared_index_name = "HISTORY_QUERY_TREE_INDEX";

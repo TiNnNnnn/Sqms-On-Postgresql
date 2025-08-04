@@ -43,7 +43,7 @@ extern "C" {
 							"Sets the minimum execution time above which plans will be logged.",
 							"Zero prints all plans. -1 turns this feature off.",
 							&query_min_duration,
-							0.00001, // hyh设置了默认query_min_duration的值
+							-1,
 							-1, INT_MAX,
 							PGC_SUSET,
 							GUC_UNIT_MS,
@@ -121,6 +121,17 @@ extern "C" {
 									NULL,
 									NULL);	
 
+		DefineCustomStringVariable("sqms.log_directory",
+									"Sets the directory for SQMS log files",
+									"Sets the directory for SQMS log files",
+									&sqms_log_directory,
+									"/usr/local/log",
+									PGC_SUSET,
+									0,
+									NULL,
+									NULL,
+									NULL);
+
         prev_ExecutorStart = ExecutorStart_hook;
         ExecutorStart_hook = StmtExecutorStart;
 
@@ -180,6 +191,17 @@ void StatCollecter::StmtExecutorStartWrapper(QueryDesc *queryDesc, int eflags){
 	*/
 	// Examine whether the sql is a select on system table
 	if (IsSystemCatalogQuery(queryDesc)) {
+		// call original executor directly, escape SQMS process
+		if (prev_ExecutorStart)
+            prev_ExecutorStart(queryDesc, eflags);
+        else
+            standard_ExecutorStart(queryDesc, eflags);
+		
+		return ;
+	}
+
+	// check if we set query_min_duration
+	if (query_min_duration == -1) {
 		// call original executor directly, escape SQMS process
 		if (prev_ExecutorStart)
             prev_ExecutorStart(queryDesc, eflags);
@@ -447,7 +469,7 @@ extern "C" void ShuntLog(ErrorData *edata){
     char log_filename[MAXPGPATH] = {0};
     
     /* timestamp str */
-    const char* log_directory = "/home/hyh/Sqms-On-Postgresql/log";
+    const char* log_directory = sqms_log_directory;
     char log_prefix[32] = "DEFAULT"; 
 
     /* parse hint，use hint as prefix of log name */
