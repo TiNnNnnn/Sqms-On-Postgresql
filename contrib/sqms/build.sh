@@ -23,7 +23,7 @@ echo -e "${YELLOW}Build complete.${RESET}"
 
 
 echo -e "${YELLOW}${BOLD}Installing the extension...${RESET}"
-sudo env "PATH=$PATH" "PG_CONFIG=/home/yyk/postgresql-13.10/bin/pg_config" make install
+sudo env "PATH=$PATH" make install
 echo -e "${GREEN}Installation complete.${RESET}"
 
 

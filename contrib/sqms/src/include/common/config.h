@@ -35,6 +35,7 @@ extern bool plan_equal_enabled;
  * For System Secutrity,we don't open this prams to users;
  **/
 extern bool prune_constants_enabled;
+extern char* sqms_log_directory;
 /*unused param,max msg size for plan storaging*/
 extern const int max_msg_size;
 /*share mem size*/

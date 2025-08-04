@@ -121,6 +121,17 @@ extern "C" {
 									NULL,
 									NULL);	
 
+		DefineCustomStringVariable("sqms.log_directory",
+									"Sets the directory for SQMS log files",
+									"Sets the directory for SQMS log files",
+									&sqms_log_directory,
+									"/usr/local/log",
+									PGC_SUSET,
+									0,
+									NULL,
+									NULL,
+									NULL);
+
         prev_ExecutorStart = ExecutorStart_hook;
         ExecutorStart_hook = StmtExecutorStart;
 
@@ -159,15 +170,55 @@ bool StatCollecter::current_query_sampled = false;
 StatCollecter::StatCollecter(){
 }
 
+static bool IsSystemCatalogQuery(QueryDesc *queryDesc) {
+	if (!queryDesc || !queryDesc->plannedstmt)
+        return false;
+        
+    // check select text
+    if (queryDesc->sourceText) {
+		if (strstr(queryDesc->sourceText, "pg_catalog.") || strstr(queryDesc->sourceText, "information_schema.")) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
 void StatCollecter::StmtExecutorStartWrapper(QueryDesc *queryDesc, int eflags){
-	/*sqi just process cmd_select*/
+	/* 
+		if we execute '/d', the sql will be like : 
+		"SELECT n.nspname as \"Schema\",\n  c.relname as \"Name\",\n  CASE c.relkind WHEN 'r' THEN 'table' WHEN 'v' THEN 'view' WHEN 'm' THEN 'materialized view' WHEN 'i' THEN 'index' WHEN 'S' THEN 'sequence' WHEN 's' THEN 'special' WHEN 'f' THEN 'foreign table' WHEN 'p' THEN 'partitioned table' WHEN 'I' THEN 'partitioned index' END as \"Type\",\n  pg_catalog.pg_get_userbyid(c.relowner) as \"Owner\"\nFROM pg_catalog.pg_class c\n     LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace\nWHERE c.relkind IN ('r','p','v','m','S','f','')\n      AND n.nspname <> 'pg_catalog'\n      AND n.nspname <> 'information_schema'\n      AND n.nspname !~ '^pg_toast'\n  AND pg_catalog.pg_table_is_visible(c.oid)\nORDER BY 1,2;"
+	*/
+	// Examine whether the sql is a select on system table
+	if (IsSystemCatalogQuery(queryDesc)) {
+		// call original executor directly, escape SQMS process
+		if (prev_ExecutorStart)
+            prev_ExecutorStart(queryDesc, eflags);
+        else
+            standard_ExecutorStart(queryDesc, eflags);
+		
+		return ;
+	}
+
+	// check if we set query_min_duration
+	if (query_min_duration == -1) {
+		// call original executor directly, escape SQMS process
+		if (prev_ExecutorStart)
+            prev_ExecutorStart(queryDesc, eflags);
+        else
+            standard_ExecutorStart(queryDesc, eflags);
+		
+		return ;
+	}
+
+	/* sqi just process cmd_select */
     if(auto_explain_enabled()){
 		/* Enable per-node instrumentation iff log_analyze is required. */
 		if ((eflags & EXEC_FLAG_EXPLAIN_ONLY) == 0)
 		{
-			queryDesc->instrument_options |= INSTRUMENT_TIMER;
-			queryDesc->instrument_options |= INSTRUMENT_BUFFERS;
-			queryDesc->instrument_options |= INSTRUMENT_WAL;
+			queryDesc->instrument_options |= INSTRUMENT_TIMER; // enable timer
+			queryDesc->instrument_options |= INSTRUMENT_BUFFERS; // record buffer
+			queryDesc->instrument_options |= INSTRUMENT_WAL; // count WAL
 		}
 		
         if (prev_ExecutorStart)
@@ -177,14 +228,14 @@ void StatCollecter::StmtExecutorStartWrapper(QueryDesc *queryDesc, int eflags){
 
         if (auto_explain_enabled() && queryDesc->operation == CMD_SELECT)
         {
-            //global elapsed for query
+            // global elapsed for query
             if (queryDesc->totaltime == NULL)
             {
                 MemoryContext oldcxt;
                 oldcxt = MemoryContextSwitchTo(queryDesc->estate->es_query_cxt);
                 queryDesc->totaltime = InstrAlloc(1, INSTRUMENT_ALL);
 				
-				/*analyse query whether a slow query or not*/
+				/* analyse query whether a slow query or not */
 				PlanStatFormat& es = PlanStatFormat::getInstance();
 				es.ProcQueryDesc(queryDesc,oldcxt,false);
                 
@@ -418,7 +469,7 @@ extern "C" void ShuntLog(ErrorData *edata){
     char log_filename[MAXPGPATH] = {0};
     
     /* timestamp str */
-    const char* log_directory = "/home/yyk/Sqms-On-Postgresql/log";
+    const char* log_directory = sqms_log_directory;
     char log_prefix[32] = "DEFAULT"; 
 
     /* parse hint，use hint as prefix of log name */

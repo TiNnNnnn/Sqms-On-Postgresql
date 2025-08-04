@@ -11,11 +11,12 @@ import matplotlib.pyplot as plt
 import execute
 import plot 
 import shutil
-import time, torch
-from qppnet.model_arch import QPPNet
-from qppnet.dataset.terrier_tpch_dataset.terrier_utils import TerrierTPCHDataSet
-from qppnet.dataset.postgres_tpch_dataset.tpch_utils import PSQLTPCHDataSet
-from qppnet.dataset.oltp_dataset.oltp_utils import OLTPDataSet
+import time
+# import torch
+# from qppnet.model_arch import QPPNet
+# from qppnet.dataset.terrier_tpch_dataset.terrier_utils import TerrierTPCHDataSet
+# from qppnet.dataset.postgres_tpch_dataset.tpch_utils import PSQLTPCHDataSet
+# from qppnet.dataset.oltp_dataset.oltp_utils import OLTPDataSet
 import argparse
 from collections import OrderedDict
 
@@ -75,18 +76,20 @@ DB_CONFIG = {
     "port": "44444"
 }
 
+TEST_HOME="/home/hyh/Sqms-On-Postgresql/contrib/sqms/test"
+
 # workload dir
 SQL_DIR = "./tpch_query_slow"
 # data dir before split
-TBL_DIR = "/home/yyk/Sqms-On-Postgresql/contrib/sqms/test2/tbl_data"           
+TBL_DIR = TEST_HOME + "/tbl_data"           
 # data dir after split
-BATCH_DIR = "/home/yyk/Sqms-On-Postgresql/contrib/sqms/test2/tbl_batches"       
+BATCH_DIR = TEST_HOME + "/tbl_batches"       
 # create table file
-CREATE_FILE = "/home/yyk/Sqms-On-Postgresql/contrib/sqms/test2/tpch-create.sql"       
-PKEYS_FILE = "/home/yyk/Sqms-On-Postgresql/contrib/sqms/test2/tpch-pkeys.sql"
-FKEYS_FILE = "/home/yyk/Sqms-On-Postgresql/contrib/sqms/test2/tpch-alter.sql"
-CREATE_IDX_FILE = "/home/yyk/Sqms-On-Postgresql/contrib/sqms/test2/tpch-index.sql"
-DROP_IDX_FILE = "/home/yyk/Sqms-On-Postgresql/contrib/sqms/test2/tpch-index-drop.sql"
+CREATE_FILE = TEST_HOME + "/tpch-create.sql"       
+PKEYS_FILE = TEST_HOME + "/tpch-pkeys.sql"
+FKEYS_FILE = TEST_HOME + "/tpch-alter.sql"
+CREATE_IDX_FILE = TEST_HOME + "/tpch-index.sql"
+DROP_IDX_FILE = TEST_HOME + "/tpch-index-drop.sql"
 # spilt nums
 NUM_BATCHES = 1
 # output dir
@@ -99,7 +102,7 @@ def create_timestamped_folder(base_dir="output"):
     return folder_path
 
 # predict time for a query using qppnet
-def get_time():
+# def get_time():
     opt = parser.parse_args()
     if opt.dataset == "PSQLTPCH":
         dataset = PSQLTPCHDataSet(opt)
@@ -148,7 +151,7 @@ def wrap_plan_for_qppnet(plan_dict):
         "Slice statistics": []
     }
 
-def qppnet_plan_collector(sql_files, conn):
+# def qppnet_plan_collector(sql_files, conn):
     cursor = conn.cursor()
     output_dir = "./qppnet/data/pgdata"
     if os.path.exists(output_dir):
@@ -223,7 +226,7 @@ def InitEnv(conn,type):
             cursor.execute(f"copy {tbl_name} from '{tbl_path}' with delimiter as '|' NULL '' ")
             print(f"[ batch {batch_index + 1}] Finish importing data...")
     if type == 1:
-        cursor.execute(f"set sqms.query_min_duration = '5s'")
+        cursor.execute(f"set sqms.query_min_duration = '0.00000001s'")
     cursor.close()
     return 
 
@@ -308,7 +311,7 @@ def StaticWorkloadTest(type):
     idx_offset = 0
 
     if type == 3:
-        sql_files = get_names_with_value_one("/home/yyk/Sqms-On-Postgresql/contrib/sqms/test2/output/20250615_152306/query_run_time.xlsx")
+        sql_files = get_names_with_value_one(TEST_HOME + "/output/20250615_152306/query_run_time.xlsx")
 
     for sql_file in sql_files:
         sql_path = os.path.join(rep_sql_file_path, sql_file)
@@ -328,39 +331,39 @@ def StaticWorkloadTest(type):
                 current_total_time += elapsed
                 query_run_map[total_cnt] = [sql_file,elapsed]
                 run_cnt += 1
-        else: 
-            # run qppnet test
-            start_time = time.time()
-            plan_json = execute.execute_explain_sql_file(conn, sql_path)
+        # else: 
+        #     # run qppnet test
+        #     start_time = time.time()
+        #     plan_json = execute.execute_explain_sql_file(conn, sql_path)
             
-            end_time = time.time()
+        #     end_time = time.time()
 
-            if plan_json != None:
-                wrapped_plan = wrap_plan_for_qppnet(plan_json)
-                temp_plan_path = os.path.join(temp_plan_dir, f"{sql_file}.txt")
-                with open(temp_plan_path, 'a') as f:
-                    f.write(json.dumps(wrapped_plan) + "\n")
+        #     if plan_json != None:
+        #         wrapped_plan = wrap_plan_for_qppnet(plan_json)
+        #         temp_plan_path = os.path.join(temp_plan_dir, f"{sql_file}.txt")
+        #         with open(temp_plan_path, 'a') as f:
+        #             f.write(json.dumps(wrapped_plan) + "\n")
 
-                pred_t,actual_t,rq = get_time()
-                pred_t = pred_t / 10.00
-                actual_t = actual_t / 10.00
-                if pred_t >= 5.00:
-                    total_cancelled += 1
-                    query_run_map[total_cnt] = [sql_file,-1,pred_t,actual_t,rq]
-                else:
-                    elapsed = end_time - start_time
-                    current_total_time += elapsed
-                    query_run_map[total_cnt] = [sql_file,1,pred_t,actual_t,rq]
-                    run_cnt += 1
+        #         pred_t,actual_t,rq = get_time()
+        #         pred_t = pred_t / 10.00
+        #         actual_t = actual_t / 10.00
+        #         if pred_t >= 5.00:
+        #             total_cancelled += 1
+        #             query_run_map[total_cnt] = [sql_file,-1,pred_t,actual_t,rq]
+        #         else:
+        #             elapsed = end_time - start_time
+        #             current_total_time += elapsed
+        #             query_run_map[total_cnt] = [sql_file,1,pred_t,actual_t,rq]
+        #             run_cnt += 1
 
-                if os.path.exists(temp_plan_path):
-                    os.remove(temp_plan_path)
-                else:
-                    print(f"{temp_plan_path} deltet failed, fatal error")
-                    return -1
-            else:
-                print(f"error plan")
-                continue
+        #         if os.path.exists(temp_plan_path):
+        #             os.remove(temp_plan_path)
+        #         else:
+        #             print(f"{temp_plan_path} deltet failed, fatal error")
+        #             return -1
+        #     else:
+        #         print(f"error plan")
+        #         continue
 
         # mark time when 10 querys has run
         if total_cnt % 5 == 0:
@@ -387,7 +390,7 @@ def StaticWorkloadTest(type):
     return
 
 def main():
-    StaticWorkloadTest(2)
+    StaticWorkloadTest(1)
     # conn = psycopg2.connect(**DB_CONFIG)
     # conn.autocommit = True
     # cursor = conn.cursor()

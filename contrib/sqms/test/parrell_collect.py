@@ -25,16 +25,18 @@ DB_CONFIG = {
     "port": "44444"
 }
 
+TEST_HOME="/home/hyh/Sqms-On-Postgresql/contrib/sqms/test"
+
 SQL_DIR = "./tpch_query"
 OUTPUT_DIR = "./qppnet/data/pgdata"
 # data dir after split
-BATCH_DIR = "/home/yyk/Sqms-On-Postgresql/contrib/sqms/test2/tbl_batches"       
+BATCH_DIR = TEST_HOME + "/tbl_batches"       
 # create table file
-CREATE_FILE = "/home/yyk/Sqms-On-Postgresql/contrib/sqms/test2/tpch-create.sql"   
-PKEYS_FILE = "/home/yyk/Sqms-On-Postgresql/contrib/sqms/test2/tpch-pkeys.sql"
-FKEYS_FILE = "/home/yyk/Sqms-On-Postgresql/contrib/sqms/test2/tpch-alter.sql"
-CREATE_IDX_FILE = "/home/yyk/Sqms-On-Postgresql/contrib/sqms/test2/tpch-index.sql"
-DROP_IDX_FILE = "/home/yyk/Sqms-On-Postgresql/contrib/sqms/test2/tpch-index-drop.sql"
+CREATE_FILE = TEST_HOME + "/tpch-create.sql"   
+PKEYS_FILE = TEST_HOME + "/tpch-pkeys.sql"
+FKEYS_FILE = TEST_HOME + "/tpch-alter.sql"
+CREATE_IDX_FILE = TEST_HOME + "/tpch-index.sql"
+DROP_IDX_FILE = TEST_HOME + "/tpch-index-drop.sql"
 
 def classify_sql_statements(raw_sql):
     """
