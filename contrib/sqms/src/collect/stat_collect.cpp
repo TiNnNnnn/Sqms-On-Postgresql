@@ -6,6 +6,7 @@
 #include "utils/dsa.h"
 #include "utils/snapmgr.h"
 #include "commands/explain.h"
+#include "common/config.h"
 
 extern "C" {
 	PG_MODULE_MAGIC;
@@ -43,7 +44,7 @@ extern "C" {
 							"Sets the minimum execution time above which plans will be logged.",
 							"Zero prints all plans. -1 turns this feature off.",
 							&query_min_duration,
-							-1,
+							0.00000001,
 							-1, INT_MAX,
 							PGC_SUSET,
 							GUC_UNIT_MS,
@@ -125,7 +126,7 @@ extern "C" {
 									"Sets the directory for SQMS log files",
 									"Sets the directory for SQMS log files",
 									&sqms_log_directory,
-									"/usr/local/log",
+									"/home/hyh/Sqms-On-Postgresql/log",
 									PGC_SUSET,
 									0,
 									NULL,
@@ -144,13 +145,14 @@ extern "C" {
         prev_ExecutorEnd = ExecutorEnd_hook;
         ExecutorEnd_hook = StmtExecutorEnd;
 
-		RequestAddinShmemSpace(20485760000);	
+		// RequestAddinShmemSpace(20485760000);
+		// RequestAddinShmemSpace(1024000000);	
 		
 		prev_explain_one_query_hook = ExplainOneQuery_hook;
 		ExplainOneQuery_hook = ExplainOneQueryWithSlow;
 		
-		prev_shmem_startup_hook = shmem_startup_hook;
-		shmem_startup_hook = RegisterQueryIndex;
+		// prev_shmem_startup_hook = shmem_startup_hook;
+		// shmem_startup_hook = RegisterQueryIndex;
     }
 
     void _PG_fini(void){
@@ -159,7 +161,7 @@ extern "C" {
         ExecutorFinish_hook = prev_ExecutorFinish;
         ExecutorEnd_hook = prev_ExecutorEnd;       
 		ExplainOneQuery_hook = prev_explain_one_query_hook;
-		shmem_startup_hook = prev_shmem_startup_hook;
+		// shmem_startup_hook = prev_shmem_startup_hook;
     }
 };
 
@@ -210,7 +212,17 @@ void StatCollecter::StmtExecutorStartWrapper(QueryDesc *queryDesc, int eflags){
 		
 		return ;
 	}
-
+	bool found = false;
+	auto globle_handle = (dsa_handle*)ShmemInitStruct("SQMS_DSA_HANDLE", sizeof(dsa_handle), &found);
+	if (!found) {
+		// build index structure
+		RegisterQueryIndex();
+	}
+	else {
+		area_ = dsa_attach(*globle_handle);
+	}
+	std::cout << *globle_handle << std::endl;
+	std::cout << area_ << std::endl;
 	/* sqi just process cmd_select */
     if(auto_explain_enabled()){
 		/* Enable per-node instrumentation iff log_analyze is required. */
@@ -298,6 +310,7 @@ void StatCollecter::StmtExecutorEndWrapper(QueryDesc *queryDesc)
 		es.ProcQueryDesc(queryDesc,oldcxt,true); 
 		
 		MemoryContextSwitchTo(oldcxt);
+		dsa_detach(area_);
 	}
 
 	if (prev_ExecutorEnd){
@@ -307,6 +320,25 @@ void StatCollecter::StmtExecutorEndWrapper(QueryDesc *queryDesc)
 	}
 }
 
+/**
+ * @brief Wrapper function for query execution with slow query monitoring
+ * 
+ * This function serves as the entry point for SQMS query analysis. It:
+ * 1. Intercepts all query executions through PostgreSQL hook mechanism
+ * 2. For SELECT queries, performs comprehensive slow query analysis including:
+ *    - Execution time measurement
+ *    - Buffer usage tracking
+ *    - WAL logging statistics
+ *    - Plan tree processing via PlanStatFormat
+ * 3. For non-SELECT queries, falls back to standard explain output
+ * 4. Maintains compatibility with existing PostgreSQL explain hooks
+ * 
+ * @param query The query to be executed and analyzed
+ * @param params Query parameters
+ * @param queryString Original query text
+ * @param es ExplainState for output formatting
+ * @param prev_hook Pointer to previous hook in chain
+ */
 void StatCollecter::ExplainOneQueryWithSlowWrapper(Query *query,
 							int cursorOptions,
 							IntoClause *into,
@@ -380,50 +412,103 @@ void StatCollecter::ExplainOneQueryWithSlowWrapper(Query *query,
 }
 
 extern "C" void RegisterQueryIndex(){
+	area_ = dsa_create(1);
+	dsa_pin(area_);
+	std::cout << area_ << std::endl;
+	dsa_dump(area_);
+	bool found = false;
+	auto globle_handle = (dsa_handle*)ShmemInitStruct("SQMS_DSA_HANDLE", sizeof(dsa_handle), &found);
+	new (globle_handle) dsa_handle;
+	*globle_handle = dsa_get_handle(area_);
+	std::cout << *globle_handle << std::endl;
+
+	assert(area_ != NULL);
 
 	std::cout<<"begin building history query index..."<<std::endl;
-	bool found = true;
-	auto shared_index = (HistoryQueryLevelTree*)ShmemInitStruct(shared_index_name, sizeof(HistoryQueryLevelTree), &found);
+	// bool found = true;
+	// auto shared_index = (HistoryQueryLevelTree*)ShmemInitStruct(shared_index_name, sizeof(HistoryQueryLevelTree), &found);
 
+	// if (!shared_index) {
+    //     elog(ERROR, "Failed to allocate shared memory for root node.");
+    //     return;
+	// }
+	// if(!found){
+	// 	new (shared_index) HistoryQueryLevelTree(1);
+	// }
+
+	shared_index_ptr = (dsa_pointer*)ShmemInitStruct(shared_index_name, sizeof(dsa_pointer), &found);
+	*shared_index_ptr = dsa_allocate(area_, sizeof(HistoryQueryLevelTree));
+	auto shared_index = (HistoryQueryLevelTree*)dsa_get_address(area_, *shared_index_ptr);
 	if (!shared_index) {
-        elog(ERROR, "Failed to allocate shared memory for root node.");
-        return;
+		elog(ERROR, "Failed to allocate shared memory for root node.");
+		return;
 	}
-	if(!found){
-		new (shared_index) HistoryQueryLevelTree(1);
-	}
+	new (shared_index) HistoryQueryLevelTree(1);
+
 	std::cout<<"finish building history query index..."<<std::endl;
 	
-	found = true;
-	auto scan_index = (HistoryQueryLevelTree*)ShmemInitStruct(scan_index_name, sizeof(HistoryQueryLevelTree), &found);
+	// found = true;
+	// auto scan_index = (HistoryQueryLevelTree*)ShmemInitStruct(scan_index_name, sizeof(HistoryQueryLevelTree), &found);
+	// if(!scan_index) {
+	// 	elog(ERROR, "Failed to allocate shared memory for scan index.");
+	// 	return;
+	// }
+	// if(!found){
+	// 	new (scan_index) HistoryQueryLevelTree(1);
+	// }
+
+	scan_index_ptr = (dsa_pointer*)ShmemInitStruct(scan_index_name, sizeof(dsa_pointer), &found);
+	*scan_index_ptr = dsa_allocate(area_, sizeof(HistoryQueryLevelTree));
+	auto scan_index = (HistoryQueryLevelTree*)dsa_get_address(area_, *scan_index_ptr);
 	if(!scan_index) {
 		elog(ERROR, "Failed to allocate shared memory for scan index.");
 		return;
 	}
-	if(!found){
-		new (scan_index) HistoryQueryLevelTree(1);
-	}
+	new (scan_index) HistoryQueryLevelTree(1);
 
 	/*plan hash table is a baseline method for slow match*/
-	found = true;
-	auto plan_hash_table = (LevelHashStrategy*)ShmemInitStruct(plan_hash_table_name,sizeof(LevelHashStrategy),&found);
+	// found = true;
+	// auto plan_hash_table = (LevelHashStrategy*)ShmemInitStruct(plan_hash_table_name,sizeof(LevelHashStrategy),&found);
+	// if(!plan_hash_table){
+	// 	elog(ERROR, "Failed to allocate shared memory for plan_hash_table.");
+	// 	return;
+	// }
+	// if(!found){
+	// 	new (plan_hash_table) LevelHashStrategy(0);
+	// }
+
+	plan_hash_table_ptr = (dsa_pointer*)ShmemInitStruct(plan_hash_table_name, sizeof(dsa_pointer), &found);
+	*plan_hash_table_ptr = dsa_allocate(area_, sizeof(LevelHashStrategy));
+	auto plan_hash_table = (LevelHashStrategy*)dsa_get_address(area_, *plan_hash_table_ptr);
 	if(!plan_hash_table){
 		elog(ERROR, "Failed to allocate shared memory for plan_hash_table.");
 		return;
 	}
-	if(!found){
-		new (plan_hash_table) LevelHashStrategy(0);
-	}
+	new (plan_hash_table) LevelHashStrategy(0);
+
 	/**
 	 * TODO: here we should load history slow queries in redis into shared_index
 	 */
 	std::cout<<"begin building sqms logger..."<<std::endl;
-	found = false;
-	auto logger = (SqmsLogger*)ShmemInitStruct("SqmsLogger", sizeof(SqmsLogger), &found);
-	if(!found){
-		new (logger) SqmsLogger();
+	// found = false;
+	// auto logger = (SqmsLogger*)ShmemInitStruct("SqmsLogger", sizeof(SqmsLogger), &found);
+	// if(!found){
+	// 	new (logger) SqmsLogger();
+	// }
+
+	sqmslogger_ptr = (dsa_pointer*)ShmemInitStruct(sqmslogger_name, sizeof(dsa_pointer), &found);
+	*sqmslogger_ptr = dsa_allocate(area_, sizeof(SqmsLogger));
+	auto logger = (SqmsLogger*)dsa_get_address(area_, *sqmslogger_ptr);
+	if(!logger){
+		elog(ERROR, "Failed to allocate shared memory for logger.");
+		return;
 	}
+	new (logger) SqmsLogger();
+
+
 	std::cout<<"finsh building sqms logger..."<<std::endl;
+	dsa_dump(area_);
+
 }
 
 extern "C" void StmtExecutorStart(QueryDesc *queryDesc, int eflags) {

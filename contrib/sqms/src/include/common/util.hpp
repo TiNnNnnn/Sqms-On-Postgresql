@@ -16,6 +16,7 @@ extern "C" {
     #include "postgres.h"
     #include "common/config.h"
     #include "storage/shmem.h"
+    #include "utils/dsa.h"
 }
 
 //单位是ms
@@ -58,6 +59,41 @@ struct SharedMemoryAllocator {
     }
 
     bool operator!=(const SharedMemoryAllocator& other) const noexcept {
+        return !(*this == other);
+    }
+};
+
+/* dsa_shared memory based on dsa shmem interface */
+template <typename T>
+struct dsa_allocator {
+    using value_type = T;
+
+    dsa_pointer dptr = 0;
+
+    template <typename U>
+    struct rebind {
+        using other = dsa_allocator<U>;
+    };
+
+    dsa_allocator() {}
+    
+    template <typename U>
+    dsa_allocator(const dsa_allocator<U>&) {}
+
+    T* allocate(std::size_t n) {
+        dptr = dsa_allocate(area_, n * sizeof(T));
+        return static_cast<T*>(dsa_get_address(area_, dptr));
+    }
+    
+    void deallocate(T* p, std::size_t n) noexcept {
+        // dsa_free(area_, dptr);
+    }
+
+    bool operator==(const dsa_allocator& other) const noexcept {
+        return true; 
+    }
+
+    bool operator!=(const dsa_allocator& other) const noexcept {
         return !(*this == other);
     }
 };

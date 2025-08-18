@@ -123,12 +123,15 @@ public:
         early_stop_ = lpes->EarlyStop();
         lpe_id_ = lpes->LpeId();
     }
+    void set_dsa_ptr(dsa_pointer ptr) { dsa_ptr_ = ptr; }
+    dsa_pointer get_dsa_ptr() {return dsa_ptr_; }
 private:
     SMUnorderedSet<SMPredEquivlence*> level_pe_sets_;
     SMUnorderedMap<SMString,SMPredEquivlence*,SMStringHash> key2pe_;
     //SMUnorderedMap<SMPredEquivlence*,SMPredEquivlence*>pe2pe_map_;
     bool early_stop_ = true;
     int  lpe_id_;
+    dsa_pointer dsa_ptr_;
 };
 
 class SMLevelPredEquivlencesList{
@@ -143,7 +146,10 @@ public:
 
     void Copy(LevelPredEquivlencesList* lpe_list){
         for(const auto& lpe : lpe_list->GetLpesList()){
-            SMLevelPredEquivlences* sm_lpe = (SMLevelPredEquivlences*)ShmemAlloc(sizeof(SMLevelPredEquivlences));
+            dsa_pointer ptr = dsa_allocate(area_, sizeof(SMLevelPredEquivlences));
+            SMLevelPredEquivlences* sm_lpe = (SMLevelPredEquivlences*)dsa_get_address(area_, ptr);
+            sm_lpe->set_dsa_ptr(ptr);
+            // SMLevelPredEquivlences* sm_lpe = (SMLevelPredEquivlences*)ShmemAlloc(sizeof(SMLevelPredEquivlences));
             assert(sm_lpe);
             new (sm_lpe) SMLevelPredEquivlences();
             sm_lpe->Copy(lpe);
@@ -157,9 +163,12 @@ public:
             child_lpes_map_[item.first] = child_id_list;
         }
     }
+    void set_dsa_ptr(dsa_pointer ptr) { dsa_ptr_ = ptr; }
+    dsa_pointer get_dsa_ptr() {return dsa_ptr_; }
 private:
     SMVector<SMLevelPredEquivlences*> lpes_list_;
     SMUnorderedMap<size_t,SMVector<size_t>> child_lpes_map_;
+    dsa_pointer dsa_ptr_;
 };
 
 class SMLevelOutputList{
@@ -300,7 +309,10 @@ public:
     const SMString& GetQueryStr();
     void Copy(LevelManager* level_mgr){
         for(const auto& pe : level_mgr->GetTotalEquivlences()){
-            SMLevelPredEquivlencesList* sm_lpes_list = (SMLevelPredEquivlencesList*)ShmemAlloc(sizeof(SMLevelPredEquivlencesList));
+            dsa_pointer ptr = dsa_allocate(area_, sizeof(SMLevelPredEquivlencesList));
+            SMLevelPredEquivlencesList* sm_lpes_list = (SMLevelPredEquivlencesList*)dsa_get_address(area_, ptr);
+            sm_lpes_list->set_dsa_ptr(ptr);
+            // SMLevelPredEquivlencesList* sm_lpes_list = (SMLevelPredEquivlencesList*)ShmemAlloc(sizeof(SMLevelPredEquivlencesList));
             assert(sm_lpes_list);
             new (sm_lpes_list) SMLevelPredEquivlencesList();
             sm_lpes_list->Copy(pe);

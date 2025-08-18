@@ -22,8 +22,8 @@ PlanStatFormat::PlanStatFormat(int psize)
     storage_ = std::make_shared<RedisSlowPlanStatProvider>(std::string(redis_host),redis_port,totalFetchTimeoutMillis,totalSetTimeMillis,defaultTTLSeconds); 
 
     bool found = false;
-    logger_ = (SqmsLogger*)ShmemInitStruct("SqmsLogger", sizeof(SqmsLogger), &found);
-    assert(found);
+    sqmslogger_ptr = (dsa_pointer*)ShmemInitStruct(sqmslogger_name, sizeof(dsa_pointer), &found);
+    assert(sqmslogger_ptr);
 }
 
 bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slow){
@@ -54,8 +54,18 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
         // }
         HistorySlowPlanStat *hsps = &hsps_;
         bool found = true;
-        auto shared_index = (HistoryQueryLevelTree*)ShmemInitStruct(shared_index_name, sizeof(HistoryQueryLevelTree), &found);
-        if(!found || !shared_index){
+        // auto shared_index = (HistoryQueryLevelTree*)ShmemInitStruct(shared_index_name, sizeof(HistoryQueryLevelTree), &found);
+        // if(!found || !shared_index){
+        //     std::cerr<<"shared_index not exist!"<<std::endl;
+        //     exit(-1);
+        // }
+        shared_index_ptr = (dsa_pointer*)ShmemInitStruct(shared_index_name, sizeof(dsa_pointer), &found);
+        if(!found){
+            std::cerr<<"shared_index_ptr not exist!"<<std::endl;
+            exit(-1);
+        }
+        auto shared_index = (HistoryQueryLevelTree*)dsa_get_address(area_, *shared_index_ptr);
+        if (!shared_index_ptr || !shared_index) {
             std::cerr<<"shared_index not exist!"<<std::endl;
             exit(-1);
         }
@@ -84,9 +94,13 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
             for(const auto& p : list){
                 if(plan_equal_enabled){
                     assert(!node_match_enabled && !plan_match_enabled);
-                    bool found = true;
-                    auto plan_map = (LevelHashStrategy*)ShmemInitStruct(plan_hash_table_name, sizeof(LevelHashStrategy), &found);
-                    if(!found || !plan_map){
+                    plan_hash_table_ptr = (dsa_pointer*)ShmemInitStruct(plan_hash_table_name, sizeof(dsa_pointer), &found);
+                    if(!found){
+                        std::cerr<<"plan map not exist!"<<std::endl;
+                        exit(-1);
+                    }
+                    auto plan_map = (LevelHashStrategy*)dsa_get_address(area_, *plan_hash_table_ptr);
+                    if (!plan_map) {
                         std::cerr<<"plan map not exist!"<<std::endl;
                         exit(-1);
                     }
@@ -181,8 +195,14 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
                     if(plan_equal_enabled){
                         assert(!node_match_enabled && !plan_match_enabled );
                         bool found = true;
-                        auto plan_map = (LevelHashStrategy*)ShmemInitStruct(plan_hash_table_name, sizeof(LevelHashStrategy), &found);
-                        if(!found || !plan_map){
+                        plan_hash_table_ptr = (dsa_pointer*)ShmemInitStruct(plan_hash_table_name, sizeof(dsa_pointer), &found);
+                        if(!found){
+                            std::cerr<<"plan map not exist!"<<std::endl;
+                            exit(-1);
+                        }
+
+                        auto plan_map = (LevelHashStrategy*)dsa_get_address(area_, *plan_hash_table_ptr);
+                        if (!plan_map) {
                             std::cerr<<"plan map not exist!"<<std::endl;
                             exit(-1);
                         }
@@ -240,8 +260,14 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
         /**collect scan nodes of all querys */
         if(slow && collect_scans_enabled){
             bool found = true;
-            auto scan_index = (HistoryQueryLevelTree*)ShmemInitStruct(scan_index_name, sizeof(HistoryQueryLevelTree), &found);
-            if(!found || !scan_index){
+            scan_index_ptr = (dsa_pointer*)ShmemInitStruct(scan_index_name, sizeof(dsa_pointer), &found);
+            if(!found){
+                std::cerr<<"scan_index not exist!"<<std::endl;
+                exit(-1);
+            }
+
+            auto scan_index = (HistoryQueryLevelTree*)dsa_get_address(area_, *scan_index_ptr);
+            if (!scan_index) {
                 std::cerr<<"scan_index not exist!"<<std::endl;
                 exit(-1);
             }
@@ -306,11 +332,13 @@ bool PlanStatFormat::ExplainQueryDesc(QueryDesc *qd,ExplainState *es){
     }
     HistorySlowPlanStat *hsps = &hsps_;
     bool found = true;
-    auto shared_index = (HistoryQueryLevelTree*)ShmemInitStruct(shared_index_name, sizeof(HistoryQueryLevelTree), &found);
+    auto shared_index_ptr = (dsa_pointer*)ShmemInitStruct(shared_index_name, sizeof(dsa_pointer), &found);
+    auto shared_index = (HistoryQueryLevelTree*)dsa_get_address(area_, *shared_index_ptr);
     if(!found || !shared_index){
         std::cerr<<"shared_index not exist!"<<std::endl;
         exit(-1);
     }
+
     logger_->Logger("comming","begin explain comming query...");
     std::cout<<"begin explain comming query..."<<std::endl;
 
@@ -402,6 +430,20 @@ std::string PlanStatFormat::HashCanonicalPlan(char *json_plan){
     return std::to_string(hash_fn(std::string(json_plan)));
 }
 
+/**
+ * Performs a level-order (breadth-first) traversal of the slow query plan tree
+ * and collects all nodes into the provided vector.
+ * 
+ * @param hsps The root node of the HistorySlowPlanStat tree to traverse
+ * @param sub_list Output vector that will contain all nodes in level-order
+ * 
+ * This function uses a queue-based BFS algorithm to traverse the plan tree,
+ * processing nodes level by level (root first, then its children, etc).
+ * Each node is pushed into the output vector in traversal order.
+ * 
+ * The function is used for analyzing query plan structure and collecting
+ * statistics in a hierarchical manner.
+ */
 void PlanStatFormat::LevelOrder(HistorySlowPlanStat* hsps,std::vector<HistorySlowPlanStat*>& sub_list){
     std::queue<HistorySlowPlanStat*>q;
     int level_size = 1;

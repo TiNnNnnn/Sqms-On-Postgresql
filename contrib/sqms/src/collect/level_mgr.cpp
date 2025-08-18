@@ -1705,8 +1705,10 @@ PredEquivlence::PredEquivlence(Quals* qual,bool is_not){
 			PlanFormatContext* pf_context = new PlanFormatContext();
 			
 			bool found = false;
-			auto logger = (SqmsLogger*)ShmemInitStruct("SqmsLogger", sizeof(SqmsLogger), &found);
+			sqmslogger_ptr = (dsa_pointer*)ShmemInitStruct(sqmslogger_name, sizeof(dsa_pointer), &found);
 			assert(found);
+			auto logger = (SqmsLogger*)dsa_get_address(area_, *sqmslogger_ptr);
+			assert(sqmslogger_ptr);
 
 			if(!strlen(qual->left)){
 				/*subquery not must have left val,may be we should find left var in subquery output cols*/
@@ -1754,8 +1756,10 @@ PredEquivlence::PredEquivlence(Quals* qual,bool is_not){
 			PlanFormatContext* pf_context = new PlanFormatContext();
 
 			bool found = false;
-			auto logger = (SqmsLogger*)ShmemInitStruct("SqmsLogger", sizeof(SqmsLogger), &found);
+			sqmslogger_ptr = (dsa_pointer*)ShmemInitStruct(sqmslogger_name, sizeof(dsa_pointer), &found);
 			assert(found);
+			auto logger = (SqmsLogger*)dsa_get_address(area_, *sqmslogger_ptr);
+			assert(sqmslogger_ptr);
 
 			if(!strlen(qual->left)){				
 			}else{
@@ -1802,9 +1806,11 @@ PredEquivlence::PredEquivlence(Quals* qual,bool is_not){
 			PlanFormatContext* pf_context = new PlanFormatContext();
 			
 			bool found = false;
-			auto logger = (SqmsLogger*)ShmemInitStruct("SqmsLogger", sizeof(SqmsLogger), &found);
+			sqmslogger_ptr = (dsa_pointer*)ShmemInitStruct(sqmslogger_name, sizeof(dsa_pointer), &found);
 			assert(found);
-
+			auto logger = (SqmsLogger*)dsa_get_address(area_, *sqmslogger_ptr);
+			assert(sqmslogger_ptr);
+			
 			/*qual has param may be just has a param without left var*/
 			/**
 			 * TODO: paser not totally correct
