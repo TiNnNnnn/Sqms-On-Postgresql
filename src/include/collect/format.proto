@@ -1,0 +1,205 @@
+syntax = "proto3";
+
+message HistorySlowPlanStat{
+	double custom_plan_provider = 1;
+	double estimate_plan_width = 4;
+
+	double actual_nloops = 5;
+	double actual_start_up = 6;
+	double actual_total = 7;
+	double actual_rows = 8;
+
+    repeated HistorySlowPlanStat  childs = 9;
+    string node_type = 10;
+	string strategy = 11;
+	//for aggregate
+	string partial_mode = 12;
+	//for subplan
+	string sub_plan_name = 13;
+	//for insert/update/delete
+	string operation = 14;
+    //for scan (object tag and object name is a kv)
+	string object_name = 15;
+	string schema = 16;
+	string object_tag = 17;
+	string alia_name = 18;
+	//addtional info for indexscan/indexonlyscan
+	string scan_dir =19;
+	string idx_name = 20;
+	//for join
+	string join_type = 21;
+	bool inner_unique = 22;
+	//for setOp
+	string command = 23;
+	//output cols
+	repeated string output = 24;
+	string relationship = 25;
+	double total_cost = 26;
+	string sample_method = 27;
+	string sampling_parameters = 28;
+	string repeatable_seed = 29;
+
+	/*total cost of current subquery*/
+	double sub_cost = 30;
+	/*json of current subquery*/
+	string json_plan = 31; 
+	string canonical_json_plan = 32;
+	/*all node type of current subquery*/
+	repeated string sub_node_type_set = 33;
+
+	/*for filter*/
+	string qlabel = 34;
+	string exprstr = 35;
+	
+	/*for groupby*/
+	string key_name = 36;
+	string keysetname = 37;
+	
+	bool is_g_keys = 38;
+	/*for groupby set, a set contains serval keys*/
+	repeated GroupKeys g_sets = 39;
+
+	/*for groupby or sort keys*/
+	string group_sort_qlabel = 40;
+	repeated GroupSortKey group_sort_keys = 41;
+
+	int32 node_tag = 42;
+
+	PredExpression expr_root = 43;
+
+	PredTypeTag cur_expr_tag = 44;
+
+	//map<string,PredExpression> expr_tree = 45;
+	PredExpression join_cond_expr_tree = 45;
+	PredExpression join_filter_expr_tree = 46;
+	PredExpression filter_tree = 47;
+	PredExpression one_time_filter_tree = 48;
+	PredExpression tid_cond_expr_tree = 49;
+	PredExpression recheck_cond_tree = 50;
+	PredExpression index_cond_expr_tree = 51;
+	PredExpression order_by_expr_tree = 52;
+
+	/*Auxiliary parameters*/
+	int32 child_idx = 53;
+	int32 subplan_idx = 54;
+	/*we storage subplan divide from sommon childs*/
+	repeated HistorySlowPlanStat subplans = 55;
+	string canonical_node_json_plan = 56;
+
+	double node_cost = 57;
+	/*cur hsp postiton in opne query's all subplan*/
+	int32 sub_id = 58;
+}
+
+enum PredTypeTag{
+	NONE = 0;
+	JOIN_COND = 1;
+	JOIN_FILTER = 2;
+	FILTER = 3;
+	ONE_TIME_FILTER = 4;
+	TID_COND = 5;
+	RECHECK_COND = 6;
+	INDEX_COND = 7;
+	ORDER_BY = 8;
+}
+
+message GroupSortKey{
+	/*
+	* sort or groupby key
+	* group_sort_qlabel == "Group Key" --> groupby key
+	* group_sort_qlable == "Sort Key"  --> sort key
+	*/
+	string key = 1;
+	/*sort order options*/
+	bool sort_operators = 2;
+	string sort_collation = 3;
+	string sort_direction = 4; // DESC or ASC or NO_DEFAULT
+	string sort_null_pos = 5; // NULLS FIRST or NULLS LAST
+	bool presorted_key = 6;
+}
+
+message GroupKeys{
+	string key_name = 1;
+	repeated string keys = 2;
+}
+
+message PredExpression {
+    oneof expr {
+        PredOperator op = 1;
+        Quals qual = 2;
+    }
+}
+
+message PredOperator {
+	enum PredOperatorType {
+		AND = 0;
+		OR = 1;
+		NOT = 2;
+	}
+    PredOperatorType type = 1;
+	repeated PredExpression childs = 2;
+}
+
+enum ValType{
+	UNKNOWN = 0;
+	INT = 1;
+	DOUBLE = 2;
+	STRING = 3;
+	BOOL = 4;
+	NULL = 5;
+}
+
+message Quals{
+	/*Common qual*/
+	string left = 1;
+	string right = 2;
+	string op = 3;
+
+	int64 l_type = 4;
+	int64 r_type = 5;
+
+	/*T_ScalarArrayOpExpr*/
+	string format_type = 6;
+	string use_or = 7;
+
+	/*SubQuery*/
+	bool hash_sub_plan = 8;
+	string sub_plan_name = 9;
+	
+	HistorySlowPlanStat hsps = 10;
+
+	uint32 left_val_type_id = 11;
+	uint32 right_val_type_id = 12;
+
+	HistorySlowPlanStat root_hsps = 13;
+}
+
+
+/*TODO: reserved protobuf structure,no used currently*/
+message ProtoPredEquivlence{	
+	repeated string sets = 1;
+	repeated Range ranges = 2;
+}
+
+message Range{
+    string str_lower_limit = 3;
+    string str_upper_limit = 4;
+}
+
+/*plan stat in single level*/
+message SlowPlanLevelStat{
+    /*join,filter*/
+    repeated ProtoPredEquivlence pe_list = 1;
+    repeated string output_col_set = 2;
+    /*Agg*/
+    repeated string group_by_set = 3;    
+    /*Limit*/
+	/*Sort*/
+	repeated string sort_key_set = 4;
+	bool stop = 5;
+};
+
+message SlowPlanStat{
+    /*size of stats is qual with slow plan's level num*/
+    repeated SlowPlanLevelStat stats = 1;
+}

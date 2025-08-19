@@ -1,0 +1,5 @@
+# sqms extension
+comment = 'slow query manager system'
+default_version = '1.0'
+module_pathname = '$libdir/sqms'
+relocatable = true
