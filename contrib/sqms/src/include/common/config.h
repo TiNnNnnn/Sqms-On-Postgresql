@@ -2,6 +2,8 @@
 #include <limits.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include "postgres.h"
+#include "utils/dsa.h"
 
 /* GUC variables */
 extern int	query_min_duration;
@@ -22,9 +24,9 @@ extern long defaultTTLSeconds;
 extern bool debug;
 /*if enable to use excavate core sub plan*/
 extern bool excavate_enabled;
-/*if enable to use plan phyiscal view metod to match slow plans*/
+/*if enable to use plan physical view method to match slow plans*/
 extern bool plan_match_enabled;
-/*if enable to use node phyiscla view stitch metod to match slow plans*/
+/*if enable to use node physical view stitch method to match slow plans*/
 extern bool node_match_enabled;
 /*gc params*/
 extern bool collect_scans_enabled;
@@ -47,4 +49,11 @@ extern const char* queue_name;
 extern const char* shared_index_name;
 extern const char* scan_index_name;
 extern const char* plan_hash_table_name;
+extern const char* sqmslogger_name;
 
+/* dsa */
+extern dsa_pointer *shared_index_ptr;
+extern dsa_pointer *scan_index_ptr;
+extern dsa_pointer *plan_hash_table_ptr;
+extern dsa_pointer *sqmslogger_ptr;
+extern dsa_area *area_;

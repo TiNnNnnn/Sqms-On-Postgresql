@@ -29,3 +29,11 @@ const char* shared_index_name = "HISTORY_QUERY_TREE_INDEX";
 const char* scan_index_name = "HISTORY_QUERY_SCAN_INDEX";
 const char* queue_name = "query_index";
 const char* plan_hash_table_name = "PLAN_HASH_TABLE";
+const char* sqmslogger_name = "SQMS_LOGGER";
+
+/* dsa */
+dsa_pointer *shared_index_ptr = NULL;
+dsa_pointer *scan_index_ptr = NULL;
+dsa_pointer *plan_hash_table_ptr = NULL;
+dsa_pointer *sqmslogger_ptr = NULL;
+dsa_area *area_ = NULL;

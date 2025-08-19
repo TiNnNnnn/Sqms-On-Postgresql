@@ -40,6 +40,11 @@ sqms_env/
 lib/
 include/
 share/postgresql/contrib/
+contrib/sqms/test/__pycache__
+contrib/sqms/test/output
+contrib/sqms/test/tbl_data
+contrib/sqms/test/tpch_query_slow
+contrib/sqms/test/sql_order.txt
 
 # Local excludes in root directory
 /GNUmakefile

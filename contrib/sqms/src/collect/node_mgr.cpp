@@ -9,12 +9,16 @@
 NodeManager::NodeManager(HistorySlowPlanStat* hsps,std::shared_ptr<LevelManager> level_mgr,pid_t pid)
 : hsps_(hsps),level_mgr_(level_mgr),pool_(std::make_shared<ThreadPool>(10,true)),pid_(pid){
     bool found = false;
-    logger_ = (SqmsLogger*)ShmemInitStruct("SqmsLogger", sizeof(SqmsLogger), &found);
-    assert(logger_ && found);
+    sqmslogger_ptr = (dsa_pointer*)ShmemInitStruct(sqmslogger_name, sizeof(dsa_pointer), &found);
 
     found = false;
-    shared_index_ = (HistoryQueryLevelTree*)ShmemInitStruct(shared_index_name, sizeof(HistoryQueryLevelTree), &found);
-    assert(shared_index_ && found);
+    shared_index_ptr = (dsa_pointer*)ShmemInitStruct(shared_index_name, sizeof(dsa_pointer), &found);
+
+    logger_ = (SqmsLogger*)dsa_get_address(area_, *sqmslogger_ptr);
+    assert(logger_ && sqmslogger_ptr);
+
+    shared_index_ = (HistoryQueryLevelTree*)dsa_get_address(area_, *shared_index_ptr);
+    assert(shared_index_ && shared_index_ptr);
 
     root_ = level_mgr_->GetNodeCollector()[hsps];
 }

@@ -73,7 +73,7 @@ DB_CONFIG = {
     "dbname": "postgres",
     "user": "postgres",
     "host": "localhost",
-    "port": "44444"
+    "port": "44445"
 }
 
 TEST_HOME="/home/hyh/Sqms-On-Postgresql/contrib/sqms/test"
@@ -218,13 +218,14 @@ def InitEnv(conn,type):
     #set foreign key
     #status = execute.execute_sql_file(cursor,FKEYS_FILE,False)
     #import data
-    for batch_index in range(init_data_size):
-        print(f"[ batch {batch_index + 1} ] Begin importing data...")
-        for tbl_name in ["lineitem", "orders", "part", "partsupp", "customer", "nation", "region", "supplier"]:
-            tbl_path = f"{BATCH_DIR}/{tbl_name}_batch_{batch_index}.tbl"
-            print(f"copy {tbl_name} from '{tbl_path}' with delimiter as '|' NULL '' ")
-            cursor.execute(f"copy {tbl_name} from '{tbl_path}' with delimiter as '|' NULL '' ")
-            print(f"[ batch {batch_index + 1}] Finish importing data...")
+    #for batch_index in range(init_data_size):
+    #print(f"[ batch {batch_index + 1} ] Begin importing data...")
+    for tbl_name in ["lineitem", "orders", "part", "partsupp", "customer", "nation", "region", "supplier"]:
+        #tbl_path = f"{BATCH_DIR}/{tbl_name}_batch_{batch_index}.tbl"
+        tbl_path = f"{TBL_DIR}/{tbl_name}.tbl"
+        print(f"copy {tbl_name} from '{tbl_path}' with delimiter as '|' NULL '' ")
+        cursor.execute(f"copy {tbl_name} from '{tbl_path}' with delimiter as '|' NULL '' ")
+        #print(f"[ batch {batch_index + 1}] Finish importing data...")
     if type == 1:
         cursor.execute(f"set sqms.query_min_duration = '0.00000001s'")
     cursor.close()
@@ -264,10 +265,11 @@ def StaticWorkloadTest(type):
     conn.autocommit = True
     
     batch_size = 3
-    SQL_DIR = "./tpch_query_slow2"
-    order_file_path = "./sql_order2.txt"
-    rep_sql_file_path = SQL_DIR + "_rep"
-    InitEnv(conn,type)
+    SQL_DIR = "./tpch_query_slow"
+    order_file_path = "./sql_order.txt"
+    # rep_sql_file_path = SQL_DIR + "_rep"
+    rep_sql_file_path = SQL_DIR
+    #InitEnv(conn,type)
 
     # init qppnet and prepare plan dir
     temp_plan_dir = "./qppnet/data/pgdata"
@@ -278,6 +280,7 @@ def StaticWorkloadTest(type):
         opt = parser.parse_args()
 
     cursor = conn.cursor()
+    cursor.execute(f"set statement_timeout = '10s'")
 
     # sql_files = replicate_sql_files(SQL_DIR, rep_sql_file_path, batch_size)
     # sql_files = [f for f in os.listdir(rep_sql_file_path) if f.endswith(".sql")]
