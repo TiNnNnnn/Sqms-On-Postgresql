@@ -11,7 +11,7 @@ bool LevelHashStrategy::Insert(LevelManager* level_mgr){
     assert(level_mgr);
     auto json_sub_plan = SMString(level_mgr->GetHsps()->canonical_json_plan);
 
-    SMConcurrentHashMap<SMString,HistoryQueryIndexNode*>::const_accessor acc;
+    SMConcurrentHashMap<SMString,HistoryQueryIndexNode*,SMStringHash>::const_accessor acc;
     if(set_map_.find(acc ,json_sub_plan)){
         auto child = acc->second;
         return child->Insert(level_mgr);
@@ -39,7 +39,7 @@ bool LevelHashStrategy::Insert(LevelManager* level_mgr){
 bool LevelHashStrategy::Serach(LevelManager* level_mgr,int id){
     assert(level_mgr);
     auto json_sub_plan = SMString(level_mgr->GetHsps()->canonical_json_plan);
-    SMConcurrentHashMap<SMString,HistoryQueryIndexNode*>::const_accessor acc;
+    SMConcurrentHashMap<SMString,HistoryQueryIndexNode*,SMStringHash>::const_accessor acc;
     if(set_map_.find(acc ,json_sub_plan)){
         auto child = acc->second;
         return child->Search(level_mgr,-1);
@@ -61,7 +61,7 @@ bool LevelHashStrategy::Insert(NodeCollector* node_collector){
     assert(node_collector);
     auto json_sub_plan = SMString(node_collector->json_sub_plan);
 
-    SMConcurrentHashMap<SMString,HistoryQueryIndexNode*>::const_accessor acc;
+    SMConcurrentHashMap<SMString,HistoryQueryIndexNode*,SMStringHash>::const_accessor acc;
     if(set_map_.find(acc ,json_sub_plan)){
         auto child = acc->second;
         return child->Insert(node_collector);
@@ -89,7 +89,7 @@ bool LevelHashStrategy::Remove(NodeCollector* node_collector){
 bool LevelHashStrategy::Search(NodeCollector* node_collector){
     assert(node_collector);
     auto json_sub_plan = SMString(node_collector->json_sub_plan);
-    SMConcurrentHashMap<SMString,HistoryQueryIndexNode*>::const_accessor acc;
+    SMConcurrentHashMap<SMString,HistoryQueryIndexNode*,SMStringHash>::const_accessor acc;
     if(set_map_.find(acc ,json_sub_plan)){
         auto child = acc->second;
         return child->Serach(node_collector);
@@ -104,7 +104,7 @@ bool LevelHashStrategy::Insert(const std::string& plan){
 }
 
 bool LevelHashStrategy::Search(const std::string& plan){
-    SMConcurrentHashMap<SMString,HistoryQueryIndexNode*>::const_accessor acc;
+    SMConcurrentHashMap<SMString,HistoryQueryIndexNode*,SMStringHash>::const_accessor acc;
     return set_map_.find(acc,SMString(plan));
 }
 

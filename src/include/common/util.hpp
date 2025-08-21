@@ -38,9 +38,14 @@ struct SharedMemoryAllocator {
         using other = SharedMemoryAllocator<U>;
     };
 
-    SharedMemoryAllocator() {}
-    template <typename U>
-    SharedMemoryAllocator(const SharedMemoryAllocator<U>&) {}
+    SharedMemoryAllocator() noexcept = default;
+
+    template <class U>
+    SharedMemoryAllocator(const SharedMemoryAllocator<U>&) noexcept {}
+
+    // SharedMemoryAllocator() {}
+    // template <typename U>
+    // SharedMemoryAllocator(const SharedMemoryAllocator<U>&) {}
 
     T* allocate(std::size_t n) {
         void* ptr = ShmemAlloc(n * sizeof(T));
@@ -51,6 +56,7 @@ struct SharedMemoryAllocator {
     }
 
     void deallocate(T* p, std::size_t n) {
+        
     }
 
     bool operator==(const SharedMemoryAllocator& other) const noexcept {
@@ -60,6 +66,11 @@ struct SharedMemoryAllocator {
     bool operator!=(const SharedMemoryAllocator& other) const noexcept {
         return !(*this == other);
     }
+
+    using is_always_equal = std::true_type;
+    using propagate_on_container_move_assignment = std::true_type;
+    using propagate_on_container_copy_assignment = std::true_type;
+    using propagate_on_container_swap = std::true_type;
 };
 
 template <typename Key, typename Value,typename Hash = std::hash<Key>,typename EqualTo = std::equal_to<Key>>
@@ -157,5 +168,13 @@ uint32_t hash_array(const SMVector<int>& array);
 struct SMStringHash {
     std::size_t operator()(const SMString &s) const {
         return std::hash<std::string_view>{}(std::string_view(s.data(), s.size()));
+    }
+
+    size_t hash(const SMString &s) const {
+        return operator()(s);
+    }
+
+    bool equal(const SMString &a, const SMString &b) const {
+        return a == b;
     }
 };

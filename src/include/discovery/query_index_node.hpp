@@ -86,7 +86,7 @@ public:
     bool Search(const std::string& plan);
 
 private:
-    SMConcurrentHashMap<SMString,HistoryQueryIndexNode*>set_map_;
+    SMConcurrentHashMap<SMString,HistoryQueryIndexNode*,SMStringHash>set_map_;
 };
 
 
