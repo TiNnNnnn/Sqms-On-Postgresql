@@ -1,4 +1,5 @@
 #include "discovery/query_index_node.hpp"
+#include "discovery/query_index.hpp"
 #include "common/util.hpp"
 #include <unordered_set>
 #include <algorithm>
@@ -965,24 +966,42 @@ bool LeafStrategy::Insert(LevelManager* level_mgr){
         historys_.insert(historys_.begin(),level_mgr_);
     }
 
+    if(!shared_index_){
+        bool found = true;
+        shared_index_ = (HistoryQueryLevelTree*)ShmemInitStruct(shared_index_name, sizeof(HistoryQueryLevelTree), &found);
+        if(!found || !shared_index_){
+            std::cerr<<"shared_index not exist!"<<std::endl;
+            exit(-1);
+        }
+    }
+
     auto new_level_mgr = (SMLevelManager*)ShmemAlloc(sizeof(SMLevelManager));
     assert(new_level_mgr);
     /*new sm level manager need shmemalloc*/
     new (new_level_mgr) SMLevelManager();
     new_level_mgr->Copy(level_mgr);
     level_mgr_ = new_level_mgr;
+    effective_ = true;
     return true;
 }
 
 bool LeafStrategy::Serach(LevelManager* level_mgr,int id){
     auto total_lpes_list = level_mgr->GetTotalEquivlences();
+    
+    std::shared_lock<std::shared_mutex>lock(rw_mutex_);
+    if(!effective_){
+        return false;
+    }
+
+    if(!shared_index_->CheckEffective(level_mgr_->GetLid())){
+        SetEffective(false);
+        return false;
+    }
 
     /*check lpes from top to down*/
     int h = total_lpes_list.size() -1;
     int lpe_id = id;
     {
-        std::shared_lock<std::shared_mutex>lock(rw_mutex_);
-
         while(h >= 1){
             auto child_lpes_list = total_lpes_list[h]->GetChildLpesMap()[lpe_id];
             if(child_lpes_list.empty()){
@@ -1017,7 +1036,6 @@ bool LeafStrategy::Serach(LevelManager* level_mgr,int id){
 }
 
 
-
 bool LeafStrategy::SearchInternal(LevelManager* src_mgr,int h,int id,int dst_id){
     if(h<0){
         return true;
@@ -1050,6 +1068,15 @@ bool LeafStrategy::Insert(NodeCollector* node_collector){
     std::unique_lock<std::shared_mutex> lock(rw_mutex_);
     std::string input_str;
 
+    if(!shared_index_){
+        bool found = true;
+        shared_index_ = (HistoryQueryLevelTree*)ShmemInitStruct(shared_index_name, sizeof(HistoryQueryLevelTree), &found);
+        if(!found || !shared_index_){
+            std::cerr<<"shared_index not exist!"<<std::endl;
+            exit(-1);
+        }
+    }
+
     std::pair<int,int> input_pair = {0,0};
     if(!node_collector->inputs.size()){
     }else if(node_collector->inputs.size() == 1){
@@ -1064,7 +1091,8 @@ bool LeafStrategy::Insert(NodeCollector* node_collector){
     NodeInfo* new_node_info = (NodeInfo*)ShmemAlloc(sizeof(NodeInfo));
     assert(new_node_info);
     new (new_node_info) NodeInfo(node_collector->output,
-        node_collector->time,node_collector->hsps_pack_size,node_collector->hsps_pack);
+        node_collector->time,node_collector->hsps_pack_size,
+        node_collector->hsps_pack,node_collector->lid_);
     history_map_[input_pair] = new_node_info;
 
     inputs_.resize(0);
@@ -1089,12 +1117,6 @@ bool LeafStrategy::Search(NodeCollector* node_collector){
     std::shared_lock<std::shared_mutex>lock(rw_mutex_);
     
     search_cnt_.fetch_add(1);
-
-    /**if leaf node isn't effective, searching fail directly.*/
-    if(!effective_){
-        elog(LOG, "LeafStrategy::Search: strategy is not effective");
-        return false;
-    }
     
     bool found = false;
     node_collector->output = 0;
@@ -1110,6 +1132,11 @@ bool LeafStrategy::Search(NodeCollector* node_collector){
                 continue;
             }
         }
+        
+        if(!his.second->effective_){
+            continue;
+        }
+
         found = true;
         /**
          * TODO: Here priorvly match larger output instead of time
@@ -1127,8 +1154,13 @@ bool LeafStrategy::Search(NodeCollector* node_collector){
     if(!found){
         return false;
     }
+
     if(node_collector->set_effective_){
-        SetEffective(true);
+        /**effective is set for scan node*/
+        assert(inputs_.empty());
+        assert(history_map_.size() == 1);
+        history_map_.begin()->second->effective_ = false;
+        shared_index_->SetEffective(node_collector->lid_,false);
         /*here we should retrun false, then it will keeping matching all the index*/
         return false;
     }
@@ -1145,8 +1177,7 @@ bool LeafStrategy::Search(NodeCollector* node_collector){
          */
         for(const auto& his : history_map_){
            /*0.9 is a magic param,just fot testing...*/
-           if(node_collector->output <= his.second->output_ * 0.9
-            ){
+           if(node_collector->output <= his.second->output_ * 0.9){
                 node_collector->scan_view_decrease_ = true;
                 return true;
             }

@@ -10,7 +10,7 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
-
+#include <atomic>
 
 /**
  * HistoryQueryLevelTree
@@ -29,8 +29,15 @@ public:
 
     void ShowAllNodeTypes();
 
+    void SetEffective(int id,bool effective);
+    bool CheckEffective(int id);
+
+    int GetNextLid(){return std::atomic_fetch_add(&next_lid_,1);}
+
 private:
     HistoryQueryIndexNode* root_;
+    SMConcurrentHashMap<int,bool> id_effective_map_;
+    std::atomic<int>next_lid_ = 0;
     size_t height_ = 7;
 };
 

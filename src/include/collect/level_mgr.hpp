@@ -710,6 +710,7 @@ public:
     int candidate_id = -1;
     int pre_candidate_id = -1;
     HistorySlowPlanStat* match_hsps_ = nullptr;
+    int lid_ = -1;
 };
 
 /**
@@ -760,6 +761,9 @@ public:
 
     void SetSourceQuery(const char* query){q_str_ = std::string(query);}
     std::string GetSourceQuery(){return q_str_;}
+
+    void SetLid(int lid){lid_ = lid;}
+    int GetLid(){return lid_;}
 
 private:
     void ComputeLevelClass(const std::vector<HistorySlowPlanStat*>& list);
@@ -826,6 +830,8 @@ private:
     SqmsLogger* logger_;
     std::string log_tag_;
     std::string serialization_;
+
+    int lid_ = -1;
 };
 
 class PredOperatorWrap: public AbstractPredNode{

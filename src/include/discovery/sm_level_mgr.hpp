@@ -298,6 +298,7 @@ public:
     const uint8_t* GetHspsPackage();
     const size_t GetHspsPackSize();
     const SMString& GetQueryStr();
+    int GetLid(){return lid_;}
     void Copy(LevelManager* level_mgr){
         for(const auto& pe : level_mgr->GetTotalEquivlences()){
             SMLevelPredEquivlencesList* sm_lpes_list = (SMLevelPredEquivlencesList*)ShmemAlloc(sizeof(SMLevelPredEquivlencesList));
@@ -349,7 +350,7 @@ public:
         hsps_package_ = level_mgr->GetHspsPackage();
         q_str_ = SMString(level_mgr->GetSourceQuery());
         hsps_size_ = level_mgr->GetHspsPackSize();
-        
+        lid_ = level_mgr->GetLid();
     }
 private:
     /* total equivlences for predicates */
@@ -372,4 +373,5 @@ private:
     /*hsps info after packing*/
     size_t hsps_size_;
     const uint8_t* hsps_package_ = nullptr;
+    int lid_ = -1;
 };

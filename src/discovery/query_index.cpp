@@ -25,12 +25,26 @@ bool HistoryQueryLevelTree::Search(LevelManager* level_mgr,int l){
 bool HistoryQueryLevelTree::Insert(NodeCollector* node_collector){
     return root_->Insert(node_collector);
 }
+
 bool HistoryQueryLevelTree::Remove(NodeCollector* node_collector){
     return root_->Remove(node_collector);
 }
+
 bool HistoryQueryLevelTree::Search(NodeCollector* node_collector){
     return root_->Serach(node_collector);
-    
+}
+
+void HistoryQueryLevelTree::SetEffective(int id,bool effective = false){
+    id_effective_map_.insert({id,effective});
+}
+
+bool HistoryQueryLevelTree::CheckEffective(int id){
+    SMConcurrentHashMap<int,bool>::const_accessor acc;
+    if(id_effective_map_.find(acc ,id)){
+        return acc->second;
+    }else{
+        return true;
+    }
 }
 
 /**

@@ -223,7 +223,8 @@ class SMLevelManager;
 class LeafStrategy : public LevelStrategy{
 public:
     LeafStrategy(size_t total_height)
-        : LevelStrategy(total_height){}
+        : LevelStrategy(total_height){
+    }
     SMString Name(){return "LeafStrategy";}
     bool Insert(LevelManager* level_mgr);
     bool Serach(LevelManager* level_mgr,int id);
@@ -255,12 +256,14 @@ private:
 private:
     class NodeInfo{
     public:
-        NodeInfo(int out,double t,double sz,const uint8_t* ptr)
-            :output_(out),time_(t),pack_size_(sz),pack_ptr_(ptr){}
+        NodeInfo(int out,double t,double sz,const uint8_t* ptr,int lid)
+            :output_(out),time_(t),pack_size_(sz),pack_ptr_(ptr),lid_(lid){}
         int output_;
         double time_;
         int pack_size_;
         const uint8_t* pack_ptr_;
+        int lid_;
+        bool effective_ = true;
     };
 private:
     std::shared_mutex rw_mutex_;
@@ -281,10 +284,12 @@ private:
     std::atomic<int> search_cnt_ = 0;
     std::atomic<int> match_cnt_ = 0;
     /**
+     * for plan level matching
      * if this node is effective,if not, even a view can match it, return false.
      * This is used for both plan matching and node matching method.
      */
     bool effective_ = true;
+    HistoryQueryLevelTree* shared_index_ = nullptr;
 };
 
 /**

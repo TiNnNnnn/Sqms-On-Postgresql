@@ -97,6 +97,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
                 SlowPlanStat *sps= new SlowPlanStat();
                 auto level_mgr = std::make_shared<LevelManager>(p,sps,logger_,"slow");
                 level_mgr->SetSourceQuery(qd->sourceText);
+                level_mgr->SetLid(shared_index->GetNextLid());
                 pf_context_1->SetStrategy(level_mgr);
                 pf_context_1->executeStrategy();
                 level_mgr->ShowTotalPredClass();
@@ -112,7 +113,6 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
                     pf_context_2->SetStrategy(node_manager);
                     pf_context_2->executeStrategy();
                 }
-
                 if(plan_match_enabled){
                     if(!shared_index->Insert(level_mgr.get(),1)){
                         logger_->Logger("slow","shared_index insert error in strategy 1");
@@ -125,6 +125,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
                 if(node_match_enabled){
                     assert(node_manager);
                     for(const auto& node_collector : node_manager->GetNodeCollectorList()){
+                        node_collector->lid_ = level_mgr->GetLid();
                         if(!shared_index->Insert(node_collector)){
                             logger_->Logger("slow","shared_index insert error in strategy 2");
                             exit(-1);
