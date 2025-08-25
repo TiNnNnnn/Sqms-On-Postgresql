@@ -700,13 +700,7 @@ public:
      * */
     bool check_scan_view_decrease_ = false;
     bool scan_view_decrease_ = false;
-    /**
-     * Execute time and output for scan node
-     * They are different from node time and output, they are used in slow plan match,
-     * they will be calulated in slow plan match process.
-     */
-    double scan_time  = 0;
-    int scan_output = 0;
+   
     /*unused variables*/
     size_t child_idx = -1;
     int pe_idx = -1;

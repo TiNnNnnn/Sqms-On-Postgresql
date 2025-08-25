@@ -43,10 +43,6 @@ struct SharedMemoryAllocator {
     template <class U>
     SharedMemoryAllocator(const SharedMemoryAllocator<U>&) noexcept {}
 
-    // SharedMemoryAllocator() {}
-    // template <typename U>
-    // SharedMemoryAllocator(const SharedMemoryAllocator<U>&) {}
-
     T* allocate(std::size_t n) {
         void* ptr = ShmemAlloc(n * sizeof(T));
         if (!ptr) {

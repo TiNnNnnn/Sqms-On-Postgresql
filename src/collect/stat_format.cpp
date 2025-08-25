@@ -270,13 +270,14 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
                     exit(-1);
                 }
                 /**
-                 * search all history matched view,and set then as not effective,
+                 * search all history matched view,and set them as not effective,
                  * then they will not be matched any more in after querys
                  */
                 if(node_collector->scan_view_decrease_){
                     node_collector->set_effective_ = true;
                     shared_index->Search(node_collector);
                 }
+                
                 /*insert new scan view into index*/
                 if(!scan_index->Insert(node_collector)){
                     logger_->Logger("slow","scan_index insert error");
@@ -294,6 +295,8 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
     //t.detach();
     //return true;
 }
+
+
 
 /**
  * ProcQueryExplain: explain query with slow query detect information.

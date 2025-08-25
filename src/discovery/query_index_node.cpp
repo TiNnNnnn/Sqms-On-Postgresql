@@ -964,6 +964,7 @@ bool LeafStrategy::Insert(LevelManager* level_mgr){
     if(level_mgr_){
         historys_.insert(historys_.begin(),level_mgr_);
     }
+
     auto new_level_mgr = (SMLevelManager*)ShmemAlloc(sizeof(SMLevelManager));
     assert(new_level_mgr);
     /*new sm level manager need shmemalloc*/
@@ -975,6 +976,7 @@ bool LeafStrategy::Insert(LevelManager* level_mgr){
 
 bool LeafStrategy::Serach(LevelManager* level_mgr,int id){
     auto total_lpes_list = level_mgr->GetTotalEquivlences();
+
     /*check lpes from top to down*/
     int h = total_lpes_list.size() -1;
     int lpe_id = id;
@@ -1013,6 +1015,8 @@ bool LeafStrategy::Serach(LevelManager* level_mgr,int id){
         return true;
     }
 }
+
+
 
 bool LeafStrategy::SearchInternal(LevelManager* src_mgr,int h,int id,int dst_id){
     if(h<0){
@@ -1085,6 +1089,8 @@ bool LeafStrategy::Search(NodeCollector* node_collector){
     std::shared_lock<std::shared_mutex>lock(rw_mutex_);
     
     search_cnt_.fetch_add(1);
+
+    /**if leaf node isn't effective, searching fail directly.*/
     if(!effective_){
         elog(LOG, "LeafStrategy::Search: strategy is not effective");
         return false;
@@ -1138,11 +1144,11 @@ bool LeafStrategy::Search(NodeCollector* node_collector){
          * it means this history scan is not effective
          */
         for(const auto& his : history_map_){
-           if(node_collector->scan_output <= his.second->output_ * 0.9
-            /*&& node_collector->scan_time < his.second.second*/
+           /*0.9 is a magic param,just fot testing...*/
+           if(node_collector->output <= his.second->output_ * 0.9
             ){
                 node_collector->scan_view_decrease_ = true;
-                break;
+                return true;
             }
         }
         node_collector->scan_view_decrease_ = false;
