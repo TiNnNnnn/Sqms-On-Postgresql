@@ -1160,7 +1160,7 @@ bool LeafStrategy::Search(NodeCollector* node_collector){
         assert(inputs_.empty());
         assert(history_map_.size() == 1);
         history_map_.begin()->second->effective_ = false;
-        shared_index_->SetEffective(node_collector->lid_,false);
+        shared_index_->SetEffective(history_map_.begin()->second->lid_,false);
         /*here we should retrun false, then it will keeping matching all the index*/
         return false;
     }
@@ -1175,14 +1175,14 @@ bool LeafStrategy::Search(NodeCollector* node_collector){
          * comming scan: [SeqScan(t1),t1.a < 140] [time: 0.08s] [output: 800]
          * it means this history scan is not effective
          */
+        node_collector->scan_view_decrease_ = false;
         for(const auto& his : history_map_){
            /*0.9 is a magic param,just fot testing...*/
-           if(node_collector->output <= his.second->output_ * 0.9){
+           if(node_collector->scan_output < his.second->output_){
                 node_collector->scan_view_decrease_ = true;
                 return true;
             }
         }
-        node_collector->scan_view_decrease_ = false;
         return true;
     }
 
@@ -1199,7 +1199,6 @@ bool LeafStrategy::Search(NodeCollector* node_collector){
 }
 
 void LeafStrategy::SetEffective(bool effective){
-    std::unique_lock<std::shared_mutex> lock(rw_mutex_);
     effective_ = effective;
 }
 

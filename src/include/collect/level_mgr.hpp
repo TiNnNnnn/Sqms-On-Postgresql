@@ -700,6 +700,8 @@ public:
      * */
     bool check_scan_view_decrease_ = false;
     bool scan_view_decrease_ = false;
+    int scan_output = 0;
+    double scan_time = 0;
    
     /*unused variables*/
     size_t child_idx = -1;

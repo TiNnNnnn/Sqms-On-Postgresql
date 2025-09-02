@@ -60,7 +60,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
             exit(-1);
         }
         if(slow && msec >= query_min_duration){
-            if(!plan_match_enabled && !node_match_enabled && !plan_equal_enabled){
+            if(!plan_match_enabled && !node_match_enabled && !plan_equal_enabled && !debug){
                 elog(ERROR, "plan_match_enabled and node_match_enabled are both false, so we will not process slow query");
                 assert(!plan_match_enabled && !node_match_enabled);
             }
@@ -246,7 +246,6 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
                 std::cerr<<"scan_index not exist!"<<std::endl;
                 exit(-1);
             }
-                
             SlowPlanStat *sps= new SlowPlanStat();
             PlanFormatContext* pf_context_1 = new PlanFormatContext();
             auto level_mgr = std::make_shared<LevelManager>(hsps,sps,logger_,"comming");
@@ -266,14 +265,16 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
                  */
                 node_collector->scan_view_decrease_=false;
                 node_collector->check_scan_view_decrease_ = true;
+                node_collector->scan_output = node_collector->output;
+                node_collector->scan_time = node_collector->time;
                 if(!scan_index->Search(node_collector)){
-                    logger_->Logger("slow","scan_index search error");
-                    exit(-1);
+                    logger_->Logger("slow","scan_index search nothing");
                 }
                 /**
                  * search all history matched view,and set them as not effective,
                  * then they will not be matched any more in after querys
                  */
+                node_collector->check_scan_view_decrease_ = false;
                 if(node_collector->scan_view_decrease_){
                     node_collector->set_effective_ = true;
                     shared_index->Search(node_collector);
