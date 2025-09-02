@@ -278,9 +278,12 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
                 if(node_collector->scan_view_decrease_){
                     node_collector->set_effective_ = true;
                     shared_index->Search(node_collector);
+                    std::cout<<"find scan view decrease, try set ineffective"<<std::endl;
                 }
                 
-                /*insert new scan view into index*/
+                /*insert new scan view into index,and recover node_collector's output and time*/
+                node_collector->output = node_collector->scan_output;
+                node_collector->time = node_collector->scan_time;
                 if(!scan_index->Insert(node_collector)){
                     logger_->Logger("slow","scan_index insert error");
                     exit(-1);

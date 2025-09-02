@@ -121,17 +121,6 @@ extern "C" {
 									NULL,
 									NULL);	
 
-		// DefineCustomStringVariable("sqms.log_directory",
-		// 							"Sets the directory for SQMS log files",
-		// 							"Sets the directory for SQMS log files",
-		// 							&sqms_log_directory,
-		// 							"/usr/local/log",
-		// 							PGC_SUSET,
-		// 							0,
-		// 							NULL,
-		// 							NULL,
-		// 							NULL);
-
         prev_ExecutorStart = ExecutorStart_hook;
         ExecutorStart_hook = StmtExecutorStart;
 

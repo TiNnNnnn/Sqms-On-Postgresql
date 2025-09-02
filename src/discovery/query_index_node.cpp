@@ -982,6 +982,7 @@ bool LeafStrategy::Insert(LevelManager* level_mgr){
     new_level_mgr->Copy(level_mgr);
     level_mgr_ = new_level_mgr;
     effective_ = true;
+    std::cout<<"insert shared_index,lid:"<<level_mgr_->GetLid()<<std::endl;
     return true;
 }
 
@@ -1090,6 +1091,7 @@ bool LeafStrategy::Insert(NodeCollector* node_collector){
     
     NodeInfo* new_node_info = (NodeInfo*)ShmemAlloc(sizeof(NodeInfo));
     assert(new_node_info);
+    
     new (new_node_info) NodeInfo(node_collector->output,
         node_collector->time,node_collector->hsps_pack_size,
         node_collector->hsps_pack,node_collector->lid_);
@@ -1178,6 +1180,7 @@ bool LeafStrategy::Search(NodeCollector* node_collector){
         node_collector->scan_view_decrease_ = false;
         for(const auto& his : history_map_){
            /*0.9 is a magic param,just fot testing...*/
+           std::cout<<"check scan view decrease: history output:"<<his.second->output_<<", scan output:"<<node_collector->scan_output<<std::endl;
            if(node_collector->scan_output < his.second->output_){
                 node_collector->scan_view_decrease_ = true;
                 return true;
