@@ -12,6 +12,7 @@ import execute
 import plot 
 import shutil
 import time
+from enum import Enum
 # import torch
 # from qppnet.model_arch import QPPNet
 # from qppnet.dataset.terrier_tpch_dataset.terrier_utils import TerrierTPCHDataSet
@@ -73,10 +74,16 @@ DB_CONFIG = {
     "dbname": "postgres",
     "user": "postgres",
     "host": "localhost",
-    "port": "44444"
+    "port": "55555"
 }
 
-TEST_HOME="/home/hyh/Sqms-On-Postgresql/contrib/sqms/test"
+class TestType(Enum):
+    SQMS = 0,
+    QPPNET = 1,
+    EXSIST = 2
+    UNKNOW = 3
+
+TEST_HOME="/SSD/00/yyk/Sqms-On-Postgresql/contrib/sqms/test"
 
 # workload dir
 SQL_DIR = "./tpch_query_slow"
@@ -203,30 +210,32 @@ def wrap_plan_for_qppnet(plan_dict):
     return
 
 #create tables and import data
-def InitEnv(conn,type):
-    init_data_size = 5
+def InitEnv(conn,type: TestType, import_data: bool = False, init_data_size: int = 5):
     cursor = conn.cursor()
     #re-create tables
-    print("Creating tables...")
-    for tbl_name in ["lineitem", "orders", "part"," partsupp", "customer", "nation", "region", "supplier"]:
-        cursor.execute(f"DROP TABLE IF EXISTS {tbl_name} CASCADE")
-    status = execute.execute_sql_file(cursor,CREATE_FILE,False)
-    #clear index
-    status = execute.execute_sql_file(cursor,DROP_IDX_FILE,False)
-    #set primary key
-    status = execute.execute_sql_file(cursor,PKEYS_FILE,False)
-    #set foreign key
-    #status = execute.execute_sql_file(cursor,FKEYS_FILE,False)
-    #import data
-    for batch_index in range(init_data_size):
-        print(f"[ batch {batch_index + 1} ] Begin importing data...")
-        for tbl_name in ["lineitem", "orders", "part", "partsupp", "customer", "nation", "region", "supplier"]:
-            tbl_path = f"{BATCH_DIR}/{tbl_name}_batch_{batch_index}.tbl"
-            print(f"copy {tbl_name} from '{tbl_path}' with delimiter as '|' NULL '' ")
-            cursor.execute(f"copy {tbl_name} from '{tbl_path}' with delimiter as '|' NULL '' ")
-            print(f"[ batch {batch_index + 1}] Finish importing data...")
-    if type == 1:
-        cursor.execute(f"set sqms.query_min_duration = '0.00000001s'")
+
+    if(import_data):
+        print("Creating tables...")
+        for tbl_name in ["lineitem", "orders", "part"," partsupp", "customer", "nation", "region", "supplier"]:
+            cursor.execute(f"DROP TABLE IF EXISTS {tbl_name} CASCADE")
+        status = execute.execute_sql_file(cursor,CREATE_FILE,False)
+        #clear index
+        status = execute.execute_sql_file(cursor,DROP_IDX_FILE,False)
+        #set primary key
+        status = execute.execute_sql_file(cursor,PKEYS_FILE,False)
+        #set foreign key (MARK: don't set foregin key)
+        #status = execute.execute_sql_file(cursor,FKEYS_FILE,False)
+        for batch_index in range(init_data_size):
+            print(f"[ batch {batch_index + 1} ] Begin importing data...")
+            for tbl_name in ["lineitem", "orders", "part", "partsupp", "customer", "nation", "region", "supplier"]:
+                tbl_path = f"{BATCH_DIR}/{tbl_name}_batch_{batch_index}.tbl"
+                print(f"copy {tbl_name} from '{tbl_path}' with delimiter as '|' NULL '' ")
+                cursor.execute(f"copy {tbl_name} from '{tbl_path}' with delimiter as '|' NULL '' ")
+                print(f"[ batch {batch_index + 1}] Finish importing data...")
+    else:
+        print("table and data have exisit, skip crete table and import data")
+    if type == TestType.SQMS:
+        cursor.execute(f"set sqms.query_min_duration = '5s'")
     cursor.close()
     return 
 
@@ -259,19 +268,20 @@ def get_names_with_value_one(excel_path):
     return name_list
 
 # static workload test
-def StaticWorkloadTest(type):
+def StaticWorkloadTest(type,impor_data: bool, init_data_size: int):
     conn = psycopg2.connect(**DB_CONFIG)
     conn.autocommit = True
+    sql_files = []
     
     batch_size = 3
-    SQL_DIR = "./tpch_query_slow2"
-    order_file_path = "./sql_order2.txt"
+    SQL_DIR = "./tpch_query_slow"
+    order_file_path = "./sql_order.txt"
     rep_sql_file_path = SQL_DIR + "_rep"
-    InitEnv(conn,type)
-
+    InitEnv(conn,type,False,init_data_size)
+    
     # init qppnet and prepare plan dir
     temp_plan_dir = "./qppnet/data/pgdata"
-    if type == 2:
+    if type == TestType.QPPNET:
         if os.path.exists(temp_plan_dir):
             shutil.rmtree(temp_plan_dir)
         os.makedirs(temp_plan_dir)
@@ -279,19 +289,23 @@ def StaticWorkloadTest(type):
 
     cursor = conn.cursor()
 
-    # sql_files = replicate_sql_files(SQL_DIR, rep_sql_file_path, batch_size)
-    # sql_files = [f for f in os.listdir(rep_sql_file_path) if f.endswith(".sql")]
-    # random.shuffle(sql_files)
-    
-    if os.path.exists(order_file_path):
-        with open(order_file_path, "r") as f:
-            sql_files = [line.strip() for line in f.readlines()]
-    else:
+    if 0 == os.path.exists(rep_sql_file_path) and type == TestType.SQMS:
+        sql_files = replicate_sql_files(SQL_DIR, rep_sql_file_path, batch_size)
         sql_files = [f for f in os.listdir(rep_sql_file_path) if f.endswith(".sql")]
         random.shuffle(sql_files)
-        with open(order_file_path, "w") as f:
-            for fname in sql_files:
-                f.write(fname + "\n")
+    
+        if os.path.exists(order_file_path):
+            with open(order_file_path, "r") as f:
+                sql_files = [line.strip() for line in f.readlines()]
+        else:
+            sql_files = [f for f in os.listdir(rep_sql_file_path) if f.endswith(".sql")]
+            random.shuffle(sql_files)
+            with open(order_file_path, "w") as f:
+                for fname in sql_files:
+                    f.write(fname + "\n")
+
+    if type == TestType.EXSIST:
+        sql_files = get_names_with_value_one(TEST_HOME + "/output/20250615_152306/query_run_time.xlsx")
     
     total_sqls = len(sql_files)
     index_list = extract_create_index_statements(CREATE_IDX_FILE)
@@ -310,9 +324,6 @@ def StaticWorkloadTest(type):
     current_total_time = 0.0
     idx_offset = 0
 
-    if type == 3:
-        sql_files = get_names_with_value_one(TEST_HOME + "/output/20250615_152306/query_run_time.xlsx")
-
     for sql_file in sql_files:
         sql_path = os.path.join(rep_sql_file_path, sql_file)
         print(f"Executing: {sql_path}")
@@ -326,6 +337,10 @@ def StaticWorkloadTest(type):
             if status == "CANCELLED":
                 total_cancelled += 1
                 query_run_map[total_cnt] = [sql_file,-1]
+            elif status == "TIMEOUT":
+                run_cnt += 1
+                current_total_time += 20
+                query_run_map[total_cnt] = [sql_file,20]
             else:
                 elapsed = end_time - start_time
                 current_total_time += elapsed
@@ -390,7 +405,8 @@ def StaticWorkloadTest(type):
     return
 
 def main():
-    StaticWorkloadTest(1)
+
+    StaticWorkloadTest(TestType.SQMS,False,5)
     # conn = psycopg2.connect(**DB_CONFIG)
     # conn.autocommit = True
     # cursor = conn.cursor()

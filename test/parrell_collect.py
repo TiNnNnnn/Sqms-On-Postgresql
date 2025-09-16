@@ -22,10 +22,10 @@ DB_CONFIG = {
     "dbname": "postgres",
     "user": "postgres",
     "host": "localhost",
-    "port": "44444"
+    "port": "55555"
 }
 
-TEST_HOME="/home/hyh/Sqms-On-Postgresql/contrib/sqms/test"
+TEST_HOME="/SSD/00/yyk/Sqms-On-Postgresql/contrib/sqms/test"
 
 SQL_DIR = "./tpch_query"
 OUTPUT_DIR = "./qppnet/data/pgdata"
@@ -139,7 +139,8 @@ def process_one_sql_for_average_time(sql_file,query_time_map,repeat):
     conn.autocommit = True
     cursor = conn.cursor()
     time_out = False
-    SQL_DIR = "tpch_query_slow2_rep"
+    SQL_DIR = "tpch_query_slow_rep"
+    cursor.execute(f"set statement_timeout = '20s'")
     for batch_index in range(repeat):
         sql_path = os.path.join(SQL_DIR, sql_file)
         print(f"Executing: {sql_path}")
@@ -148,8 +149,8 @@ def process_one_sql_for_average_time(sql_file,query_time_map,repeat):
         status = execute.execute_sql_file(cursor, sql_path)
         end_time = time.time()
 
-        if status == "CANCELLED":
-            query_time_map[sql_file] = 10
+        if status == "CANCELLED" or status == "TIMEOUT":
+            query_time_map[sql_file] = 20
             time_out = True
             break
         else:
@@ -184,7 +185,7 @@ def InitEnv(conn,init_data_size = 2):
             cursor.execute(f"copy {tbl_name} from '{tbl_path}' with delimiter as '|' NULL '' ")
             print(f"[ batch {batch_index + 1}] Finish importing data...")
 
-    cursor.execute(f"set statement_timeout = '10s'")
+    cursor.execute(f"set statement_timeout = '20s'")
     cursor.close()
     return
 
@@ -213,8 +214,10 @@ def WokloadTimeCollector(num_workers=8):
     data_size = 5
     repeat = 5
     InitEnv(conn,data_size)
+    cursor = conn.cursor()
+    cursor.execute(f"set statement_timeout = '20s'")
     conn.close()
-    order_file_path = "./sql_order2.txt"
+    order_file_path = "./sql_order.txt"
     with open(order_file_path, "r") as f:
         sql_files = [line.strip() for line in f.readlines()]
   
@@ -230,4 +233,4 @@ def WokloadTimeCollector(num_workers=8):
 
 if __name__ == "__main__":
     #QppNetPlanCollector(8)
-    WokloadTimeCollector(8)
+    WokloadTimeCollector(16)

@@ -229,11 +229,11 @@ def plot_grouped_bar_chart(output_path):
     workloads = ['RW-Load', 'URW-Load']
     relative_error = {
         'RW-Load': [97, 77, 91, 30],
-        'URW-Load':  [0, 0, 0, 0]
+        'URW-Load':  [98, 71, 85, 29]
     }
     mean_absolute_error = {
         'RW-Load': [67, 96, 95, 97],
-        'URW-Load':  [0, 0, 0, 0]
+        'URW-Load':  [65, 88, 89, 98]
     }
 
     def plot_single_chart(ax, data_dict, ylabel, title):

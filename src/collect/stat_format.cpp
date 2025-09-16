@@ -5,7 +5,7 @@
 #include <functional>
 #include <queue>
 #include "collect/node_mgr.hpp"
-
+#include <chrono>
 
 static std::hash<std::string> hash_fn;
 
@@ -41,6 +41,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
     //     return 1;
     // }
     // history_slow_plan_stat__pack(&hsps_,buffer);
+    
     pid_t pid = getpid();
     //std::thread t([msg_size,buffer,slow,pid,this,oldcxt,qd]() -> bool{
         std::cout<<"Thread: "<<ThreadPool::GetTid()<<" Begin Working..."<<std::endl;
@@ -52,6 +53,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
         // if(!hsps){
         //     std::cerr<<"history_slow_plan_stat__unpack failed in thered: "<<ThreadPool::GetTid()<<std::endl;
         // }
+        //auto insert_start = std::chrono::high_resolution_clock::now();
         HistorySlowPlanStat *hsps = &hsps_;
         bool found = true;
         auto shared_index = (HistoryQueryLevelTree*)ShmemInitStruct(shared_index_name, sizeof(HistoryQueryLevelTree), &found);
@@ -143,15 +145,17 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
             //     std::string hash_val = HashCanonicalPlan(q->json_plan);
             //     storage_->PutStat(hash_val,hsps);
             // }
+            //auto insert_end = std::chrono::high_resolution_clock::now();
             std::cout<<"finish process slow query..."<<std::endl;
             logger_->Logger("slow","finish process slow query...");
         }else{
             logger_->Logger("comming","begin process comming query...");
             std::cout<<"begin process comming query..."<<std::endl;
             /*check all subuqueries in plan*/
+            auto match_start = std::chrono::high_resolution_clock::now();
             std::vector<HistorySlowPlanStat*>sub_list;
             LevelOrder(hsps,sub_list);
-
+            
             logger_->Logger("comming",("subplan size: "+std::to_string(sub_list.size())).c_str());
             size_t sub_idx = 0;
 
@@ -232,6 +236,9 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
                 std::cout<<"finish node match..."<<std::endl;
                 delete(sps);
             }
+            auto match_end = std::chrono::high_resolution_clock::now();
+            auto duration = std::chrono::duration_cast<std::chrono::microseconds>(match_end - match_start);
+            std::cout<<"[Match Time]:"<< duration.count() <<std::endl;
             delete(pf_context_1);
             delete(pf_context_2);
             std::cout<<"finish process comming query..."<<std::endl;
