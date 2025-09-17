@@ -6,7 +6,6 @@ from collections import OrderedDict
 from common import DB_CONFIG, TestType, create_timestamped_folder, \
         CREATE_FILE,PKEYS_FILE,FKEYS_FILE,CREATE_IDX_FILE,DROP_IDX_FILE
 
-
 class BaseTest:
     def __init__(self, test_type: TestType,sql_dir: str,data_dir: str):
         self.type = test_type 
@@ -28,10 +27,9 @@ class IncreaseTest(BaseTest):
             self.init_data()
         for i in range(self.batch_size):
             self.test_single_batch(i)
+            self.import_data()
     
     def test_single_batch(self, i: int):    
-        self.insert_data()
-
         query_time_map = OrderedDict() 
         query_run_map = OrderedDict()
         run_cnt = 0             # query run success
@@ -72,7 +70,19 @@ class IncreaseTest(BaseTest):
         plot.write_batch_query_time_to_excel(query_time_map, output_path=os.path.join(output_folder, "query_batch_time.xlsx"))
         plot.write_query_time_to_excel(query_run_map, output_path=os.path.join(output_folder, "query_run_time.xlsx"))
     
+    def explain_test_single_banch(self,i: int):
+        
+        return
+    
     def import_data(self):
+        cur = self.init_data_size
+        cursor = self.conn.cursor()
+        print(f"[ batch {cur+1} ] begin importing data...")
+        for tbl_name in ["lineitem", "orders", "part", "partsupp", "customer", "nation", "region", "supplier"]:
+            tbl_path = f"{self.data_dir}/{tbl_name}_batch_{cur}.tbl"
+            print(f"copy {tbl_name} from '{tbl_path}' with delimiter as '|' NULL '' ")
+            cursor.execute(f"copy {tbl_name} from '{tbl_path}' with delimiter as '|' NULL '' ")
+        print(f"[ batch {cur + 1}] Finish importing data...")
         return  
         
     def init_data(self):
