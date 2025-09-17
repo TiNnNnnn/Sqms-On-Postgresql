@@ -1058,6 +1058,7 @@ bool LeafStrategy::SearchInternal(LevelManager* src_mgr,int h,int id,int dst_id)
     }else{
         return false;
     }
+    return false;
 }
 
 bool LeafStrategy::Remove(LevelManager* level_mgr){

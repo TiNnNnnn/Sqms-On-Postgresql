@@ -29,3 +29,15 @@ const char* shared_index_name = "HISTORY_QUERY_TREE_INDEX";
 const char* scan_index_name = "HISTORY_QUERY_SCAN_INDEX";
 const char* queue_name = "query_index";
 const char* plan_hash_table_name = "PLAN_HASH_TABLE";
+
+double plan_match_time = 0.0;
+double node_match_time = 0.0;
+double clear_time = 0.0;
+int  plan_match_cnt = 0;
+int  node_match_cnt = 0;
+int clear_cnt = 0;
+
+
+/**unused yet */
+int total_match_time = 0.0;
+int total_match_cnt = 0;

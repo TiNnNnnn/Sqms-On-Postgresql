@@ -9,6 +9,10 @@
 
 extern "C" {
 	PG_MODULE_MAGIC;
+	PG_FUNCTION_INFO_V1(match_avg_overhead);
+	PG_FUNCTION_INFO_V1(plan_match_avg_overhead);
+	PG_FUNCTION_INFO_V1(node_match_avg_overhead);
+	PG_FUNCTION_INFO_V1(clear_avg_overhead);
 
 	static ExecutorStart_hook_type prev_ExecutorStart = NULL;
 	static ExecutorRun_hook_type prev_ExecutorRun = NULL;
@@ -119,8 +123,33 @@ extern "C" {
 									GUC_UNIT_MS,
 									NULL,
 									NULL,
-									NULL);	
-
+									NULL);
+										
+		/**param below only set for testing */
+		DefineCustomRealVariable("sqms.plan_match_time",
+									"plan_match_time",
+									"plan_match_time",
+									&plan_match_time,
+									0.0,
+									0.0, std::numeric_limits<double>::max(),PGC_SUSET,GUC_UNIT_MS,NULL,NULL,NULL);			
+		DefineCustomRealVariable("sqms.node_match_time",
+									"node_match_time",
+									"node_match_time",
+									&node_match_time,
+									0.0,
+									0.0, std::numeric_limits<double>::max(),PGC_SUSET,GUC_UNIT_MS,NULL,NULL,NULL);	
+		DefineCustomIntVariable("sqms.plan_match_cnt",
+									"plan_match_cnt",
+									"plan_match_cnt",
+									&plan_match_cnt,
+									0,
+									0, INT_MAX,PGC_SUSET,GUC_UNIT_MS,NULL,NULL,NULL); 	
+		DefineCustomIntVariable("sqms.node_match_cnt",
+									"node_match_cnt",
+									"node_match_cnt",
+									&plan_match_cnt,
+									0,
+									0, INT_MAX,PGC_SUSET,GUC_UNIT_MS,NULL,NULL,NULL);	
         prev_ExecutorStart = ExecutorStart_hook;
         ExecutorStart_hook = StmtExecutorStart;
 
@@ -156,36 +185,35 @@ int StatCollecter::nesting_level = 0;
 bool StatCollecter::current_query_sampled = false;
 /*we hope the index built while database starting*/
 
-StatCollecter::StatCollecter(){
-}
+StatCollecter::StatCollecter(){}
 
 static bool IsSystemCatalogQuery(QueryDesc *queryDesc) {
 	if (!queryDesc || !queryDesc->plannedstmt)
         return false;
-        
-    // check select text
+    /*TODO: direct use text match,maybe we should rebuild it with a more graceful*/
     if (queryDesc->sourceText) {
-		if (strstr(queryDesc->sourceText, "pg_catalog.") || strstr(queryDesc->sourceText, "information_schema.")) {
+		if (strstr(queryDesc->sourceText, "pg_catalog.") 
+		|| strstr(queryDesc->sourceText, "information_schema.")
+		/**skip overhead udf */
+	    || strstr(queryDesc->sourceText, "overhead()")) {
 			return true;
 		}
 	}
-
 	return false;
 }
 
 void StatCollecter::StmtExecutorStartWrapper(QueryDesc *queryDesc, int eflags){
 	/* 
-		if we execute '/d', the sql will be like : 
+		Examine whether the sql is a select on system table.
+		Example: if we execute '/d', the sql will be like : 
 		"SELECT n.nspname as \"Schema\",\n  c.relname as \"Name\",\n  CASE c.relkind WHEN 'r' THEN 'table' WHEN 'v' THEN 'view' WHEN 'm' THEN 'materialized view' WHEN 'i' THEN 'index' WHEN 'S' THEN 'sequence' WHEN 's' THEN 'special' WHEN 'f' THEN 'foreign table' WHEN 'p' THEN 'partitioned table' WHEN 'I' THEN 'partitioned index' END as \"Type\",\n  pg_catalog.pg_get_userbyid(c.relowner) as \"Owner\"\nFROM pg_catalog.pg_class c\n     LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace\nWHERE c.relkind IN ('r','p','v','m','S','f','')\n      AND n.nspname <> 'pg_catalog'\n      AND n.nspname <> 'information_schema'\n      AND n.nspname !~ '^pg_toast'\n  AND pg_catalog.pg_table_is_visible(c.oid)\nORDER BY 1,2;"
 	*/
-	// Examine whether the sql is a select on system table
 	if (IsSystemCatalogQuery(queryDesc)) {
 		// call original executor directly, escape SQMS process
 		if (prev_ExecutorStart)
             prev_ExecutorStart(queryDesc, eflags);
         else
             standard_ExecutorStart(queryDesc, eflags);
-		
 		return ;
 	}
 
@@ -270,7 +298,6 @@ void StatCollecter::StmtExecutorEndWrapper(QueryDesc *queryDesc)
 {
 	if (queryDesc->totaltime && auto_explain_enabled() && queryDesc->operation == CMD_SELECT){
 		MemoryContext oldcxt;
-		double		msec; 
 		/*
 		 * Make sure we operate in the per-query context, so any cruft will be
 		 * discarded later during ExecutorEnd.
@@ -450,6 +477,31 @@ static const char* error_severity(int elevel)
         return "INFO";
     else
         return "DEBUG";
+}
+
+extern "C" Datum match_avg_overhead(PG_FUNCTION_ARGS){
+	if(!total_match_cnt) PG_RETURN_FLOAT8(0);
+	auto match_time = plan_match_time + node_match_time + clear_time;
+	auto avg_time = match_time / total_match_cnt; 
+	PG_RETURN_FLOAT8(avg_time);
+}
+
+extern "C" Datum plan_match_avg_overhead(PG_FUNCTION_ARGS){
+	if(!plan_match_cnt) PG_RETURN_FLOAT8(0);
+	auto avg_time = plan_match_time / plan_match_cnt;
+	PG_RETURN_FLOAT8(avg_time);
+}
+
+extern "C" Datum node_match_avg_overhead(PG_FUNCTION_ARGS){
+	if(!node_match_cnt) PG_RETURN_FLOAT8(0);
+	auto avg_time = node_match_time / node_match_cnt;
+	PG_RETURN_FLOAT8(avg_time);
+}
+
+extern "C" Datum clear_avg_overhead(PG_FUNCTION_ARGS){
+	if(!clear_cnt) PG_RETURN_FLOAT8(0);
+	auto avg_time = clear_time / clear_cnt;
+	PG_RETURN_FLOAT8(avg_time);
 }
 
 extern "C" void ShuntLog(ErrorData *edata){

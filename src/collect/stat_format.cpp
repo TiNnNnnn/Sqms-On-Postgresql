@@ -151,8 +151,8 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
         }else{
             logger_->Logger("comming","begin process comming query...");
             std::cout<<"begin process comming query..."<<std::endl;
+            total_match_cnt ++;
             /*check all subuqueries in plan*/
-            auto match_start = std::chrono::high_resolution_clock::now();
             std::vector<HistorySlowPlanStat*>sub_list;
             LevelOrder(hsps,sub_list);
             
@@ -165,6 +165,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
 
             if(plan_match_enabled || plan_equal_enabled){
                 std::cout<<"begin plan match..."<<std::endl;
+                auto plan_match_start = std::chrono::high_resolution_clock::now();
                 for(const auto& p : sub_list){
                 /**
                  * MARK: to make test more easy,here move muti-thread while testing
@@ -218,11 +219,16 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
                 //});
                     ++sub_idx;
                 }
+                auto plan_match_end = std::chrono::high_resolution_clock::now();
+                auto plan_match_duration = std::chrono::duration_cast<std::chrono::microseconds>(plan_match_end - plan_match_start);
+                plan_match_time += plan_match_duration.count();
+                plan_match_cnt ++;
                 std::cout<<"finsh plan match..."<<std::endl;
             }
-            
+
             if(node_match_enabled && !cancel){
                 std::cout<<"begin node match..."<<std::endl;
+                auto node_match_start = std::chrono::high_resolution_clock::now();
                 auto top_p = sub_list[0];
                 SlowPlanStat *sps= new SlowPlanStat();
                 auto level_mgr = std::make_shared<LevelManager>(top_p,sps,logger_,"comming");
@@ -232,13 +238,15 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
                 auto node_mgr = std::make_shared<NodeManager>(top_p,level_mgr,pid);
                 pf_context_2->SetStrategy(node_mgr);
                 pf_context_2->executeStrategy();
+
                 node_mgr->Search();
                 std::cout<<"finish node match..."<<std::endl;
+                auto node_match_end = std::chrono::high_resolution_clock::now();
+                auto node_match_duration = std::chrono::duration_cast<std::chrono::microseconds>(node_match_end - node_match_start);
+                node_match_time += node_match_duration.count();
+                node_match_cnt ++;
                 delete(sps);
             }
-            auto match_end = std::chrono::high_resolution_clock::now();
-            auto duration = std::chrono::duration_cast<std::chrono::microseconds>(match_end - match_start);
-            std::cout<<"[Match Time]:"<< duration.count() <<std::endl;
             delete(pf_context_1);
             delete(pf_context_2);
             std::cout<<"finish process comming query..."<<std::endl;
@@ -253,6 +261,8 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
                 std::cerr<<"scan_index not exist!"<<std::endl;
                 exit(-1);
             }
+            auto clear_start = std::chrono::high_resolution_clock::now();
+
             SlowPlanStat *sps= new SlowPlanStat();
             PlanFormatContext* pf_context_1 = new PlanFormatContext();
             auto level_mgr = std::make_shared<LevelManager>(hsps,sps,logger_,"comming");
@@ -297,6 +307,10 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
                 }
                 node_collector->check_scan_view_decrease_ = false;
             }
+            auto clear_end = std::chrono::high_resolution_clock::now();
+            auto clear_duration = std::chrono::duration_cast<std::chrono::microseconds>(clear_end - clear_start);
+            clear_time += clear_duration.count();
+            clear_cnt ++;
             delete(sps);
             delete(pf_context_1);
             delete(pf_context_2);

@@ -59,7 +59,7 @@ bool NodeManager::SearchInternal(NodeCollector *node,double total_time,int finis
         }
         return false;
     }else{ 
-        std::cout<<"[comming]match failed for node"<<std::endl;
+        //std::cout<<"[comming]match failed for node"<<std::endl;
         return false;
     }    
    return false;

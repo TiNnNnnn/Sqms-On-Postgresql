@@ -2027,6 +2027,7 @@ PType PredEquivlence::QualType(Quals* qual){
 		std::cerr<<"not support currnt type of quals: left: "<<left_type<<",right: "<<right_type<<std::endl;
 		return PType::UNKNOWN;
 	}
+	return PType::UNKNOWN;
 }
 
 VarType PredEquivlence::QualVarType(Quals* qual){

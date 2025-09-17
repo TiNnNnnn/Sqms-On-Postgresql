@@ -48,3 +48,13 @@ extern const char* shared_index_name;
 extern const char* scan_index_name;
 extern const char* plan_hash_table_name;
 
+extern double plan_match_time;
+extern double node_match_time;
+extern double clear_time;
+
+extern int  plan_match_cnt;
+extern int  node_match_cnt;
+extern int  clear_cnt;
+
+extern int total_match_time;
+extern int total_match_cnt;
