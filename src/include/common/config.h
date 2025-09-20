@@ -58,3 +58,8 @@ extern int  clear_cnt;
 
 extern int total_match_time;
 extern int total_match_cnt;
+
+extern int plan_search_cnt;
+extern int node_search_cnt;
+
+extern int cur_finish_node_num;

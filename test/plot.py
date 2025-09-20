@@ -99,11 +99,11 @@ def write_average_query_times_to_excel(query_time_map, filename="output/query_av
     df.to_excel(filename, index=False)
     print(f"Query times saved to {filename}")
 
-def plot_query_time(query_time_map, title, output_path):
+def plot_query_time(query_time_map, title, output_path,smooth = True):
     x = np.array(list(query_time_map.keys()))
     y = np.array(list(query_time_map.values()))
 
-    if len(x) < 4:
+    if len(x) < 4 or smooth == False:
         # 不足以平滑时，退回原始折线图
         print("Too few points for smoothing; drawing raw line.")
         plt.figure(figsize=(10, 6))
@@ -156,6 +156,69 @@ def write_query_time_to_excel(query_run_map, output_path):
 
     workbook.close()
 
+def plot_overhead_from_excel(input_excel_path, output_image_path):
+    df = pd.read_excel(input_excel_path, engine='openpyxl') 
+    df.columns = df.columns.astype(str).str.strip()
+
+    def clean_column(series):
+        return series.astype(str).str.replace(r'_x000d_', '', regex=True).str.strip().astype(float)
+
+    print(df.columns)
+    query_counts = clean_column(df["Query Count"])
+    overhead_1 = clean_column(df["1"])
+    overhead_2 = clean_column(df["2"])
+    overhead_3 = clean_column(df["3"])
+
+    plt.figure(figsize=(14, 10))
+    plt.rcParams.update({
+        'font.size': 22,            # 所有字体大小
+        'axes.titlesize': 22,       # 标题字体大小
+        'axes.labelsize': 22,       # 坐标轴标签字体大小
+        'xtick.labelsize': 20,      # x轴刻度字体
+        'ytick.labelsize': 20,      # y轴刻度字体
+        'legend.fontsize': 18,      # 图例字体大小
+        'axes.linewidth': 2,   
+    })
+
+    if len(query_counts) >= 3:
+        # 插值平滑曲线
+        x_new = np.linspace(query_counts.min(), query_counts.max(), 300)
+
+        spl_1  = make_interp_spline(query_counts, overhead_1, k=2)
+        spl_2 = make_interp_spline(query_counts, overhead_2, k=2)
+        spl_3 = make_interp_spline(query_counts, overhead_3, k=2)
+
+        y_1 = spl_1(x_new)
+        y_2 = spl_2(x_new)
+        y_3 = spl_3(x_new)
+
+        plt.plot(x_new, y_1, label="Plan View Match + Node View Match", color='green',linewidth=3)
+        plt.plot(x_new, y_2, label="Plan View Match", color='blue',linewidth=3)
+        plt.plot(x_new, y_3, label="Node View Match", color='red',linewidth=3)
+
+        # 原始点
+        #plt.scatter(query_counts, with_index, color='blue')
+        #plt.scatter(query_counts, without_index, color='red')
+    else:
+        # 数据点太少，不进行插值
+        plt.plot(query_counts, overhead_1, marker='o', label="Plan View Match + Node View Match", color='green',linewidth=3)
+        plt.plot(query_counts, overhead_2, marker='o', label="Plan View Match", color='blue',linewidth=3)
+        plt.plot(query_counts, overhead_3, marker='o', label="Node View Match", color='red',linewidth=3)
+        
+    plt.xlabel("Query Count")
+    plt.ylabel("OverHead (ms)")
+    plt.title("OverHead")
+    ymin, ymax = plt.ylim()
+    plt.ylim(ymin, ymax * 1.1)   # 把上限提高 10%，曲线整体往下看起来就离 legend 远了
+    plt.grid(True)
+    plt.legend(loc="upper left", bbox_to_anchor=(0.01, 0.99))
+    plt.tight_layout()
+
+    # 创建输出目录
+    os.makedirs(os.path.dirname(output_image_path), exist_ok=True)
+    plt.savefig(output_image_path, bbox_inches='tight', dpi=300)
+    plt.show()
+
 def plot_from_excel(input_excel_path, output_image_path):
     df = pd.read_excel(input_excel_path, engine='openpyxl') 
     df.columns = df.columns.astype(str).str.strip()
@@ -205,6 +268,7 @@ def plot_from_excel(input_excel_path, output_image_path):
     plt.title("Workload runtime ")
     plt.grid(True)
     plt.legend()
+    
     plt.tight_layout()
 
     # 创建输出目录
@@ -277,5 +341,6 @@ def plot_grouped_bar_chart(output_path):
 
 
 if __name__ == "__main__":
-    plot_grouped_bar_chart("output/compare_accuracy")
+    plot_overhead_from_excel("/SSD/00/yyk/Sqms-On-Postgresql/contrib/sqms/test/output/match_avg_overhead_cmp.xlsx","ouput/overhead_compare.png")
+    #plot_grouped_bar_chart("output/compare_accuracy")
     #plot_from_excel("/home/hyh/Sqms-On-Postgresql/contrib/sqms/test2/output/20250616_105812_without_excavate/query_batch_time.xlsx","output/core_subquery_compare.png")

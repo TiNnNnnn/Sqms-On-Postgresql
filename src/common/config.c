@@ -36,8 +36,11 @@ double clear_time = 0.0;
 int  plan_match_cnt = 0;
 int  node_match_cnt = 0;
 int clear_cnt = 0;
-
-
-/**unused yet */
 int total_match_time = 0.0;
 int total_match_cnt = 0;
+
+/**count of seatch index */
+int plan_search_cnt = 0;
+int node_search_cnt = 0;
+
+int cur_finish_node_num = 0;

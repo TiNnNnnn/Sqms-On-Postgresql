@@ -27,7 +27,7 @@ $(info CURRENT_DIR = $(CURRENT_DIR))
 
 SHLIB_LINK_INTERNAL = $(libpq) -lstdc++ -lprotobuf -lprotobuf-c -L/usr/local/lib -lhiredis -luv -lstdc++ -L/usr/lib/x86_64-linux-gnu -ltbb 
 CFLAGS += -std=c11  -I/usr/local/include 
-PG_CPPFLAGS = -std=c++17 -fPIC -I$(libpq_srcdir) -I$(CURRENT_DIR)/src/include
+PG_CPPFLAGS = -std=c++17 -fPIC -I$(libpq_srcdir) -I$(CURRENT_DIR)/src/include 
 
 # pg extend config 
 EXTENSION = sqms

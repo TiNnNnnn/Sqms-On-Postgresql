@@ -85,61 +85,14 @@ def execute_explain_sql_file(conn, file_path, select=True):
     cursor.close()
     return plan_dict
 
-def execute_sql_file2(conn, file_path,select = True):
-    cursor = conn.cursor()
-    with open(file_path, 'r', encoding='utf-8') as f:
-        raw_sql = f.read()
-    status = "OK"
-    create_stmts, select_stmts, drop_stmts = classify_sql_statements(raw_sql)
-    try:
-            # CREATE
-            for create_stmt in create_stmts:
-                try:
-                    cursor.execute(create_stmt)
-                except Exception as e:
-                    print(f"[{file_path}] Create failed: {e}")
-                    conn.rollback()
-
-            #  SELECT
-            if select:
-                for select_stmt in select_stmts:
-                    try:
-                        cursor.execute(select_stmt)
-                        if cursor.description: 
-                            results = cursor.fetchall()
-                            print(f"Results from {file_path}:")
-                            for row in results:
-                                print(row)
-                        else:
-                            print(f"Executed {file_path} (no results to fetch)")
-                        status = "OK"
-                    except psycopg2.OperationalError as e:
-                        if "canceling statement due to user request" in str(e):
-                            print(f"Query cancelled by user in {file_path}")
-                            status =  "CANCELLED"
-                        if "canceling statement due to statement timeout" in str(e):
-                            print(f"Query cancelled by user in {file_path}")
-                            status = "TIMEOUT"
-                        else:
-                            print(f"OperationalError in {file_path}: {e}")
-                            status = "ERROR"
-
-                    except psycopg2.ProgrammingError as e:
-                        print(f"ProgrammingError in {file_path}: {e}")
-                        status = "ERROR"
-                        exit(-1)
-            # DROP
-            for drop_stmt in drop_stmts:
-                try:
-                    cursor.execute(drop_stmt)
-                    conn.commit()
-                except Exception as e:
-                    print(f"[{file_path}] Drop failed: {e}")
-                    conn.rollback()
-    except Exception as e:
-        print(f"[{file_path}] Outer error: {e}")
-        conn.rollback()
-    return status 
+def execute_sql(cursor,sql: str):
+    cursor.execute(sql)
+    if cursor.description: 
+        results = cursor.fetchall()
+        return results   
+    else:
+        print(f"Executed {str} (no results to fetch)")
+        return None
 
 # execute single sql
 def execute_sql_file(cursor, file_path,select = True):

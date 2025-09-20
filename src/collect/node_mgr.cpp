@@ -30,6 +30,8 @@ bool NodeManager::PrintPredEquivlences(){
 
 bool NodeManager::SearchInternal(NodeCollector *node,double total_time,int finish_node_num,LevelOrderIterator* iter){
    assert(node);
+   node_search_cnt += 1;
+   cur_finish_node_num += 1;
    if(shared_index_->Search(node) || node->match_cnt){
         for(size_t i = 0; i < node->output_list_.size();++i){    
             total_time += node->time_list_[i];
@@ -40,7 +42,7 @@ bool NodeManager::SearchInternal(NodeCollector *node,double total_time,int finis
                 node->parent_->inputs[node->child_idx] = node->output_list_[i];
             }
             if(total_time >= query_min_duration && finish_node_num >= 1){
-                CancelQuery(pid_);
+                //CancelQuery(pid_);
                 return true;
             }else{
                 if(!iter->hasNext()){

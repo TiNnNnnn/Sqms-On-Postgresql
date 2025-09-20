@@ -77,6 +77,13 @@ DB_CONFIG = {
     "port": "55555"
 }
 
+# DB_CONFIG = {
+#     "dbname": "test",
+#     "user": "postgres",
+#     "host": "localhost",
+#     "port": "55555"
+# }
+
 class TestType(Enum):
     SQMS = 0,
     QPPNET = 1,
@@ -268,7 +275,7 @@ def get_names_with_value_one(excel_path):
     return name_list
 
 # static workload test
-def StaticWorkloadTest(type,impor_data: bool, init_data_size: int):
+def StaticWorkloadTest(type,import_data: bool, init_data_size: int):
     conn = psycopg2.connect(**DB_CONFIG)
     conn.autocommit = True
     sql_files = []
@@ -277,7 +284,7 @@ def StaticWorkloadTest(type,impor_data: bool, init_data_size: int):
     SQL_DIR = "./tpch_query_slow"
     order_file_path = "./sql_order.txt"
     rep_sql_file_path = SQL_DIR + "_rep"
-    InitEnv(conn,type,False,init_data_size)
+    InitEnv(conn,type,import_data,init_data_size)
     
     # init qppnet and prepare plan dir
     temp_plan_dir = "./qppnet/data/pgdata"
@@ -294,10 +301,10 @@ def StaticWorkloadTest(type,impor_data: bool, init_data_size: int):
         sql_files = [f for f in os.listdir(rep_sql_file_path) if f.endswith(".sql")]
         random.shuffle(sql_files)
     
-        if os.path.exists(order_file_path):
+    if os.path.exists(order_file_path):
             with open(order_file_path, "r") as f:
                 sql_files = [line.strip() for line in f.readlines()]
-        else:
+    else:
             sql_files = [f for f in os.listdir(rep_sql_file_path) if f.endswith(".sql")]
             random.shuffle(sql_files)
             with open(order_file_path, "w") as f:
@@ -314,6 +321,22 @@ def StaticWorkloadTest(type,impor_data: bool, init_data_size: int):
     query_time_map = OrderedDict() 
     # run time of each query, if the query has been cancel, it will be consider as -1
     query_run_map = OrderedDict()
+    # match average time
+    match_avg_overhead_map = OrderedDict()
+    match_avg_overhead_map[0] = 0
+    plan_match_avg_overhead_map = OrderedDict()
+    plan_match_avg_overhead_map[0] = 0
+    node_match_avg_overhead_map = OrderedDict()
+    node_match_avg_overhead_map[0] = 0
+    # match average count
+    plan_search_avg_cnt_map = OrderedDict()
+    plan_search_avg_cnt_map[0] = 0
+    node_search_avg_cnt_map = OrderedDict()
+    node_search_avg_cnt_map[0] = 0
+
+    query_search_cnt_map = OrderedDict()
+    query_search_cnt_map[0] = 0
+    
     # cancel query name
     cancel_query_map = { i+1: [] for i in range(batch_size)}
     index_interval = total_sqls // len(index_list) if index_list else total_sqls
@@ -333,7 +356,6 @@ def StaticWorkloadTest(type,impor_data: bool, init_data_size: int):
             start_time = time.time()
             status = execute.execute_sql_file(cursor, sql_path)
             end_time = time.time()
-            
             if status == "CANCELLED":
                 total_cancelled += 1
                 query_run_map[total_cnt] = [sql_file,-1]
@@ -384,7 +406,24 @@ def StaticWorkloadTest(type,impor_data: bool, init_data_size: int):
         if total_cnt % 5 == 0:
             query_time_map[total_cnt] = current_total_time
             print(f"[Info] Recorded time after {run_cnt} successful queries: {current_total_time:.2f}s")
+            
+            match_avg_overhead =  float(execute.execute_sql(cursor,"SELECT match_avg_overhead()")[0][0]) / 1000
+            match_avg_overhead_map[total_cnt] = match_avg_overhead
 
+            plan_match_avg_overhead = float(execute.execute_sql(cursor,"SELECT plan_match_avg_overhead()")[0][0]) / 1000
+            plan_match_avg_overhead_map[total_cnt] = plan_match_avg_overhead
+            
+            node_match_avg_overhead = float(execute.execute_sql(cursor,"SELECT node_match_avg_overhead()")[0][0]) / 1000
+            node_match_avg_overhead_map[total_cnt] = node_match_avg_overhead
+
+            plan_search_avg_cnt = float(execute.execute_sql(cursor,"SELECT plan_search_avg_overhead()")[0][0])
+            plan_search_avg_cnt_map[total_cnt] = plan_search_avg_cnt
+
+            node_search_avg_cnt = float(execute.execute_sql(cursor,"SELECT node_search_avg_overhead()")[0][0])
+            node_search_avg_cnt_map[total_cnt] = node_search_avg_cnt
+
+        query_search_cnt = int(execute.execute_sql(cursor,"SELECT cur_node_search_cnt()")[0][0]) 
+        query_search_cnt_map[total_cnt] = query_search_cnt
         #try to create a new index after each index_interval 
         # if total_cnt % index_interval == 0 and idx_offset < len(index_list):
         #     print(f"[Index] Creating index: {index_list[idx_offset]}")
@@ -400,6 +439,23 @@ def StaticWorkloadTest(type,impor_data: bool, init_data_size: int):
     plot.write_batch_query_time_to_excel(query_time_map, output_path=os.path.join(output_folder, "query_batch_time.xlsx"))
     plot.write_query_time_to_excel(query_run_map, output_path=os.path.join(output_folder, "query_run_time.xlsx"))
     
+    plot.plot_query_time(match_avg_overhead_map, title="OverHead", output_path=os.path.join(output_folder, "overhead.png"))
+    plot.plot_query_time(plan_match_avg_overhead_map, title="Plan OverHead", output_path=os.path.join(output_folder, "plan_overhead.png"))
+    plot.plot_query_time(node_match_avg_overhead_map, title="Node OverHead", output_path=os.path.join(output_folder, "node_overhead.png"))
+    
+    plot.write_batch_query_time_to_excel(match_avg_overhead_map, output_path=os.path.join(output_folder, "match_avg_overhead_map.xlsx"))
+    plot.write_batch_query_time_to_excel(plan_match_avg_overhead_map, output_path=os.path.join(output_folder, "plan_match_avg_overhead_map.xlsx"))
+    plot.write_batch_query_time_to_excel(node_match_avg_overhead_map, output_path=os.path.join(output_folder, "node_match_avg_overhead_map.xlsx"))
+    
+    plot.plot_query_time(plan_search_avg_cnt_map, title="Plan Search Cnt", output_path=os.path.join(output_folder, "plan_search_cnt.png"))
+    plot.plot_query_time(node_search_avg_cnt_map, title="Node Search Cnt", output_path=os.path.join(output_folder, "node_search_cnt.png"))
+    
+    plot.write_batch_query_time_to_excel(plan_search_avg_cnt_map, output_path=os.path.join(output_folder, "plan_search_cnt.xlsx"))
+    plot.write_batch_query_time_to_excel(node_search_avg_cnt_map, output_path=os.path.join(output_folder, "node_search_cnt.xlsx"))
+
+    plot.plot_query_time(query_search_cnt_map, title="Query Search Cnt", output_path=os.path.join(output_folder, "query_search_cnt.png"),smooth=False)
+    plot.write_batch_query_time_to_excel(query_search_cnt_map, output_path=os.path.join(output_folder, "query_search_cnt.xlsx"))
+
     cursor.close()
     conn.close()
     return

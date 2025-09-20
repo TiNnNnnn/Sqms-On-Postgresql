@@ -163,8 +163,10 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
             PlanFormatContext* pf_context_1 = new PlanFormatContext();
             PlanFormatContext* pf_context_2 = new PlanFormatContext();
 
+            auto match_start = std::chrono::high_resolution_clock::now();
             if(plan_match_enabled || plan_equal_enabled){
                 std::cout<<"begin plan match..."<<std::endl;
+                plan_search_cnt ++;
                 auto plan_match_start = std::chrono::high_resolution_clock::now();
                 for(const auto& p : sub_list){
                 /**
@@ -209,7 +211,6 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
                     }
                     delete(sps);
                     if(shared_index->Search(level_mgr.get(),1)){
-                        CancelQuery(pid);
                         logger_->Logger("comming","****************************");
                         cancel = true;
                         break;
@@ -224,6 +225,10 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
                 plan_match_time += plan_match_duration.count();
                 plan_match_cnt ++;
                 std::cout<<"finsh plan match..."<<std::endl;
+
+                if(cancel){
+                    CancelQuery(pid);
+                }
             }
 
             if(node_match_enabled && !cancel){
@@ -239,18 +244,29 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
                 pf_context_2->SetStrategy(node_mgr);
                 pf_context_2->executeStrategy();
 
-                node_mgr->Search();
-                std::cout<<"finish node match..."<<std::endl;
+                if(node_mgr->Search()){
+                    cancel = true;    
+                }
+
+                std::cout<<"cancel:" <<cancel<<",finish node match..."<<std::endl;
                 auto node_match_end = std::chrono::high_resolution_clock::now();
                 auto node_match_duration = std::chrono::duration_cast<std::chrono::microseconds>(node_match_end - node_match_start);
                 node_match_time += node_match_duration.count();
                 node_match_cnt ++;
                 delete(sps);
             }
+
+            auto match_end = std::chrono::high_resolution_clock::now();
+            auto m_duration = std::chrono::duration_cast<std::chrono::microseconds>(match_end - match_start);
+            total_match_time += m_duration.count();
             delete(pf_context_1);
             delete(pf_context_2);
             std::cout<<"finish process comming query..."<<std::endl;
             logger_->Logger("comming","finish process comming query...");
+
+            if(cancel){
+                CancelQuery(pid);
+            }
         }
 
         /**collect scan nodes of all querys */
@@ -315,6 +331,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
             delete(pf_context_1);
             delete(pf_context_2);
         }
+        
         std::cout<<"Thread: "<<ThreadPool::GetTid()<<" Finish Working..."<<std::endl;
         return true;
     //});

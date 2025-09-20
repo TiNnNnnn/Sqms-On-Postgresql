@@ -13,6 +13,9 @@ extern "C" {
 	PG_FUNCTION_INFO_V1(plan_match_avg_overhead);
 	PG_FUNCTION_INFO_V1(node_match_avg_overhead);
 	PG_FUNCTION_INFO_V1(clear_avg_overhead);
+	PG_FUNCTION_INFO_V1(plan_search_avg_overhead);
+	PG_FUNCTION_INFO_V1(node_search_avg_overhead);
+	PG_FUNCTION_INFO_V1(cur_node_search_cnt);
 
 	static ExecutorStart_hook_type prev_ExecutorStart = NULL;
 	static ExecutorRun_hook_type prev_ExecutorRun = NULL;
@@ -195,7 +198,8 @@ static bool IsSystemCatalogQuery(QueryDesc *queryDesc) {
 		if (strstr(queryDesc->sourceText, "pg_catalog.") 
 		|| strstr(queryDesc->sourceText, "information_schema.")
 		/**skip overhead udf */
-	    || strstr(queryDesc->sourceText, "overhead()")) {
+	    || strstr(queryDesc->sourceText, "overhead()") 
+		|| strstr(queryDesc->sourceText,"cur_node_search_cnt")) {
 			return true;
 		}
 	}
@@ -481,8 +485,7 @@ static const char* error_severity(int elevel)
 
 extern "C" Datum match_avg_overhead(PG_FUNCTION_ARGS){
 	if(!total_match_cnt) PG_RETURN_FLOAT8(0);
-	auto match_time = plan_match_time + node_match_time + clear_time;
-	auto avg_time = match_time / total_match_cnt; 
+	auto avg_time = total_match_time / total_match_cnt; 
 	PG_RETURN_FLOAT8(avg_time);
 }
 
@@ -492,16 +495,35 @@ extern "C" Datum plan_match_avg_overhead(PG_FUNCTION_ARGS){
 	PG_RETURN_FLOAT8(avg_time);
 }
 
+extern "C" Datum plan_search_avg_overhead(PG_FUNCTION_ARGS){
+	if(!plan_match_cnt) PG_RETURN_FLOAT8(0);
+	double avg_time = (double)plan_search_cnt / plan_match_cnt;
+	PG_RETURN_FLOAT8(avg_time);
+}
+
 extern "C" Datum node_match_avg_overhead(PG_FUNCTION_ARGS){
 	if(!node_match_cnt) PG_RETURN_FLOAT8(0);
-	auto avg_time = node_match_time / node_match_cnt;
-	PG_RETURN_FLOAT8(avg_time);
+	auto avg_cnt = node_match_time / node_match_cnt;
+	PG_RETURN_FLOAT8(avg_cnt);
+}
+
+extern "C" Datum node_search_avg_overhead(PG_FUNCTION_ARGS){
+	if(!node_match_cnt) PG_RETURN_FLOAT8(0);
+	double avg_cnt = (double)node_search_cnt / node_match_cnt;
+	PG_RETURN_FLOAT8(avg_cnt);
 }
 
 extern "C" Datum clear_avg_overhead(PG_FUNCTION_ARGS){
 	if(!clear_cnt) PG_RETURN_FLOAT8(0);
 	auto avg_time = clear_time / clear_cnt;
 	PG_RETURN_FLOAT8(avg_time);
+}
+
+extern "C" Datum cur_node_search_cnt(PG_FUNCTION_ARGS){
+	if(!cur_finish_node_num) PG_RETURN_INT32(0);
+	int ret = cur_finish_node_num;
+	cur_finish_node_num = 0;
+	PG_RETURN_INT32(ret);
 }
 
 extern "C" void ShuntLog(ErrorData *edata){
