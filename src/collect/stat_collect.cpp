@@ -15,7 +15,10 @@ extern "C" {
 	PG_FUNCTION_INFO_V1(clear_avg_overhead);
 	PG_FUNCTION_INFO_V1(plan_search_avg_overhead);
 	PG_FUNCTION_INFO_V1(node_search_avg_overhead);
+	PG_FUNCTION_INFO_V1(cur_plan_search_cnt);
 	PG_FUNCTION_INFO_V1(cur_node_search_cnt);
+	PG_FUNCTION_INFO_V1(cur_plan_match_overhead);
+	PG_FUNCTION_INFO_V1(cur_node_match_overhead);
 
 	static ExecutorStart_hook_type prev_ExecutorStart = NULL;
 	static ExecutorRun_hook_type prev_ExecutorRun = NULL;
@@ -199,7 +202,7 @@ static bool IsSystemCatalogQuery(QueryDesc *queryDesc) {
 		|| strstr(queryDesc->sourceText, "information_schema.")
 		/**skip overhead udf */
 	    || strstr(queryDesc->sourceText, "overhead()") 
-		|| strstr(queryDesc->sourceText,"cur_node_search_cnt")) {
+		|| strstr(queryDesc->sourceText,"search_cnt()")) {
 			return true;
 		}
 	}
@@ -519,11 +522,32 @@ extern "C" Datum clear_avg_overhead(PG_FUNCTION_ARGS){
 	PG_RETURN_FLOAT8(avg_time);
 }
 
+extern "C" Datum cur_plan_search_cnt(PG_FUNCTION_ARGS){
+	if(!cur_finish_plan_cnt) PG_RETURN_INT32(0);
+	int ret = cur_finish_plan_cnt;
+	cur_finish_plan_cnt = 0;
+	PG_RETURN_INT32(ret);
+}
+
 extern "C" Datum cur_node_search_cnt(PG_FUNCTION_ARGS){
 	if(!cur_finish_node_num) PG_RETURN_INT32(0);
 	int ret = cur_finish_node_num;
 	cur_finish_node_num = 0;
 	PG_RETURN_INT32(ret);
+}
+
+extern "C" Datum cur_plan_match_overhead(PG_FUNCTION_ARGS){
+	if(!cur_plan_overhead) PG_RETURN_FLOAT8(0);
+	double ret = cur_plan_overhead;
+	cur_plan_overhead = 0;
+	PG_RETURN_FLOAT8(ret);
+}
+
+extern "C" Datum cur_node_match_overhead(PG_FUNCTION_ARGS){
+	if(!cur_node_overhead) PG_RETURN_FLOAT8(0);
+	double ret = cur_node_overhead;
+	cur_node_overhead = 0;
+	PG_RETURN_FLOAT8(ret);
 }
 
 extern "C" void ShuntLog(ErrorData *edata){

@@ -22,6 +22,7 @@ bool node_match_enabled = true;
 bool collect_scans_enabled = false;
 bool plan_equal_enabled = false;
 bool prune_constants_enabled = false;
+bool parallel_search_enabled = false;
 //char *sqms_log_directory = NULL;
 
 const char* redis_host = "127.0.0.1";
@@ -44,3 +45,7 @@ int plan_search_cnt = 0;
 int node_search_cnt = 0;
 
 int cur_finish_node_num = 0;
+int cur_finish_plan_cnt = 0;
+
+double cur_plan_overhead = 0;
+double cur_node_overhead = 0;

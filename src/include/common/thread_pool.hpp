@@ -17,7 +17,7 @@
  */
 class ThreadPool {
 public:
-    explicit ThreadPool(size_t threadCount, bool join = false) 
+    explicit ThreadPool(size_t threadCount, bool join = true) 
         : stopFlag(false),join_thread(join) {
         for (size_t i = 0; i < threadCount; ++i) {
             workers.emplace_back(&ThreadPool::workerThread, this);

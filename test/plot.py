@@ -156,6 +156,62 @@ def write_query_time_to_excel(query_run_map, output_path):
 
     workbook.close()
 
+def plot_search_cnt_from_excel(input_excel_path, output_image_path, mode="normal"):
+    """
+    画 col1 和 col2 的箱型图
+    mode = "normal"  原始数据
+    mode = "log"     对数缩放，适合极端分布
+    mode = "clip"    裁剪极端值，只保留 95% 分位数以内
+    """
+    # 读取 Excel
+    df = pd.read_excel(input_excel_path, engine='openpyxl') 
+    df.columns = df.columns.astype(str).str.strip()
+
+    def clean_column(series):
+        return series.astype(str).str.replace(r'_x000d_', '', regex=True).str.strip().astype(float)
+
+    print("Columns:", df.columns)
+    col1 = clean_column(df["1"])
+    col2 = clean_column(df["2"])
+
+    # ==== 根据模式处理数据 ====
+    if mode == "log":
+        col1_data = np.log1p(col1)
+        col2_data = np.log1p(col2)
+        ylabel = "log(1 + OverHead(ms))"
+    elif mode == "clip":
+        upper1 = np.percentile(col1, 95)
+        upper2 = np.percentile(col2, 95)
+        col1_data = col1[col1 <= upper1]
+        col2_data = col2[col2 <= upper2]
+        ylabel = "Value (clipped at 95%)"
+    else:
+        col1_data = col1
+        col2_data = col2
+        ylabel = "Time(ms)"
+
+    data = [col1_data, col2_data]
+
+    # ==== 画箱型图 ====
+    plt.figure(figsize=(8, 8))
+    plt.rcParams.update({
+        'font.size': 22,
+        'axes.titlesize': 22,
+        'axes.labelsize': 22,
+        'xtick.labelsize': 20,
+        'ytick.labelsize': 20,
+        'legend.fontsize': 18,
+        'axes.linewidth': 2,
+    })
+
+    plt.boxplot(data, patch_artist=True, boxprops=dict(facecolor="lightblue"))
+    plt.title("Distribution of Node and Plan Search OverHead (ms)")
+    plt.ylabel(ylabel)
+    plt.xticks([1, 2], ["Node", "Plan"])  # 两列标签
+
+    plt.savefig(output_image_path, bbox_inches="tight")
+    plt.close()
+
 def plot_overhead_from_excel(input_excel_path, output_image_path):
     df = pd.read_excel(input_excel_path, engine='openpyxl') 
     df.columns = df.columns.astype(str).str.strip()
@@ -341,6 +397,9 @@ def plot_grouped_bar_chart(output_path):
 
 
 if __name__ == "__main__":
-    plot_overhead_from_excel("/SSD/00/yyk/Sqms-On-Postgresql/contrib/sqms/test/output/match_avg_overhead_cmp.xlsx","ouput/overhead_compare.png")
+    plot_search_cnt_from_excel(
+        "/SSD/00/yyk/Sqms-On-Postgresql/contrib/sqms/test/output/20250920_202519/query_node_overhead.xlsx",
+        "ouput/plan_match_overhead_distribute.png")
+    #plot_overhead_from_excel("/SSD/00/yyk/Sqms-On-Postgresql/contrib/sqms/test/output/match_avg_overhead_cmp.xlsx","ouput/overhead_compare.png")
     #plot_grouped_bar_chart("output/compare_accuracy")
     #plot_from_excel("/home/hyh/Sqms-On-Postgresql/contrib/sqms/test2/output/20250616_105812_without_excavate/query_batch_time.xlsx","output/core_subquery_compare.png")

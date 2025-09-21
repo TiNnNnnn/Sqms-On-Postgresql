@@ -30,6 +30,8 @@ extern bool node_match_enabled;
 extern bool collect_scans_enabled;
 /*baseline strategy params, only for test*/
 extern bool plan_equal_enabled;
+
+extern bool parallel_search_enabled;
 /**
  * if enable to prune constants from equal predicates
  * For System Secutrity,we don't open this prams to users;
@@ -62,4 +64,8 @@ extern int total_match_cnt;
 extern int plan_search_cnt;
 extern int node_search_cnt;
 
+extern int cur_finish_plan_cnt;
 extern int cur_finish_node_num;
+
+extern double cur_plan_overhead;
+extern double cur_node_overhead;

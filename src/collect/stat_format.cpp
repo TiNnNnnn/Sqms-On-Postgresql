@@ -166,63 +166,83 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
             auto match_start = std::chrono::high_resolution_clock::now();
             if(plan_match_enabled || plan_equal_enabled){
                 std::cout<<"begin plan match..."<<std::endl;
-                plan_search_cnt ++;
                 auto plan_match_start = std::chrono::high_resolution_clock::now();
                 for(const auto& p : sub_list){
-                /**
-                 * MARK: to make test more easy,here move muti-thread while testing
-                 */
-                // size_t msg_size = history_slow_plan_stat__get_packed_size(p);
-                // uint8_t *buffer = (uint8_t*)malloc(msg_size);
-                // if (buffer == NULL) {
-                //     perror("Failed to allocate memory");
-                //     exit(-1);
-                // }
-                // history_slow_plan_stat__pack(p,buffer);
-                //pool_->submit([shared_index,msg_size,buffer,pid,this]()->bool{
-                    //HistorySlowPlanStat *p = history_slow_plan_stat__unpack(NULL, msg_size, buffer);
-                    // if(!p){
-                    //     std::cerr<<"history_slow_plan_stat__unpack failed in thered: "<<ThreadPool::GetTid()<<std::endl;
-                    // }
-                    logger_->Logger("comming",("**********sub_query ["+std::to_string(sub_idx)+"]***************").c_str());
+                    plan_search_cnt ++;
+                    cur_finish_plan_cnt ++;
+                    if(parallel_search_enabled){
+                        pool_->submit([&]()->bool{
+                            logger_->Logger("comming",("**********sub_query ["+std::to_string(sub_idx)+"]***************").c_str());
+                            if(plan_equal_enabled){
+                                assert(!node_match_enabled && !plan_match_enabled );
+                                bool found = true;
+                                auto plan_map = (LevelHashStrategy*)ShmemInitStruct(plan_hash_table_name, sizeof(LevelHashStrategy), &found);
+                                if(!found || !plan_map){
+                                    std::cerr<<"plan map not exist!"<<std::endl;
+                                    exit(-1);
+                                }
+                                std::cout<<"comming json_plan: \n"<<p->json_plan<<std::endl;
+                                if(plan_map->Search(p->json_plan)){
+                                    CancelQuery(pid);
+                                }
+                            }
 
-                    if(plan_equal_enabled){
-                        assert(!node_match_enabled && !plan_match_enabled );
-                        bool found = true;
-                        auto plan_map = (LevelHashStrategy*)ShmemInitStruct(plan_hash_table_name, sizeof(LevelHashStrategy), &found);
-                        if(!found || !plan_map){
-                            std::cerr<<"plan map not exist!"<<std::endl;
-                            exit(-1);
+                            SlowPlanStat *sps= new SlowPlanStat();
+                            auto level_mgr = std::make_shared<LevelManager>(p,sps,logger_,"comming");
+                            pf_context_1->SetStrategy(level_mgr);
+                            pf_context_1->executeStrategy();
+                            level_mgr->ShowTotalPredClass();
+                            if(debug){
+                                auto node_collect_map = level_mgr->GetNodeCollector();
+                                logger_->Logger("comming",ShowAllNodeCollect(p,node_collect_map,"comming").c_str());
+                            }
+                            delete(sps);
+                            if(shared_index->Search(level_mgr.get(),1)){
+                                logger_->Logger("comming","****************************");
+                                cancel = true;
+                            }
+                            logger_->Logger("comming","****************************");
+                            return true;
+                        });
+                    }else{
+                        logger_->Logger("comming",("**********sub_query ["+std::to_string(sub_idx)+"]***************").c_str());
+                        if(plan_equal_enabled){
+                            assert(!node_match_enabled && !plan_match_enabled );
+                            bool found = true;
+                            auto plan_map = (LevelHashStrategy*)ShmemInitStruct(plan_hash_table_name, sizeof(LevelHashStrategy), &found);
+                            if(!found || !plan_map){
+                                std::cerr<<"plan map not exist!"<<std::endl;
+                                exit(-1);
+                            }
+                            std::cout<<"comming json_plan: \n"<<p->json_plan<<std::endl;
+                            if(plan_map->Search(p->json_plan)){
+                                CancelQuery(pid);
+                            }
                         }
-                        std::cout<<"comming json_plan: \n"<<p->json_plan<<std::endl;
-                        if(plan_map->Search(p->json_plan)){
-                            CancelQuery(pid);
-                        }
-                    }
 
-                    SlowPlanStat *sps= new SlowPlanStat();
-                    auto level_mgr = std::make_shared<LevelManager>(p,sps,logger_,"comming");
-                    pf_context_1->SetStrategy(level_mgr);
-                    pf_context_1->executeStrategy();
-                    level_mgr->ShowTotalPredClass();
-                    if(debug){
-                        auto node_collect_map = level_mgr->GetNodeCollector();
-                        logger_->Logger("comming",ShowAllNodeCollect(p,node_collect_map,"comming").c_str());
-                    }
-                    delete(sps);
-                    if(shared_index->Search(level_mgr.get(),1)){
+                        SlowPlanStat *sps= new SlowPlanStat();
+                        auto level_mgr = std::make_shared<LevelManager>(p,sps,logger_,"comming");
+                        pf_context_1->SetStrategy(level_mgr);
+                        pf_context_1->executeStrategy();
+                        level_mgr->ShowTotalPredClass();
+                        if(debug){
+                            auto node_collect_map = level_mgr->GetNodeCollector();
+                            logger_->Logger("comming",ShowAllNodeCollect(p,node_collect_map,"comming").c_str());
+                        }
+                        delete(sps);
+                        if(shared_index->Search(level_mgr.get(),1)){
+                            logger_->Logger("comming","****************************");
+                            cancel = true;
+                            break;
+                        }
                         logger_->Logger("comming","****************************");
-                        cancel = true;
-                        break;
                     }
-                    logger_->Logger("comming","****************************");
-                    //return true;
-                //});
                     ++sub_idx;
                 }
                 auto plan_match_end = std::chrono::high_resolution_clock::now();
                 auto plan_match_duration = std::chrono::duration_cast<std::chrono::microseconds>(plan_match_end - plan_match_start);
                 plan_match_time += plan_match_duration.count();
+                cur_plan_overhead = plan_match_duration.count();
                 plan_match_cnt ++;
                 std::cout<<"finsh plan match..."<<std::endl;
 
@@ -252,6 +272,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
                 auto node_match_end = std::chrono::high_resolution_clock::now();
                 auto node_match_duration = std::chrono::duration_cast<std::chrono::microseconds>(node_match_end - node_match_start);
                 node_match_time += node_match_duration.count();
+                cur_node_overhead = node_match_duration.count();
                 node_match_cnt ++;
                 delete(sps);
             }
@@ -259,6 +280,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
             auto match_end = std::chrono::high_resolution_clock::now();
             auto m_duration = std::chrono::duration_cast<std::chrono::microseconds>(match_end - match_start);
             total_match_time += m_duration.count();
+            
             delete(pf_context_1);
             delete(pf_context_2);
             std::cout<<"finish process comming query..."<<std::endl;

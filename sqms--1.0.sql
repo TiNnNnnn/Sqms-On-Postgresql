@@ -28,7 +28,23 @@ RETURNS double precision
 AS 'sqms', 'clear_avg_overhead'
 LANGUAGE C STRICT;
 
+CREATE FUNCTION cur_plan_search_cnt()
+RETURNS int
+AS 'sqms', 'cur_plan_search_cnt'
+LANGUAGE C STRICT;
+
 CREATE FUNCTION cur_node_search_cnt()
 RETURNS int
 AS 'sqms', 'cur_node_search_cnt'
 LANGUAGE C STRICT;
+
+CREATE FUNCTION cur_plan_match_overhead()
+RETURNS double precision
+AS 'sqms', 'cur_plan_match_overhead'
+LANGUAGE C STRICT;
+
+CREATE FUNCTION cur_node_match_overhead()
+RETURNS double precision
+AS 'sqms', 'cur_node_match_overhead'
+LANGUAGE C STRICT;
+
