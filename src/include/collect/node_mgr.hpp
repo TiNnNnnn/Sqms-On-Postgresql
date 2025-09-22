@@ -58,7 +58,8 @@ private:
     void PlanPartition(HistorySlowPlanStat* hsps);
     void PlanInit(HistorySlowPlanStat* hsps);
     bool CancelQuery(pid_t pid);
-    bool SearchInternal(NodeCollector *node,double total_time,int finish_node_num,LevelOrderIterator* iter);
+    bool SearchInternal(NodeCollector *node,double total_time,
+        int finish_node_num,LevelOrderIterator* iter,int& search_cnt);
     
 private:
     int branch_num_;

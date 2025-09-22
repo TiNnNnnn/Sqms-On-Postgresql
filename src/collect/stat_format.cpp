@@ -155,11 +155,12 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
             /*check all subuqueries in plan*/
             std::vector<HistorySlowPlanStat*>sub_list;
             LevelOrder(hsps,sub_list);
-            
+            std::cout<<"subplan size"<<std::to_string(sub_list.size())<<std::endl;
             logger_->Logger("comming",("subplan size: "+std::to_string(sub_list.size())).c_str());
             size_t sub_idx = 0;
 
             bool cancel = false;
+            int search_loops = 0;
             PlanFormatContext* pf_context_1 = new PlanFormatContext();
             PlanFormatContext* pf_context_2 = new PlanFormatContext();
 
@@ -169,7 +170,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
                 auto plan_match_start = std::chrono::high_resolution_clock::now();
                 for(const auto& p : sub_list){
                     plan_search_cnt ++;
-                    cur_finish_plan_cnt ++;
+                    search_loops ++;
                     if(parallel_search_enabled){
                         pool_->submit([&]()->bool{
                             logger_->Logger("comming",("**********sub_query ["+std::to_string(sub_idx)+"]***************").c_str());
@@ -239,6 +240,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
                     }
                     ++sub_idx;
                 }
+                cur_finish_plan_cnt = search_loops;
                 auto plan_match_end = std::chrono::high_resolution_clock::now();
                 auto plan_match_duration = std::chrono::duration_cast<std::chrono::microseconds>(plan_match_end - plan_match_start);
                 plan_match_time += plan_match_duration.count();
@@ -247,7 +249,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
                 std::cout<<"finsh plan match..."<<std::endl;
 
                 if(cancel){
-                    CancelQuery(pid);
+                    //CancelQuery(pid);
                 }
             }
 
@@ -287,7 +289,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
             logger_->Logger("comming","finish process comming query...");
 
             if(cancel){
-                CancelQuery(pid);
+                //CancelQuery(pid);
             }
         }
 

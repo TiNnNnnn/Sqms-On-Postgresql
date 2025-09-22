@@ -7,7 +7,7 @@
 extern int	query_min_duration;
 extern double late_tolerance;
 
-#define bit_map_size 100
+#define bit_map_size 1000
 #define LOWER_LIMIT "SQMS_LOW_LIMIT"
 #define UPPER_LIMIT "SQMS_UPPER_LIMIT"
 

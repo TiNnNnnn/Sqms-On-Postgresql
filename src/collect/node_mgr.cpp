@@ -28,10 +28,10 @@ bool NodeManager::PrintPredEquivlences(){
     return true;
 }
 
-bool NodeManager::SearchInternal(NodeCollector *node,double total_time,int finish_node_num,LevelOrderIterator* iter){
+bool NodeManager::SearchInternal(NodeCollector *node,double total_time,int finish_node_num,LevelOrderIterator* iter,int& search_cnt){
    assert(node);
-   node_search_cnt += 1;
-   cur_finish_node_num += 1;
+   search_cnt ++;
+   node->match_cnt = 0;
    if(shared_index_->Search(node) || node->match_cnt){
         for(size_t i = 0; i < node->output_list_.size();++i){    
             total_time += node->time_list_[i];
@@ -49,7 +49,7 @@ bool NodeManager::SearchInternal(NodeCollector *node,double total_time,int finis
                     return false;
                 }
                 auto cur = iter->next();
-                int ret = SearchInternal(cur, total_time, finish_node_num,iter);
+                int ret = SearchInternal(cur, total_time, finish_node_num,iter,search_cnt);
                 iter->prev();
                 total_time -= node->time_list_[i];
                 finish_node_num--;
@@ -74,7 +74,12 @@ bool NodeManager::Search(){
     int finish_node_num = 0;
     int cur_idx = 0;
     LevelOrderIterator iter(level_collector_);
-    return SearchInternal(iter.next(), total_time, finish_node_num,&iter);
+    int search_times = 0;
+    bool ret =  SearchInternal(iter.next(), total_time, finish_node_num,&iter,search_times);
+    node_search_cnt += search_times;
+    cur_finish_node_num = search_times;
+    std::cout<<"cur_finish_node_num: "<<search_times<<std::endl;
+    return ret;
 }
 
 // bool NodeManager::Search(){

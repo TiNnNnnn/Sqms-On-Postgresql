@@ -982,7 +982,7 @@ bool LeafStrategy::Insert(LevelManager* level_mgr){
     new_level_mgr->Copy(level_mgr);
     level_mgr_ = new_level_mgr;
     effective_ = true;
-    std::cout<<"insert shared_index,lid:"<<level_mgr_->GetLid()<<std::endl;
+    //std::cout<<"insert shared_index,lid:"<<level_mgr_->GetLid()<<std::endl;
     return true;
 }
 
