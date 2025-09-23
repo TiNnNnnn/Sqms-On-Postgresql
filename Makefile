@@ -29,6 +29,11 @@ SHLIB_LINK_INTERNAL = $(libpq) -lstdc++ -lprotobuf -lprotobuf-c -L/usr/local/lib
 CFLAGS += -std=c11  -I/usr/local/include 
 PG_CPPFLAGS = -std=c++17 -fPIC -I$(libpq_srcdir) -I$(CURRENT_DIR)/src/include 
 
+ifdef enable_debug
+    CFLAGS += -O0 -g
+    PG_CPPFLAGS += -O0 -g
+endif
+
 # pg extend config 
 EXTENSION = sqms
 DATA = sqms--1.0.sql

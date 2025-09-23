@@ -922,12 +922,12 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		FormatPropertyText("Operation", operation, cn_es);
 		hsp.operation = operation;
 	}
-	if (relationship){
-		FormatPropertyText("Parent Relationship", relationship, es);
-		FormatPropertyText("Parent Relationship", relationship, ces);
-		FormatPropertyText("Parent Relationship", relationship, cn_es);
-		hsp.relationship = relationship;
-	}
+	// if (relationship){
+	// 	FormatPropertyText("Parent Relationship", relationship, es);
+	// 	FormatPropertyText("Parent Relationship", relationship, ces);
+	// 	FormatPropertyText("Parent Relationship", relationship, cn_es);
+	// 	hsp.relationship = relationship;
+	// }
 	if (plan_name){
 		FormatPropertyText("Subplan Name", plan_name, es);
 		FormatPropertyText("Subplan Name", plan_name, ces);

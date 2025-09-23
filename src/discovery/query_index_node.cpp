@@ -1181,8 +1181,9 @@ bool LeafStrategy::Search(NodeCollector* node_collector){
         node_collector->scan_view_decrease_ = false;
         for(const auto& his : history_map_){
            /*0.9 is a magic param,just fot testing...*/
-           std::cout<<"check scan view decrease: history output:"<<his.second->output_<<", scan output:"<<node_collector->scan_output<<std::endl;
-           if(node_collector->scan_output < his.second->output_){
+           //std::cout<<"check scan view decrease: history output:"<<his.second->output_<<", scan output:"<<node_collector->scan_output<<std::endl;
+           if(node_collector->scan_output < his.second->output_ 
+                && double(his.second->output_- node_collector->scan_output)/his.second->output_ >= truth_ratio){
                 node_collector->scan_view_decrease_ = true;
                 return true;
             }

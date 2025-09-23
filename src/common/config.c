@@ -15,6 +15,7 @@ const size_t shared_mem_size = 1024* 1024* 1024 * 10;
 const int node_search_topk = 5;
 const int max_msg_size = 1024; 
 
+bool sqms_enabled = true;
 bool debug = false;
 bool excavate_enabled = true;
 bool plan_match_enabled = true;
@@ -49,3 +50,5 @@ int cur_finish_plan_cnt = 0;
 
 double cur_plan_overhead = 0;
 double cur_node_overhead = 0;
+
+double truth_ratio = 1.0;

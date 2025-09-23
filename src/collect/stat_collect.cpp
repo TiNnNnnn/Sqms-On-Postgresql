@@ -156,6 +156,22 @@ extern "C" {
 									&plan_match_cnt,
 									0,
 									0, INT_MAX,PGC_SUSET,GUC_UNIT_MS,NULL,NULL,NULL);	
+		DefineCustomRealVariable("sqms.truth_ratio",
+									"truth_ratio",
+									"truth_ratio",
+									&truth_ratio,
+									1.0,
+									0.0, 1.0, PGC_SUSET,GUC_UNIT_MS,NULL,NULL,NULL);	
+		DefineCustomBoolVariable("sqms.sqms_enabled",
+											"sqms_enabled",
+											"sqms_enabled",
+											&sqms_enabled,
+											true,
+											PGC_SUSET,
+											GUC_UNIT_MS,
+											NULL,
+											NULL,
+											NULL);
         prev_ExecutorStart = ExecutorStart_hook;
         ExecutorStart_hook = StmtExecutorStart;
 
@@ -215,17 +231,8 @@ void StatCollecter::StmtExecutorStartWrapper(QueryDesc *queryDesc, int eflags){
 		Example: if we execute '/d', the sql will be like : 
 		"SELECT n.nspname as \"Schema\",\n  c.relname as \"Name\",\n  CASE c.relkind WHEN 'r' THEN 'table' WHEN 'v' THEN 'view' WHEN 'm' THEN 'materialized view' WHEN 'i' THEN 'index' WHEN 'S' THEN 'sequence' WHEN 's' THEN 'special' WHEN 'f' THEN 'foreign table' WHEN 'p' THEN 'partitioned table' WHEN 'I' THEN 'partitioned index' END as \"Type\",\n  pg_catalog.pg_get_userbyid(c.relowner) as \"Owner\"\nFROM pg_catalog.pg_class c\n     LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace\nWHERE c.relkind IN ('r','p','v','m','S','f','')\n      AND n.nspname <> 'pg_catalog'\n      AND n.nspname <> 'information_schema'\n      AND n.nspname !~ '^pg_toast'\n  AND pg_catalog.pg_table_is_visible(c.oid)\nORDER BY 1,2;"
 	*/
-	if (IsSystemCatalogQuery(queryDesc)) {
-		// call original executor directly, escape SQMS process
-		if (prev_ExecutorStart)
-            prev_ExecutorStart(queryDesc, eflags);
-        else
-            standard_ExecutorStart(queryDesc, eflags);
-		return ;
-	}
-
 	// check if we set query_min_duration
-	if (query_min_duration == -1) {
+	if (!sqms_enabled || query_min_duration == -1 || IsSystemCatalogQuery(queryDesc)) {
 		// call original executor directly, escape SQMS process
 		if (prev_ExecutorStart)
             prev_ExecutorStart(queryDesc, eflags);
@@ -303,7 +310,9 @@ void StatCollecter::StmtExecutorFinishWrapper(QueryDesc *queryDesc){
 
 void StatCollecter::StmtExecutorEndWrapper(QueryDesc *queryDesc)
 {
-	if (queryDesc->totaltime && auto_explain_enabled() && queryDesc->operation == CMD_SELECT){
+	if (queryDesc->totaltime 
+		&& auto_explain_enabled() && queryDesc->operation == CMD_SELECT
+		&& !IsSystemCatalogQuery(queryDesc) && sqms_enabled){
 		MemoryContext oldcxt;
 		/*
 		 * Make sure we operate in the per-query context, so any cruft will be
@@ -388,7 +397,7 @@ void StatCollecter::ExplainOneQueryWithSlowWrapper(Query *query,
 								standard_ExecutorStart(queryDesc, eflags);
 		ExplainOpenGroup("Query", NULL, true, es);
 
-		if(queryDesc->operation != CMD_SELECT){
+		if(queryDesc->operation != CMD_SELECT || !sqms_enabled){
 			ExplainPrintPlan(es, queryDesc);
 		}else{
 			PlanStatFormat& psf = PlanStatFormat::getInstance();

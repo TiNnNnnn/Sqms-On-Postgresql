@@ -18,6 +18,8 @@ extern long totalFetchTimeoutMillis;
 extern long totalSetTimeMillis;
 extern long defaultTTLSeconds;
 
+
+extern bool sqms_enabled;
 /*if using debug mode*/
 extern bool debug;
 /*if enable to use excavate core sub plan*/
@@ -69,3 +71,5 @@ extern int cur_finish_node_num;
 
 extern double cur_plan_overhead;
 extern double cur_node_overhead;
+
+extern double truth_ratio;

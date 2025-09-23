@@ -275,6 +275,123 @@ def get_names_with_value_one(excel_path):
     name_list = filtered.iloc[:, 1].tolist()
     return name_list
 
+def DecreaesingWorkloadTest(type,import_data:bool,init_data_size: int):
+    conn = psycopg2.connect(**DB_CONFIG)
+    conn.autocommit = True
+    sql_files = []
+    
+    rep_batch_size = 3
+    SQL_DIR = "./tpch_query_slow"
+    order_file_path = "./sql_order.txt"
+    rep_sql_file_path = SQL_DIR + "_rep"
+    InitEnv(conn,type,import_data,init_data_size)
+    
+    # init qppnet and prepare plan dir
+    temp_plan_dir = "./qppnet/data/pgdata"
+    if type == TestType.QPPNET:
+        if os.path.exists(temp_plan_dir):
+            shutil.rmtree(temp_plan_dir)
+        os.makedirs(temp_plan_dir)
+        opt = parser.parse_args()
+
+    cursor = conn.cursor()
+
+    if 0 == os.path.exists(rep_sql_file_path) and type == TestType.SQMS:
+        sql_files = replicate_sql_files(SQL_DIR, rep_sql_file_path, rep_batch_size)
+        sql_files = [f for f in os.listdir(rep_sql_file_path) if f.endswith(".sql")]
+        random.shuffle(sql_files)
+    
+    if os.path.exists(order_file_path):
+        with open(order_file_path, "r") as f:
+            sql_files = [line.strip() for line in f.readlines()]
+    else:
+        sql_files = [f for f in os.listdir(rep_sql_file_path) if f.endswith(".sql")]
+        random.shuffle(sql_files)
+        with open(order_file_path, "w") as f:
+            for fname in sql_files:
+                f.write(fname + "\n")
+    total_sqls = len(sql_files)
+    index_list = extract_create_index_statements(CREATE_IDX_FILE)
+    
+    batch_size = 2
+    for i in range(0,batch_size):
+        # query total time in every btach
+        query_time_map = OrderedDict() 
+        # run time of each query, if the query has been cancel, it will be consider as -1
+        query_run_map = OrderedDict()
+
+        run_cnt = 0             # query run success
+        total_cnt = 0           # all querys try to run = run_cnt + total_cancelled
+        
+        total_cancelled = 0     # query cancelled
+        accidental_total_cancelled = 0 #query cancelled by accident
+        not_cancelled = 0
+
+        current_total_time = 0.0
+        idx_offset = 0
+
+        for sql_file in sql_files:
+            sql_path = os.path.join(rep_sql_file_path, sql_file)
+            print(f"Executing: {sql_path}")
+            total_cnt += 1
+
+            if type != 2:
+                start_time = time.time()
+                status = execute.execute_sql_file(cursor, sql_path)
+                end_time = time.time()
+                if status == "CANCELLED":
+                    total_cancelled += 1
+                    query_run_map[total_cnt] = [sql_file,-1]
+                    
+                    execute.execute_sql(cursor,"set sqms.sqms_enabled = false")
+                    test_start_time = time.time()
+                    status = execute.execute_sql_file(cursor, sql_path)
+                    test_end_time = time.time()
+                    test_time = test_end_time - test_start_time
+                    if test_time < 5.0:
+                        accidental_total_cancelled += 1
+                        query_run_map[total_cnt] = [sql_file,-2]
+                    execute.execute_sql(cursor,"set sqms.sqms_enabled = true")
+                else:
+                    elapsed = end_time - start_time
+                    current_total_time += elapsed
+                    query_run_map[total_cnt] = [sql_file,elapsed]
+                    if elapsed >= 5.0:
+                        not_cancelled += 1
+                    run_cnt += 1
+            if total_cnt % 5 == 0:
+                query_time_map[total_cnt] = current_total_time
+                print(f"[Info] Recorded time after {run_cnt} successful queries: {current_total_time:.2f}s")
+
+        print(f"Total queries attempted: {total_cnt}")
+        print(f"Total cancelled queries: {total_cancelled}")
+        print(f"Total successful queries: {run_cnt}")
+        print(f"Total cancelled by accident queries: {accidental_total_cancelled}")
+        print(f"Total slow not cancelled queries: {not_cancelled}")
+
+        callback_ratio = (total_cancelled - accidental_total_cancelled) / (total_cancelled - accidental_total_cancelled + not_cancelled) if (total_cancelled - accidental_total_cancelled + not_cancelled) > 0 else 0
+        correct_ratio = (total_cancelled - accidental_total_cancelled) / total_cancelled if total_cancelled > 0 else 0
+
+        output_folder = create_timestamped_folder("output")
+        with open(os.path.join(output_folder, f"result_batch_{i}.txt"), "w") as f:
+            f.write(f"callback_ratio: {callback_ratio:.2f}\n")
+            f.write(f"correct_ratio: {correct_ratio:.2f}\n")
+        plot.plot_query_time(query_time_map, title="Query Time vs Count", output_path=os.path.join(output_folder, "query_time_progress.png"))
+        plot.write_batch_query_time_to_excel(query_time_map, output_path=os.path.join(output_folder, "query_batch_time.xlsx"))
+        plot.write_query_time_to_excel(query_run_map, output_path=os.path.join(output_folder, "query_run_time.xlsx"))
+
+        # delete ten percent data from one random table
+        tbl_list = ["lineitem", "orders", "part", "partsupp", "customer", "nation", "region", "supplier"]
+        tbl_name = tbl_list[ random.randint(0,len(tbl_list)-1)]
+        execute.execute_sql(cursor,"set sqms.sqms_enabled = false")
+        tbl_cnt = int(execute.execute_sql(cursor,f"SELECT COUNT(*) from {tbl_name}")[0][0])
+        print(f"target table: {tbl_name} has {tbl_cnt} rows")
+        del_cnt = int(tbl_cnt * 0.1)
+        execute.execute_sql(cursor,f"DELETE FROM {tbl_name} WHERE ctid IN (SELECT ctid FROM {tbl_name} LIMIT {del_cnt})")
+        execute.execute_sql(cursor,"set sqms.sqms_enabled = true")
+        time.sleep(2)
+    return 
+
 # static workload test
 def StaticWorkloadTest(type,import_data: bool, init_data_size: int):
     conn = psycopg2.connect(**DB_CONFIG)
@@ -493,8 +610,8 @@ def StaticWorkloadTest(type,import_data: bool, init_data_size: int):
     return
 
 def main():
-
-    StaticWorkloadTest(TestType.SQMS,False,5)
+    DecreaesingWorkloadTest(TestType.SQMS,False,5)
+    #StaticWorkloadTest(TestType.SQMS,False,5)
     # conn = psycopg2.connect(**DB_CONFIG)
     # conn.autocommit = True
     # cursor = conn.cursor()

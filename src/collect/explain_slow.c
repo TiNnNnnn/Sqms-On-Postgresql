@@ -804,8 +804,8 @@ ExplainNodeWithSlow(PlanState *planstate, List *ancestors,
 			ExplainPropertyText("Partial Mode", partialmode, es);
 		if (operation)
 			ExplainPropertyText("Operation", operation, es);
-		if (relationship)
-			ExplainPropertyText("Parent Relationship", relationship, es);
+		// if (relationship)
+		// 	ExplainPropertyText("Parent Relationship", relationship, es);
 		if (plan_name)
 			ExplainPropertyText("Subplan Name", plan_name, es);
 		if (custom_name)
@@ -1503,15 +1503,23 @@ ExplainNodeWithSlow(PlanState *planstate, List *ancestors,
 				 es, NULL,cur_sub_id,NULL);
 		}
 	}
-		
-
+	
+	bool match_left = false;
 	/* lefttree */
 	if (outerPlanState(planstate)){
-		if(hsps && *cur_sub_id >= hsps->sub_id){
-			assert(hsps->childs && hsps->childs[0]);
-			++(*cur_sub_id);
-			ExplainNodeWithSlow(outerPlanState(planstate), ancestors,
-					"Outer", NULL, es,hsps->childs[0],cur_sub_id,node_explain);
+		if(hsps){
+			if(*cur_sub_id < hsps->sub_id){
+				++(*cur_sub_id);
+				if(*cur_sub_id == hsps->sub_id) match_left = true;
+				ExplainNodeWithSlow(outerPlanState(planstate), ancestors,
+						"Outer", NULL, es,hsps,cur_sub_id,node_explain);
+			}else{
+				assert(hsps->childs && hsps->childs[0]);
+				++(*cur_sub_id);
+				if(*cur_sub_id == hsps->sub_id) match_left = true;
+				ExplainNodeWithSlow(outerPlanState(planstate), ancestors,
+						"Outer", NULL, es,hsps->childs[0],cur_sub_id,node_explain);
+			}
 		}else if(node_explain){
 			assert(node_explain->childs_ && node_explain->childs_[0]);
 			ExplainNodeWithSlow(outerPlanState(planstate), ancestors,
@@ -1521,16 +1529,20 @@ ExplainNodeWithSlow(PlanState *planstate, List *ancestors,
 			ExplainNodeWithSlow(outerPlanState(planstate), ancestors,
 								"Outer", NULL, es,NULL,cur_sub_id,NULL);
 		}
-		
 	}
 		
 	/* righttree */
 	if (innerPlanState(planstate)){
-		if(hsps && *cur_sub_id >= hsps->sub_id){
-			assert(hsps->childs && hsps->childs[1]);
-			++(*cur_sub_id);
-			ExplainNodeWithSlow(innerPlanState(planstate), ancestors,
-					"Inner", NULL, es,hsps->childs[1],cur_sub_id,node_explain);
+		if(hsps && !match_left){
+			if(*cur_sub_id < hsps->sub_id){
+				++(*cur_sub_id);
+				ExplainNodeWithSlow(innerPlanState(planstate), ancestors,
+						"Inner", NULL, es,hsps,cur_sub_id,node_explain);
+			}else{
+				++(*cur_sub_id);
+				ExplainNodeWithSlow(innerPlanState(planstate), ancestors,
+						"Inner", NULL, es,hsps->childs[1],cur_sub_id,node_explain);
+			}
 		}else if(node_explain){
 			assert(node_explain->childs_ && node_explain->childs_[1]);
 			ExplainNodeWithSlow(innerPlanState(planstate), ancestors,

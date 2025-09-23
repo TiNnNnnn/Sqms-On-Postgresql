@@ -249,7 +249,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
                 std::cout<<"finsh plan match..."<<std::endl;
 
                 if(cancel){
-                    //CancelQuery(pid);
+                    CancelQuery(pid);
                 }
             }
 
@@ -289,7 +289,7 @@ bool PlanStatFormat::ProcQueryDesc(QueryDesc* qd, MemoryContext oldcxt, bool slo
             logger_->Logger("comming","finish process comming query...");
 
             if(cancel){
-                //CancelQuery(pid);
+                CancelQuery(pid);
             }
         }
 

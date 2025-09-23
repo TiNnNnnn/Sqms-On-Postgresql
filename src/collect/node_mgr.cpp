@@ -42,7 +42,6 @@ bool NodeManager::SearchInternal(NodeCollector *node,double total_time,int finis
                 node->parent_->inputs[node->child_idx] = node->output_list_[i];
             }
             if(total_time >= query_min_duration && finish_node_num >= 1){
-                //CancelQuery(pid_);
                 return true;
             }else{
                 if(!iter->hasNext()){
