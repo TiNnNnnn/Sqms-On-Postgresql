@@ -70,19 +70,19 @@ def save_opt(opt, logf):
     logf.write('\n')
 
 #db config
-# DB_CONFIG = {
-#     "dbname": "postgres",
-#     "user": "postgres",
-#     "host": "localhost",
-#     "port": "55555"
-# }
-
 DB_CONFIG = {
-    "dbname": "test",
+    "dbname": "postgres",
     "user": "postgres",
     "host": "localhost",
     "port": "55555"
 }
+
+# DB_CONFIG = {
+#     "dbname": "test",
+#     "user": "postgres",
+#     "host": "localhost",
+#     "port": "55555"
+# }
 
 class TestType(Enum):
     SQMS = 0,
@@ -243,7 +243,7 @@ def InitEnv(conn,type: TestType, import_data: bool = False, init_data_size: int 
     else:
         print("table and data have exisit, skip crete table and import data")
     if type == TestType.SQMS:
-        cursor.execute(f"set sqms.query_min_duration = '0s'")
+        cursor.execute(f"set sqms.query_min_duration = '5s'")
     cursor.close()
     return 
 
@@ -610,8 +610,8 @@ def StaticWorkloadTest(type,import_data: bool, init_data_size: int):
     return
 
 def main():
-    DecreaesingWorkloadTest(TestType.SQMS,False,5)
-    #StaticWorkloadTest(TestType.SQMS,False,5)
+    #DecreaesingWorkloadTest(TestType.SQMS,False,5)
+    StaticWorkloadTest(TestType.SQMS,False,5)
     # conn = psycopg2.connect(**DB_CONFIG)
     # conn.autocommit = True
     # cursor = conn.cursor()

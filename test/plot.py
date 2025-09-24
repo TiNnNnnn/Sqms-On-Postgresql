@@ -10,6 +10,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import xlsxwriter
 from scipy.interpolate import make_interp_spline
+from brokenaxes import brokenaxes
 
 def plot_query_times(query_time_map):
     """
@@ -155,8 +156,107 @@ def write_query_time_to_excel(query_run_map, output_path):
             worksheet.write(row, col + 1, item)
 
     workbook.close()
-
 def plot_search_cnt_from_excel(input_excel_path, output_image_path, mode="normal"):
+    """
+    画 col1 和 col2 的箱型图
+    mode = "normal" 原始数据
+    mode = "log"    对数缩放，适合极端分布
+    mode = "clip"   裁剪极端值，只保留 95% 分位数以内
+    mode = "break"  纵轴断裂，显示锯齿
+    """
+    # 读取 Excel
+    df = pd.read_excel(input_excel_path, engine='openpyxl')
+    df.columns = df.columns.astype(str).str.strip()
+
+    def clean_column(series):
+        cleaned = series.astype(str).str.replace(r'_x000d_', '', regex=True).str.strip().astype(float)
+        return cleaned[cleaned != 0]
+
+    col1 = clean_column(df["1"])
+    col2 = clean_column(df["2"])
+
+    # ==== 根据模式处理数据 ====
+    if mode == "log":
+        col1_data = np.log1p(col1)
+        col2_data = np.log1p(col2)
+        ylabel = "log(1 + OverHead(ms))"
+        data = [col1_data, col2_data]
+
+    elif mode == "clip":
+        upper1 = np.percentile(col1, 99)
+        upper2 = np.percentile(col2, 99)
+        col1_data = col1[col1 <= upper1]
+        col2_data = col2[col2 <= upper2]
+        ylabel = "Times (clipped at 99%)"
+        data = [col1_data, col2_data]
+
+    elif mode == "break":
+        col1_data = col1
+        col2_data = col2
+        ylabel = "Times"
+        data = [col1_data, col2_data]
+
+        # ==== 只要两段 ====
+        ylims = (
+            (0, 30),   # 第一段
+            (60,80),   # 第二段
+            (260,280)
+        )
+
+        # ==== 绘图参数 ====
+        plt.rcParams.update({
+            'font.size': 24, 'axes.titlesize': 24, 'axes.labelsize': 24,
+            'xtick.labelsize': 20, 'ytick.labelsize': 20,
+            'legend.fontsize': 18, 'axes.linewidth': 3,
+        })
+
+        fig = plt.figure(figsize=(7, 8))   
+        bax = brokenaxes(ylims=ylims, hspace=0.3) 
+
+        bax.boxplot(
+            data,
+            patch_artist=True,
+            widths=0.5,
+            boxprops=dict(facecolor="lightblue", linewidth=2),
+            whiskerprops=dict(linewidth=2),
+            capprops=dict(linewidth=2),
+            medianprops=dict(color="red", linewidth=2),
+        )
+        bax.set_ylabel(ylabel)
+        bax.set_xticks([1, 2], labels=["Plan Match", "Node Match"])
+
+        plt.savefig(output_image_path, bbox_inches="tight")
+        plt.close()
+        return
+
+    else:
+        col1_data = col1
+        col2_data = col2
+        ylabel = "Time(ms)"
+        data = [col1_data, col2_data]
+
+    # ==== 普通模式下绘图 ====
+    plt.figure(figsize=(7, 8))
+    plt.rcParams.update({
+        'font.size': 24, 'axes.titlesize': 24, 'axes.labelsize': 24,
+        'xtick.labelsize': 20, 'ytick.labelsize': 20,
+        'legend.fontsize': 18, 'axes.linewidth': 3,
+    })
+    plt.boxplot(
+        data,
+        patch_artist=True,
+        widths=0.5,
+        boxprops=dict(facecolor="lightblue", linewidth=2),
+        whiskerprops=dict(linewidth=2),
+        capprops=dict(linewidth=2),
+        medianprops=dict(color="red", linewidth=2),
+    )
+    plt.ylabel(ylabel)
+    plt.xticks([1, 2], ["Plan Match", "Node Match"])
+    plt.savefig(output_image_path, bbox_inches="tight")
+    plt.close()
+
+def plot_single_search_cnt_from_excel(input_excel_path, output_image_path, mode="normal"):
     """
     画 col1 和 col2 的箱型图
     mode = "normal"  原始数据
@@ -173,25 +273,21 @@ def plot_search_cnt_from_excel(input_excel_path, output_image_path, mode="normal
 
     print("Columns:", df.columns)
     col1 = clean_column(df["1"])
-    col2 = clean_column(df["2"])
 
     # ==== 根据模式处理数据 ====
     if mode == "log":
         col1_data = np.log1p(col1)
-        col2_data = np.log1p(col2)
         ylabel = "log(1 + OverHead(ms))"
     elif mode == "clip":
         upper1 = np.percentile(col1, 95)
-        upper2 = np.percentile(col2, 95)
         col1_data = col1[col1 <= upper1]
-        col2_data = col2[col2 <= upper2]
-        ylabel = "Value (clipped at 95%)"
+     
+        ylabel = "Times (clipped at 95%)"
     else:
         col1_data = col1
-        col2_data = col2
         ylabel = "Times"
 
-    data = [col1_data, col2_data]
+    data = [col1_data]
 
     # ==== 画箱型图 ====
     plt.figure(figsize=(7, 8))
@@ -204,7 +300,7 @@ def plot_search_cnt_from_excel(input_excel_path, output_image_path, mode="normal
         'legend.fontsize': 18,
         'axes.linewidth': 3,
     })
-
+    
     plt.boxplot(
         data,
         patch_artist=True,
@@ -216,7 +312,7 @@ def plot_search_cnt_from_excel(input_excel_path, output_image_path, mode="normal
     )
 
     plt.ylabel(ylabel)
-    plt.xticks([1, 2], ["Plan Match", "Node Match"])  # 两列标签
+    plt.xticks([1], ["Plan Match"])  # 两列标签
 
     plt.savefig(output_image_path, bbox_inches="tight")
     plt.close()
@@ -406,9 +502,9 @@ def plot_grouped_bar_chart(output_path):
 
 
 if __name__ == "__main__":
-    plot_search_cnt_from_excel(
-        "/SSD/00/yyk/Sqms-On-Postgresql/contrib/sqms/test/output/query_search_cnt_cmp_urw_final.xlsx",
-        "overhead/urw_match_cnt_distribute.png")
+    plot_single_search_cnt_from_excel(
+        "/SSD/00/yyk/Sqms-On-Postgresql/contrib/sqms/test/output/20250924_114635/query/query_node_search_cnt.xlsx",
+        "overhead/urw_node_match_overhead_distribute.png")
     #plot_overhead_from_excel("/SSD/00/yyk/Sqms-On-Postgresql/contrib/sqms/test/output/match_avg_overhead_cmp.xlsx","ouput/overhead_compare.png")
     #plot_grouped_bar_chart("output/compare_accuracy")
     #plot_from_excel("/home/hyh/Sqms-On-Postgresql/contrib/sqms/test2/output/20250616_105812_without_excavate/query_batch_time.xlsx","output/core_subquery_compare.png")

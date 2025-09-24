@@ -31,6 +31,8 @@ bool NodeManager::PrintPredEquivlences(){
 bool NodeManager::SearchInternal(NodeCollector *node,double total_time,int finish_node_num,LevelOrderIterator* iter,int& search_cnt){
    assert(node);
    search_cnt ++;
+   if(search_cnt > 1000)
+    return false;
    node->match_cnt = 0;
    if(shared_index_->Search(node) || node->match_cnt){
         for(size_t i = 0; i < node->output_list_.size();++i){    
